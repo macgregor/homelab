@@ -1,0 +1,45 @@
+# https://artifacthub.io/packages/helm/ingress-nginx/ingress-nginx
+.tolerate-control-plane: &tolerate-control-plane
+  key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+
+controller:
+  tolerations:
+  - <<: *tolerate-control-plane
+
+  admissionWebhooks:
+    patch:
+      tolerations:
+      - <<: *tolerate-control-plane
+
+  name: controller-internal
+
+  podAnnotations:
+    fluentbit.io/parser_stdout: "k8s-nginx-ingress-stdout"
+    fluentbit.io/parser_stderr: "k8s-ingress-nginx-stderr"
+
+  hostname: nginx-internal-lb
+  ingressClass: nginx-internal
+  ingressClassResource:
+    name: nginx-internal
+    enabled: true
+    default: false
+    controllerValue: "k8s.io/ingress-nginx-internal"
+
+  service:
+    external:
+      enabled: true
+      loadBalancerIP: 192.168.1.221
+      loadBalancerSourceRanges:
+      - 192.168.1.0/24
+      - 10.42.0.0/24
+      - 10.43.0.0/16
+      externalTrafficPolicy: Local
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      namespace: obs

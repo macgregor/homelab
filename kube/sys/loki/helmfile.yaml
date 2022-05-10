@@ -1,0 +1,11 @@
+repositories:
+- name: grafana
+  url: https://grafana.github.io/helm-charts
+helmDefaults:
+  createNamespace: true
+releases:
+- name: loki
+  chart: grafana/loki
+  namespace: obs
+  values:
+  - ./helm-values.yml

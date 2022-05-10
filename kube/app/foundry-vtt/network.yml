@@ -1,0 +1,45 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: foundry-vtt
+  namespace: foundry-vtt
+  labels:
+    app.kubernetes.io/name: foundry-vtt
+    app.kubernetes.io/version: "v9.269"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol:  TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: foundry-vtt
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: foundry-vtt
+  namespace: foundry-vtt
+  labels:
+    app.kubernetes.io/name: foundry-vtt
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+spec:
+  ingressClassName: nginx-external
+  tls:
+  - hosts:
+    - dnd.matthew-stratton.me
+    secretName: foundry-vtt-tls
+  rules:
+  - host: dnd.matthew-stratton.me
+    http:
+      paths:
+      - backend:
+          service:
+            name: foundry-vtt
+            port:
+              number: 80
+        path: /
+        pathType: Prefix

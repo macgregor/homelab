@@ -1,0 +1,17 @@
+# https://github.com/grafana/helm-charts/tree/main/charts/loki
+image: # https://hub.docker.com/r/grafana/loki
+  tag: "2.5.0"
+  pullPolicy: IfNotPresent
+
+podLabels:
+  app.kubernetes.io/name: loki
+
+podAnnotations:
+  fluentbit.io/parser: "logfmt"
+
+persistence:
+  enabled: true
+  existingClaim: loki-data
+
+serviceMonitor:
+  enabled: true

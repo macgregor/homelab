@@ -1,0 +1,60 @@
+# defaults: https://github.com/democratic-csi/charts/blob/master/stable/democratic-csi/values.yaml
+csiDriver:
+  # should be globally unique for a given cluster
+  name: org.democratic-csi.nfs-client.synology-app-data
+
+
+controller:
+  strategy: node
+  externalResizer:
+    enabled: false
+  external-snapshotter:
+    enabled: false
+
+node:
+  tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+  driver:
+    lifecycle:
+      postStart:
+        exec:
+          command: ["/bin/sh", "-c", "mkdir -p /storage; mount 192.168.1.200:/volume2/kube-nfs /storage"]
+      preStop:
+        exec:
+          command: ["/bin/sh","-c","umount /storage"]
+
+storageClasses:
+- name: synology-nfs-app-data-retain
+  defaultClass: false
+  reclaimPolicy: Retain
+  volumeBindingMode: WaitForFirstConsumer
+  allowVolumeExpansion: false
+  parameters:
+    fsType: nfs
+  mountOptions:
+  - noatime
+  - nolock
+  - nfsvers=3
+- name: synology-nfs-app-data-delete
+  defaultClass: false
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+  allowVolumeExpansion: false
+  parameters:
+    fsType: nfs
+  mountOptions:
+  - noatime
+  - nolock
+  - nfsvers=3
+
+driver:
+  config:
+    driver: nfs-client
+    nfs:
+      shareHost: 192.168.1.200
+      shareBasePath: "/volume2/kube-nfs"
+      # shareHost:shareBasePath should be mounted at this location in the controller container
+      controllerBasePath: "/storage"

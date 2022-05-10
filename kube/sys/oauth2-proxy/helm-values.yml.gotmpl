@@ -1,0 +1,74 @@
+# https://artifacthub.io/packages/helm/oauth2-proxy/oauth2-proxy
+tolerations:
+- key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: node-role.kubernetes.io/control-plane
+          operator: In
+          values:
+          - 'true'
+image:
+  tag: v7.2.1-arm64
+
+podAnnotations:
+  fluentbit.io/parser: "oauth2-proxy"
+
+# These are parameters passed to the oauth2-proxy binary running in the pod
+# https://oauth2-proxy.github.io/oauth2-proxy/docs/configuration/overview
+extraArgs:
+  #github-org: "OpenShift"
+  github-user: "iamthe-Wraith,macgregor"
+  reverse-proxy: true
+  show-debug-on-error: true
+  silence-ping-logging: true
+  standard-logging: true
+  auth-logging: true
+  request-logging: true
+
+# Oauth client configuration specifics
+config:
+  clientID: {{ requiredEnv "OAUTH_CLIENT_ID" | quote}}
+  clientSecret: {{ requiredEnv "OAUTH_CLIENT_SECRET" | quote}}
+  # Create a new secret with the following command
+  # openssl rand -base64 32 | head -c 32 | base64
+  cookieSecret: {{ requiredEnv "OAUTH_COOKIE_SECRET" | quote}}
+  configFile: |-
+    provider = "github"
+    email_domains = [ "*" ]
+    cookie_domains = ".matthew-stratton.me"
+    whitelist_domains = ".matthew-stratton.me"
+    pass_authorization_header = true
+    pass_access_token = true
+    pass_user_headers = true
+    set_authorization_header = true
+    set_xauthrequest = true
+    cookie_refresh = "1m"
+    cookie_expire = "30m"
+    upstreams = [ "file:///dev/null" ]
+
+ingress:
+  enabled: true
+  path: /
+  hosts:
+    - sso.matthew-stratton.me
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt"
+    #nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    #nginx.ingress.kubernetes.io/proxy-ssl-verify: "true"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+  tls:
+    - secretName: oauth-proxy-tls
+      hosts:
+        - sso.matthew-stratton.me
+
+metrics:
+  servicemonitor:
+    enabled: true
+    namespace: obs

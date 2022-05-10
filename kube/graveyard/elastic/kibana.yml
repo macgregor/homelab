@@ -1,0 +1,74 @@
+---
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: kibana
+  namespace: elastic-system
+spec:
+  version: 8.1.3
+  count: 1
+  elasticsearchRef:
+    name: elasticsearch
+  config: # https://www.elastic.co/guide/en/kibana/master/settings.html
+    server.publicBaseUrl: https://kibana.matthew-stratton.me
+  http:
+    tls:
+      selfSignedCertificate:
+        subjectAltNames:
+        - ip: 192.168.1.220
+        - dns: kibana.matthew-stratton.me
+  podTemplate:
+    spec:
+      tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: In
+                values:
+                - 'true'
+      containers:
+      - name: kibana
+        resources:
+          requests:
+            memory: 0.5Gi
+          limits:
+            memory: 1Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kibana
+  namespace: elastic-system
+  labels:
+    common.k8s.elastic.co/type: kibana
+    kibana.k8s.elastic.co/name: kibana
+  annotations:
+    co.elastic.logs/module: kibana
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/proxy-ssl-verify: "true"
+spec:
+  tls:
+  - hosts:
+    - kibana.matthew-stratton.me
+    secretName: kibana-tls
+  rules:
+  - host: kibana.matthew-stratton.me
+    http:
+      paths:
+      - backend:
+          service:
+            name: kibana-kb-http
+            port:
+              number: 5601
+        path: /
+        pathType: Prefix

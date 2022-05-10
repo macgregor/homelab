@@ -1,0 +1,55 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: synology-dsm
+  namespace: synology-dsm
+  labels:
+    app.kubernetes.io/name: synology-dsm
+spec:
+  clusterIP: None
+  ports:
+  - port: 5001
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: synology-dsm
+  namespace: synology-dsm
+  labels:
+    app.kubernetes.io/name: synology-dsm
+subsets:
+  - addresses:
+    - ip: 192.168.1.200
+    - ip: 192.168.1.201
+    ports:
+      - port: 5001
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: synology-dsm
+  namespace: synology-dsm
+  labels:
+    app.kubernetes.io/name: synology-dsm
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/proxy-ssl-verify: "true"
+spec:
+  ingressClassName: nginx-external
+  tls:
+  - hosts:
+    - synology.matthew-stratton.me
+    secretName: synology-tls
+  rules:
+  - host: synology.matthew-stratton.me
+    http:
+      paths:
+      - backend:
+          service:
+            name: synology-dsm
+            port:
+              number: 5001
+        path: /
+        pathType: Prefix

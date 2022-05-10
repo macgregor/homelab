@@ -1,0 +1,12 @@
+---
+clients:
+  - host: 192.168.1.200
+    port: 5001
+    https: true
+    username: '$SYNOLOGY_USER'
+    password: '$SYNOLOGY_PASS'
+  - host: 192.168.1.201
+    port: 5001
+    https: true
+    username: '$SYNOLOGY_USER'
+    password: '$SYNOLOGY_PASS'

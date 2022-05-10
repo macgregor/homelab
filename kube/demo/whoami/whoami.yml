@@ -1,0 +1,26 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whoami
+  namespace: demo
+  labels:
+    app.kubernetes.io/name: whoami
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: whoami
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: whoami
+    spec:
+      containers:
+      - image: traefik/whoami
+        imagePullPolicy: Always
+        name: whoami
+        ports:
+        # note: you need to change the image args if you really want to change the port
+        # https://github.com/traefik/whoami
+        - containerPort: 80

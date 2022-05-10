@@ -1,0 +1,64 @@
+# https://artifacthub.io/packages/helm/prometheus-community/kube-prometheus-stack
+
+.tolerate-control-plane: &tolerate-control-plane
+  key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+
+namespaceOverride: obs
+
+commonLabels:
+  app.kubernetes.io/name: prometheus
+
+defaultRules:
+  create: false
+
+alertmanager:
+  enabled: false
+
+prometheusOperator:
+  podAnnotations:
+    fluentbit.io/parser: "logfmt"
+
+  tolerations:
+  - <<: *tolerate-control-plane
+  admissionWebhooks:
+    patch:
+      tolerations:
+      - <<: *tolerate-control-plane
+
+prometheus:
+  prometheusSpec:
+    # Setting this value to false makes prometheus pick up all ServiceMonitors,
+    # otherwise the helm chart  configures prometheus to only pick up
+    # ServiceMonitors with the label 'release: $.Release.Name'
+    # see: https://github.com/prometheus-community/helm-charts/blob/902a9561966d41fb2b33fa64dd70d67a930a3ee9/charts/kube-prometheus-stack/templates/prometheus/prometheus.yaml#L123
+    serviceMonitorSelectorNilUsesHelmValues: false
+    tolerations:
+    - <<: *tolerate-control-plane
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: synology-nfs-app-data-delete
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+
+grafana:
+  enabled: true
+  defaultDashboardsEnabled: true
+  defaultDashboardsTimezone: America/New_York
+  adminPassword: {{ requiredEnv "GRAFANA_ADMIN_PASS" | quote}}
+  additionalDataSources:
+  - name: Loki
+    access: proxy
+    orgId: 1
+    type: loki
+    url: http://loki:3100
+    version: 1
+    readOnly: false
+
+kubeEtcd:
+  enabled: false

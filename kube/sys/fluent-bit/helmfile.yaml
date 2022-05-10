@@ -1,0 +1,11 @@
+repositories:
+- name: fluent
+  url: https://fluent.github.io/helm-charts
+helmDefaults:
+  createNamespace: true
+releases:
+- name: fluent-bit
+  chart: fluent/fluent-bit
+  namespace: obs
+  values:
+  - ./helm-values.yml.gotmpl

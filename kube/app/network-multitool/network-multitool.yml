@@ -1,0 +1,101 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: network-multitool
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: network-multitool
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: network-multitool
+  serviceName: network-multitool
+  volumeClaimTemplates:
+  - metadata:
+      name: debug-local-path-volitile
+    spec:
+      storageClassName: "local-path"
+      accessModes: [ "ReadWriteOnce" ]
+      volumeMode: Filesystem
+      resources:
+        requests:
+          storage: 1Gi
+  - metadata:
+      name: synology-nfs-app-data-delete
+    spec:
+      storageClassName: "synology-nfs-app-data-delete"
+      accessModes: [ "ReadWriteOnce" ]
+      volumeMode: Filesystem
+      resources:
+        requests:
+          storage: 1Gi
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: network-multitool
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+                - key: "name"
+                  operator: In
+                  values:
+                  - network-multitool
+            topologyKey: "kubernetes.io/hostname"
+      terminationGracePeriodSeconds: 5
+      dnsPolicy: ClusterFirstWithHostNet
+      hostPID: true
+      hostIPC: true
+      hostNetwork: true
+      tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      containers:
+      - name: network-multitool
+        securityContext:
+          privileged: true
+        image: wbitt/network-multitool:alpine-extra
+        imagePullPolicy: Always
+        command: [ "sleep", "infinity" ]
+        resources:
+          requests:
+            memory: "0"
+            cpu: "0"
+          limits:
+            memory: "500Mi"
+            cpu: "500m"
+        volumeMounts:
+          - name: host
+            mountPath: /host
+          - name: containerd
+            mountPath: /run/k3s/containerd/containerd.sock
+          - mountPath: "/mnt/pod/node-local"
+            name: debug-local-path-volitile
+          - mountPath: "/mnt/pod/synology"
+            name: synology-nfs-app-data-delete
+          - mountPath: "/mnt/share/media"
+            name: synology-nfs-media
+      volumes:
+        - name: host
+          hostPath:
+            path: /
+        - name: containerd
+          hostPath:
+            path: /run/k3s/containerd/containerd.sock
+            type: Socket
+        - name: synology-nfs-media
+          nfs:
+            server: 192.168.1.200
+            path: /volume1/Media
+        - name: debug-local-path-volitile
+          persistentVolumeClaim:
+            claimName: debug-local-path-volitile
+        - name: synology-nfs-app-data-delete
+          persistentVolumeClaim:
+            claimName: synology-nfs-app-data-delete

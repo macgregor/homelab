@@ -1,0 +1,11 @@
+repositories:
+- name: elastic
+  url: https://helm.elastic.co
+helmDefaults:
+  createNamespace: true
+releases:
+- name: elastic-cloud-operator
+  chart: elastic/eck-operator
+  namespace: elastic-system
+  values:
+  - ./elastic-cloud-operator.helm-values.yml

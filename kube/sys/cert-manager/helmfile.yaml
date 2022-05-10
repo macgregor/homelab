@@ -1,0 +1,14 @@
+repositories:
+- name: jetstack
+  url: https://charts.jetstack.io
+helmDefaults:
+  createNamespace: true
+releases:
+- name: cert-manager
+  namespace: cert-manager
+  chart: jetstack/cert-manager
+  set:
+  - name: installCRDs
+    value: true
+  values:
+  - ./helm-values.yml

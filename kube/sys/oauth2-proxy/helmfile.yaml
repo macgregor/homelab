@@ -1,0 +1,12 @@
+repositories:
+- name: oauth2-proxy
+  url: https://oauth2-proxy.github.io/manifests
+helmDefaults:
+  createNamespace: true
+releases:
+- name: oauth2-proxy
+  namespace: oauth2-proxy
+  chart: oauth2-proxy/oauth2-proxy
+  values:
+  # .gotmpl so we can resolve secrets from environment variables
+  - ./helm-values.yml.gotmpl

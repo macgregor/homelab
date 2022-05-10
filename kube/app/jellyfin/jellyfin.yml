@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  namespace: jellyfin
+  labels:
+    app.kubernetes.io/name: jellyfin
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jellyfin
+  template:
+    metadata:
+      annotations:
+        fluentbit.io/parser: "jellyfin"
+      labels:
+        app.kubernetes.io/name: jellyfin
+    spec:
+      volumes:
+      - name: jellyfin-config
+        persistentVolumeClaim:
+          claimName: jellyfin-config
+      - name: media
+        nfs: # data folder is a mounted pre-existing NFS share, *not* a PV/PVC
+          server: 192.168.1.200
+          path: /volume1/Media/media
+      # The settings below have been marked out and can be used when removing the "#"
+      # - name: device-vcsm # Only needed if you want to use your Raspberry Pi MMAL video decoding (Enabled as OpenMax H264 decode in gui settings).
+      #   hostPath:
+      #     path: /dev/vcsm
+      # - name: device-vchiq  #Only needed if you want to use your Raspberry Pi OpenMax video encoding.
+      #   hostPath:
+      #    path: /dev/vchiq
+      # - name: device-video10  #Only needed if you want to use your Raspberry Pi V4L2 video encoding.
+      #   hostPath:
+      #     path: /dev/video10
+      # - name: device-video11  #Only needed if you want to use your Raspberry Pi V4L2 video encoding.
+      #   hostPath:
+      #     path: /dev/video11
+      # - name: device-video12  #Only needed if you want to use your Raspberry Pi V4L2 video encoding.
+      #   hostPath:
+      #      path: /dev/video12
+      containers:
+      - env:
+        - name: JELLYFIN_PublishedServerUrl
+          value: 192.168.1.222
+        - name: TZ
+          value: America/New_York
+        image: linuxserver/jellyfin:10.7.7
+        imagePullPolicy: IfNotPresent
+        name: jellyfin
+        resources:
+          requests:
+            memory: 1Gi
+          limits:
+            memory: 6Gi
+        ports:
+        - containerPort: 8096
+          name: http-tcp
+          protocol: TCP
+        - containerPort: 8920
+          name: https-tcp
+          protocol: TCP
+        - containerPort: 1900
+          name: dlna-udp
+          protocol: UDP
+        - containerPort: 7359
+          name: discovery-udp
+          protocol: TCP
+        resources: {}
+        stdin: true
+        tty: true
+        volumeMounts:
+        - mountPath: /config
+          name: jellyfin-config
+        - mountPath: /data
+          name: media
+        # Below are the path to mount devices for hardware acceleration
+        # The settings below have been marked out and can be used when removing the "#"
+        # - mountPath: /dev/vcsm
+        #   name: device-vcsm
+        # - mountPath: /dev/vchiq
+        #   name: device-vchiq
+        # - mountPath: /dev/video10
+        #   name: device-video10
+        # - mountPath: /dev/video11
+        #   name: device-video11
+        # - mountPath: /dev/video12
+        #   name: device-video12
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always

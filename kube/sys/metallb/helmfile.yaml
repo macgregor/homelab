@@ -1,0 +1,11 @@
+repositories:
+- name: metallb
+  url: https://metallb.github.io/metallb
+helmDefaults:
+  createNamespace: true
+releases:
+- name: metallb
+  chart: metallb/metallb
+  namespace: metallb
+  values:
+  - ./helm-values.yml

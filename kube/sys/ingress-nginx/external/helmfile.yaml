@@ -1,0 +1,11 @@
+repositories:
+- name: ingress-nginx
+  url: https://kubernetes.github.io/ingress-nginx
+helmDefaults:
+  createNamespace: true
+releases:
+- name: ingress-nginx-external
+  chart: ingress-nginx/ingress-nginx
+  namespace: ingress-nginx
+  values:
+  - ./helm-values.yml

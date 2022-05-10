@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prowlarr
+  namespace: arr
+  labels:
+    app.kubernetes.io/name: prowlarr
+    app.kubernetes.io/version: nightly
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prowlarr
+  template:
+    metadata:
+      annotations:
+        fluentbit.io/parser: "prowlarr"
+      labels:
+        app.kubernetes.io/name: prowlarr
+    spec:
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      restartPolicy: Always
+      volumes:
+      - name: prowlarr-config
+        persistentVolumeClaim:
+          claimName: prowlarr-config
+      - name: data
+        nfs: # data folder is a mounted pre-existing NFS share, *not* a PV/PVC
+          server: 192.168.1.200
+          path: /volume1/Media
+      containers:
+      - env:
+        - name: TZ
+          value: America/New_York
+        - name: PUID
+          value: '444'
+        - name: PGID
+          value: '321'
+        - name: UMASK
+          value: '002'
+        image: lscr.io/linuxserver/prowlarr:nightly
+        imagePullPolicy: Always
+        name: prowlarr
+        resources:
+          requests:
+            memory: 128Mi
+          limits:
+            memory: 512Mi
+        ports:
+        - containerPort: 9696
+          name: http
+          protocol: TCP
+        resources: {}
+        stdin: true
+        tty: true
+        volumeMounts:
+        - mountPath: /config
+          name: prowlarr-config

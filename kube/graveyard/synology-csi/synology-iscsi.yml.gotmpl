@@ -1,0 +1,132 @@
+# defaults: https://github.com/democratic-csi/charts/blob/master/stable/democratic-csi/values.yaml
+csiDriver:
+  # should be globally unique for a given cluster
+  name: synology-iscsi
+
+
+controller:
+  tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-role.kubernetes.io/control-plane
+            operator: In
+            values:
+            - 'true'
+node:
+  tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+
+storageClasses:
+- name: synology-app-data
+  defaultClass: false
+  capacity:
+    size: 1000Gi
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+  allowVolumeExpansion: true
+  parameters:
+    fsType: ext4
+    lunType: BLUN
+  targetTemplate: |
+      max_sessions: 0
+
+driver:
+  config:
+    driver: synology-iscsi
+    httpConnection:
+      protocol: https
+      host: 192.168.1.200
+      port: 5001
+      username: {{ requiredEnv "SYNOLOGY_USER" | quote}}
+      password: {{ requiredEnv "SYNOLOGY_PASS" | quote}}
+      allowInsecure: true
+      # should be uniqe across all installs to the same nas
+      session: "democratic-csi"
+      serialize: true
+
+    synology:
+      # choose the proper volume for your system
+      volume: /volume3
+
+    iscsi:
+      # for multipath
+      targetPortals: [192.168.1.200:3260, 192.168.1.201:3260]
+      # leave empty to omit usage of -I with iscsiadm
+      interface: ""
+      # can be whatever you would like
+      baseiqn: "iqn.2022-05.com.synology:csi."
+
+      # MUST ensure uniqueness
+      # full iqn limit is 223 bytes, plan accordingly
+      namePrefix: ""
+      nameSuffix: ""
+
+      # documented below are several blocks
+      # pick the option appropriate for you based on what your backing fs is and desired features
+      # you do not need to alter dev_attribs under normal circumstances but they may be altered in advanced use-cases
+      lunTemplate:
+        # btrfs thin provisioning
+        type: "BLUN"
+        # tpws = Hardware-assisted zeroing
+        # caw = Hardware-assisted locking
+        # 3pc = Hardware-assisted data transfer
+        # tpu = Space reclamation
+        # can_snapshot = Snapshot
+        #dev_attribs:
+        #- dev_attrib: emulate_tpws
+        #  enable: 1
+        #- dev_attrib: emulate_caw
+        #  enable: 1
+        #- dev_attrib: emulate_3pc
+        #  enable: 1
+        #- dev_attrib: emulate_tpu
+        #  enable: 0
+        #- dev_attrib: can_snapshot
+        #  enable: 1
+
+        # btfs thick provisioning
+        # only zeroing and locking supported
+        #type: "BLUN_THICK"
+        # tpws = Hardware-assisted zeroing
+        # caw = Hardware-assisted locking
+        #dev_attribs:
+        #- dev_attrib: emulate_tpws
+        #  enable: 1
+        #- dev_attrib: emulate_caw
+        #  enable: 1
+
+        # ext4 thinn provisioning UI sends everything with enabled=0
+        #type: "THIN"
+
+        # ext4 thin with advanced legacy features set
+        # can only alter tpu (all others are set as enabled=1)
+        #type: "ADV"
+        #dev_attribs:
+        #- dev_attrib: emulate_tpu
+        #  enable: 1
+
+        # ext4 thick
+        # can only alter caw
+        #type: "FILE"
+        #dev_attribs:
+        #- dev_attrib: emulate_caw
+        #  enable: 1
+
+      lunSnapshotTemplate:
+        is_locked: true
+        # https://kb.synology.com/en-me/DSM/tutorial/What_is_file_system_consistent_snapshot
+        is_app_consistent: true
+
+      targetTemplate:
+        auth_type: 0
+        max_sessions: 0

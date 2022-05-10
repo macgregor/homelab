@@ -1,0 +1,110 @@
+---
+# Source: foundry-vtt/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: foundry-vtt
+  namespace: foundry-vtt
+  labels:
+    app.kubernetes.io/name: foundry-vtt
+    app.kubernetes.io/version: "v9.269"
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: foundry-vtt
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: foundry-vtt
+    spec:
+      serviceAccountName: default
+      dnsConfig:
+        # had a weird quirk where urls wouldnt resolve because kubernetes DNS
+        # tried to search my own subdomain of matthew-stratton.me (e.g.
+        # plex.tx.matthew-stratton.me) which would claim authority over the domain
+        # (even though that domain doesnt exist) which halts DNS
+        #
+        # This override tells the DNS resolver to skip all the custom search
+        # domains if there is a single dot in the domain name rather than the
+        # default of 5.
+        #
+        # This may break pod to pod comms that rely on cluster name resolution,
+        # but plex does not.
+        #
+        # https://pracucci.com/kubernetes-dns-resolution-ndots-options-and-why-it-may-affect-application-performances.html
+        options:
+          - name: ndots
+            value: "1"
+      containers:
+      - name: foundry-vtt
+        image: "felddy/foundryvtt:release-9.269"
+        imagePullPolicy: IfNotPresent
+        ports:
+          - name: http
+            containerPort: 30000
+            protocol: TCP
+        livenessProbe:
+          initialDelaySeconds: 600
+          failureThreshold: 40
+          periodSeconds: 25
+          httpGet:
+            path: /
+            port: http
+        readinessProbe:
+          initialDelaySeconds: 30
+          httpGet:
+            path: /
+            port: http
+        resources:
+            limits:
+              cpu: 1024m
+              memory: 1024Mi
+            requests:
+              cpu: 512m
+              memory: 512Mi
+        env:
+          - name: UV_THREADPOOL_SIZE
+            value: "6"
+          - name: CONTAINER_CACHE
+            value: /data/container_cache
+          - name: CONTAINER_PRESERVE_CONFIG
+            value: "true"
+          - name: TIMEZONE
+            value: America/New_York
+          # Foundry fetch files only
+          - name: FOUNDRY_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: foundry-vtt-credentials
+                key: username
+          - name: FOUNDRY_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: foundry-vtt-credentials
+                key: password
+          # foundry configuration files
+          - name: FOUNDRY_ADMIN_KEY
+            valueFrom:
+              secretKeyRef:
+                name: foundry-vtt-credentials
+                key: adminKey
+          - name: FOUNDRY_HOSTNAME
+            value: dnd.matthew-stratton.me
+          - name: FOUNDRY_LANGUAGE
+            value: en.core
+          - name: FOUNDRY_MINIFY_STATIC_FILES
+            value: "true"
+          - name: FOUNDRY_PROXY_SSL
+            value: "true"
+          - name: FOUNDRY_VERSION
+            value: "9.269"
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: foundry-vtt-data

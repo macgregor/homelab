@@ -1,0 +1,43 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudflare-api-token-secret
+  namespace: cert-manager
+type: Opaque
+stringData:
+  api-token: $CF_API_KEY
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-staging
+    solvers:
+    - dns01:
+        cloudflare:
+          email: $CF_EMAIL
+          apiTokenSecretRef:
+            name: cloudflare-api-token-secret
+            key: api-token
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt
+    solvers:
+    - dns01:
+        cloudflare:
+          email: $CF_EMAIL
+          apiTokenSecretRef:
+            name: cloudflare-api-token-secret
+            key: api-token

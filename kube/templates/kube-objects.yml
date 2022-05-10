@@ -1,0 +1,26 @@
+.tolerate-control-plane: &tolerate-control-plane
+  key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+
+.node-affinity-require-control-plane: &node-affinity-require-control-plane
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: node-role.kubernetes.io/control-plane
+          operator: In
+          values:
+          - 'true'
+
+.node-affinity-prefer-control-plane: &node-affinity-prefer-control-plane
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      preference:
+        matchExpressions:
+        - key: node-role.kubernetes.io/control-plane
+          operator: In
+          values:
+          - 'true'

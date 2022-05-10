@@ -1,0 +1,15 @@
+# https://artifacthub.io/packages/helm/elastic/eck-operator
+tolerations:
+- key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: node-role.kubernetes.io/control-plane
+          operator: In
+          values:
+          - 'true'

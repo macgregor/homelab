@@ -1,0 +1,11 @@
+repositories:
+- name: democratic-csi
+  url: https://democratic-csi.github.io/charts/
+helmDefaults:
+  createNamespace: true
+releases:
+- name: democratic-csi-nfs-synology-app-data
+  namespace: democratic-csi
+  chart: democratic-csi/democratic-csi
+  values:
+  - ./democratic-csi-nfs-synology-app-data.helm-values.yml

@@ -1,0 +1,67 @@
+# see:
+#   * https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-api-elasticsearch-k8s-elastic-co-v1.html
+#   * https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-elasticsearch-specification.html
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: elastic-users
+  namespace: elastic-system
+stringData:
+  users: |-
+    macgregor:$ELASTIC_MACGREGOR_PASS
+    test:$ELASTIC_TEST_PASS
+  users_roles: |-
+    superuser:macgregor
+    viewer:test
+---
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch
+  namespace: elastic-system
+spec:
+  version: 8.1.3
+  volumeClaimDeletePolicy: DeleteOnScaledownAndClusterDeletion
+  auth:
+    fileRealm: # https://www.elastic.co/guide/en/elasticsearch/reference/current/file-realm.html
+    - secretName: elastic-users
+  nodeSets:
+  - name: masters
+    count: 1
+    config: &config
+      node.roles: ["master","data", "ingest", "transform"]
+      node.store.allow_mmap: true
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data # Do not change this name unless you set up a volume mount for the data path.
+      spec:  &volumeClaimTemplateSpec
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 100Gi
+        storageClassName: synology-nfs-app-data-delete
+    podTemplate: &podTemplate
+      spec:
+        tolerations:
+        - key: "CriticalAddonsOnly"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"
+        affinity:
+          nodeAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+              nodeSelectorTerms:
+              - matchExpressions:
+                - key: node-role.kubernetes.io/control-plane
+                  operator: In
+                  values:
+                  - 'true'
+        containers:
+        - name: elasticsearch
+          resources:
+            requests:
+              memory: 1Gi
+            limits:
+              memory: 2Gi

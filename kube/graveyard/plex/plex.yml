@@ -1,0 +1,120 @@
+# https://gist.github.com/darth-veitcher/802d028d8e3888d673af87fdf0f41609
+# https://www.debontonline.com/2021/01/part-14-deploy-plexserver-yaml-with.html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: plex-config
+  namespace: plex
+  labels:
+    app: plexserver
+data:
+  TZ: "America/New_York"
+  ADVERTISE_IP: 'http://192.168.1.221:32400/,https://plex.matthew-stratton.com,http://192.168.1.211:32400/'
+  HOSTNAME: plex.matthew-stratton.me
+
+  # These did not get set, I had to add them in Settings -> Network -> List of IP addresses and networks that are allowed without auth
+  ALLOWED_NETWORKS: "192.168.1.0/24,10.42.0.0/14"
+  VERSION: docker
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plex
+  namespace: plex
+  labels:
+    app: plexserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: plexserver
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: plexserver
+    spec:
+      volumes:
+      - name: plex-config
+        persistentVolumeClaim:
+          claimName: plex-config
+      - name: plex-transcode
+        persistentVolumeClaim:
+          claimName: plex-transcode
+      - name: plex-data
+        nfs: # data folder is a mounted pre-existing NFS share, *not* a PV/PVC
+          server: 192.168.1.200
+          path: /volume1/Media
+      dnsConfig:
+        # had a weird quirk where urls wouldnt resolve because kubernetes DNS
+        # tried to search my own subdomain of matthew-stratton.me (e.g.
+        # plex.tx.matthew-stratton.me) which would claim authority over the domain
+        # (even though that domain doesnt exist) which halts DNS
+        #
+        # This override tells the DNS resolver to skip all the custom search
+        # domains if there is a single dot in the domain name rather than the
+        # default of 5.
+        #
+        # This may break pod to pod comms that rely on cluster name resolution,
+        # but plex does not.
+        #
+        # https://pracucci.com/kubernetes-dns-resolution-ndots-options-and-why-it-may-affect-application-performances.html
+        options:
+          - name: ndots
+            value: "1"
+      containers:
+      - name: plex
+        image: linuxserver/plex:1.26.0 #https://hub.docker.com/r/linuxserver/plex
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: 1Gi
+          limits:
+            memory: 6Gi
+        ports: # https://support.plex.tv/articles/201543147-what-network-ports-do-i-need-to-allow-through-my-firewall/
+        - containerPort: 32400 #PMS
+          name: plex
+          protocol: TCP
+        - containerPort: 32400
+          name: plex-udp
+          protocol: UDP
+        - containerPort: 32469 #Plex DLNA
+          name: plex-dlna
+          protocol: TCP
+        - containerPort: 1900 #Plex DLNA
+          name: plex-dlna-udp
+          protocol: UDP
+        - containerPort: 5353
+          name: plex-discovery
+          protocol: UDP
+        - containerPort: 32410
+          name: gdm-1 # GDM network discovery
+          protocol: UDP
+        - containerPort: 32412
+          name: gdm-2 # GDM network discovery
+          protocol: UDP
+        - containerPort: 32413
+          name: gdm-3 # GDM network discovery
+          protocol: UDP
+        - containerPort: 32414
+          name: gdm-4 # GDM network discovery
+          protocol: UDP
+        envFrom:
+        - configMapRef:
+            name: plex-config
+        env:
+        - name: PLEX_CLAIM
+          valueFrom:
+            secretKeyRef:
+              name: plex-claim-token
+              key: token
+              optional: true
+        volumeMounts:
+        - mountPath: /config
+          name: plex-config
+        - mountPath: /transcode
+          name: plex-transcode
+        - mountPath: /data
+          name: plex-data

@@ -1,0 +1,52 @@
+# https://artifacthub.io/packages/helm/cert-manager/cert-manager
+tolerations:
+- key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: node-role.kubernetes.io/control-plane
+          operator: In
+          values:
+          - 'true'
+ingressShim:
+  defaultIssuerName: letsencrypt
+  defaultIssuerKind: ClusterIssuer
+  defaultIssuerGroup: cert-manager.io
+webhook:
+  tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-role.kubernetes.io/control-plane
+            operator: In
+            values:
+            - 'true'
+cainjector:
+  tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-role.kubernetes.io/control-plane
+            operator: In
+            values:
+            - 'true'
+prometheus:
+  servicemonitor:
+    enabled: true

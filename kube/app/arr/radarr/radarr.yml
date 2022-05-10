@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: radarr
+  namespace: arr
+  labels:
+    app.kubernetes.io/name: radarr
+    app.kubernetes.io/version: 4.1.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: radarr
+  template:
+    metadata:
+      annotations:
+        fluentbit.io/parser: "radarr"
+      labels:
+        app.kubernetes.io/name: radarr
+    spec:
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      volumes:
+      - name: radarr-config
+        persistentVolumeClaim:
+          claimName: radarr-config
+      - name: data
+        nfs: # data folder is a mounted pre-existing NFS share, *not* a PV/PVC
+          server: 192.168.1.200
+          path: /volume1/Media
+      containers:
+      - env:
+        - name: TZ
+          value: America/New_York
+        - name: PUID
+          value: '222'
+        - name: PGID
+          value: '321'
+        - name: UMASK
+          value: '002'
+        image: lscr.io/linuxserver/radarr:4.1.0
+        imagePullPolicy: IfNotPresent
+        name: radarr
+        resources:
+          requests:
+            memory: 128Mi
+          limits:
+            memory: 512Mi
+        ports:
+        - containerPort: 7878
+          name: http
+          protocol: TCP
+        resources: {}
+        stdin: true
+        tty: true
+        volumeMounts:
+        - mountPath: /data
+          name: data
+        - mountPath: /config
+          name: radarr-config

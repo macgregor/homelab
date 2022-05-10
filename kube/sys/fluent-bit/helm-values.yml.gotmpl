@@ -1,0 +1,37 @@
+# https://github.com/fluent/helm-charts/tree/main/charts/fluent-bit
+image:
+  tag: "1.9.3"
+  pullPolicy: IfNotPresent
+
+dashboards:
+  enabled: true
+
+tolerations:
+- key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+
+labels:
+  app.kubernetes.io/name: fluent-bit
+
+podLabels:
+  app.kubernetes.io/name: fluent-bit
+
+serviceMonitor:
+  enabled: true
+  namespace: obs
+  jobLabel: fluent-bit
+
+config:
+  filters: |
+{{ readFile "./conf/filters.conf" | indent 6}}
+
+  inputs: |
+{{ readFile "./conf/inputs.conf" | indent 6}}
+
+  outputs: |
+{{ readFile "./conf/outputs.conf" | indent 6}}
+
+  customParsers: |
+{{ readFile "./conf/parsers.conf" | indent 6}}
