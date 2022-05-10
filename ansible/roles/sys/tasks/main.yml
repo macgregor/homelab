@@ -1,0 +1,14 @@
+---
+- name: Configure system - general
+  include_tasks:
+    file: sys.yml
+
+- name: Configure system - k3s
+  include_tasks:
+    file: k3s.yml
+
+- name: Install storage requirements
+  include_tasks:
+    file: storage.yml
+
+- meta: flush_handlers

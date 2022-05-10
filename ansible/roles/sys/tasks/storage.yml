@@ -1,0 +1,49 @@
+---
+
+- name: "Install storage packages"
+  package:
+    name:
+    - "open-iscsi"
+    - "lsscsi"
+    - "sg3-utils"
+    - "multipath-tools"
+    - "scsitools"
+    - "nfs-common"
+    state: 'latest'
+
+- name: Configure iscsi multipath
+  template:
+    src: multipath.conf.j2
+    dest: /etc/multipath.conf
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Configure iscsi initiatorname
+  template:
+    src: initiatorname.iscsi.j2
+    dest: /etc/iscsi/initiatorname.iscsi
+    owner: 'root'
+    group: 'root'
+    mode: '0600'
+
+- name: Set startup to automatic in /etc/iscsi/iscsid.conf
+  lineinfile:
+    path: '/etc/iscsi/iscsid.conf'
+    regex: '^node\.startup\ =\ manual'
+    line: 'node.startup = automatic'
+    owner: 'root'
+    group: 'root'
+    mode: '0600'
+
+- name: "Start and enable iscsid service"
+  service:
+    name: "iscsid"
+    enabled: true
+    state: 'started'
+
+- name: "Start and enable multipath-tools service"
+  service:
+    name: "multipath-tools"
+    enabled: true
+    state: 'started'

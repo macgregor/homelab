@@ -1,0 +1,17 @@
+---
+
+- hosts: cluster
+  gather_facts: yes
+  become: yes
+  roles:
+    - role: sys
+
+- hosts: master
+  become: yes
+  roles:
+    - role: k3s/master
+
+- hosts: node
+  become: yes
+  roles:
+    - role: k3s/node

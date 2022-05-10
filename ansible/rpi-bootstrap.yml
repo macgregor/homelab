@@ -1,0 +1,56 @@
+- hosts: cluster
+  gather_facts: yes
+  become: yes
+  vars:
+    ansible_ssh_user: ubuntu
+  tasks:
+  - name: "Add the user '{{ ansible_user }}'"
+    ansible.builtin.user:
+      name: "{{ ansible_user }}"
+      uid: 1001
+      groups: sudo
+      shell: /bin/bash
+      createhome: yes
+
+  - name: Set authorized key taken from file
+    ansible.posix.authorized_key:
+      user: "{{ ansible_user }}"
+      state: present
+      key: "{{ lookup('file', '{{ ssh_pub_key }}') }}"
+
+  - name: Allow 'sudo' group to have passwordless sudo
+    lineinfile:
+      dest: /etc/sudoers
+      state: present
+      regexp: '^%sudo'
+      line: '%sudo ALL=(ALL) NOPASSWD: ALL'
+      validate: 'visudo -cf %s'
+
+- name: Log in as new user to disable root
+  hosts: cluster
+  gather_facts: false
+  become: yes
+
+  tasks:
+  - name: Remove the user 'ubuntu' if present
+    ansible.builtin.user:
+      name: ubuntu
+      state: absent
+      remove: yes
+      force: true
+
+  - name: Disable root login over SSH
+    lineinfile: dest=/etc/ssh/sshd_config regexp="^PermitRootLogin" line="PermitRootLogin no" state=present
+    notify:
+      - restart sshd
+
+  - name: Disable password login
+    lineinfile: dest=/etc/ssh/sshd_config regexp="^PasswordAuthentication" line="PasswordAuthentication no" state=present
+    notify:
+      - restart sshd
+
+  handlers:
+  - name: restart sshd
+    service:
+      name: sshd
+      state: restarted
