@@ -11,10 +11,11 @@ spec:
     matchLabels:
       app.kubernetes.io/name: whoami
   replicas: 1
+  revisionHistoryLimit: 0
   template:
     metadata:
       labels:
-        app: whoami
+        app.kubernetes.io/name: whoami
     spec:
       containers:
       - image: traefik/whoami

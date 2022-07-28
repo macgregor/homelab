@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kuard
-  namespace: kuard
+  namespace: demo
   labels:
     app.kubernetes.io/name: kuard
 spec:
@@ -11,6 +11,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: kuard
   replicas: 1
+  revisionHistoryLimit: 0
   template:
     metadata:
       labels:
