@@ -1,0 +1,43 @@
+#!/bin/bash
+
+DRY_RUN="none"
+RESERVED_NS=(default kube-node-lease kube-public kube-system)
+
+# https://medium.com/@Drew_Stokes/bash-argument-parsing-54f3b81a6a8f
+PARAMS=""
+while (( "$#" )); do
+  case "$1" in
+    -h|--help)
+      help
+      exit 0
+      ;;
+    -d|--dry-run)
+      DRY_RUN='client'
+      shift
+      ;;
+    -*|--*=) # unsupported flags
+      echo "Error: Unsupported flag $1" >&2
+      exit 1
+      ;;
+    *) # preserve positional arguments
+      PARAMS="$PARAMS $1"
+      shift
+      ;;
+  esac
+done
+
+# set positional arguments in their proper place
+eval set -- "$PARAMS"
+
+namespaces=$(kubectl get ns -o name | sed 's/namespace\///g')
+
+for ns in $namespaces
+do
+  resources=$(kubectl -n $ns get rs --no-headers | awk '{if ($2 + $3 + $4 == 0) print $1}')
+  if [[ ! -z "$resources" ]]; then
+    for resource in $resources
+    do
+      kubectl -n $ns delete rs $resource --dry-run=$DRY_RUN
+    done
+  fi
+done
