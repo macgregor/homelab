@@ -9,7 +9,7 @@ network-multitool-deploy:
 network-multitool-remove:
 	-kubectl delete -f ./app/network-multitool/network-multitool.yml
 	-kubectl -n kube-system get pvc -l 'app.kubernetes.io/name=network-multitool' -o name | xargs -I{} kubectl -n kube-system delete "{}"
-	-kubectl apply -f ./app/network-multitool/network.yml
+	-kubectl delete -f ./app/network-multitool/network.yml
 
 .PHONY: network-multitool-debug
 network-multitool-debug:
