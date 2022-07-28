@@ -1,33 +1,27 @@
-kind: Service
+---
 apiVersion: v1
+kind: Service
 metadata:
-  name: jellyfin-udp
-  namespace: jellyfin
-  annotations:
-    metallb.universe.tf/allow-shared-ip: jellyfin
+  name: jellyfin-lan
+  namespace: media
   labels:
     app.kubernetes.io/name: jellyfin
 spec:
+  type: LoadBalancer
+  loadBalancerIP: 192.168.1.224
+  externalTrafficPolicy: Local
   selector:
     app.kubernetes.io/name: jellyfin
   ports:
-  - port: 1900
-    name: dlna-udp
-    protocol: UDP
-  - port: 7359
-    name: discovery-udp
-    protocol: UDP
-  type: LoadBalancer
-  loadBalancerIP: 192.168.1.222
-  sessionAffinity: ClientIP # multipod deployments: route traffic to the same pod based on ip address
+  - port: 8096
+    name: http-tcp
+    protocol: TCP
 ---
 kind: Service
 apiVersion: v1
 metadata:
-  name: jellyfin-tcp
-  namespace: jellyfin
-  annotations:
-    metallb.universe.tf/allow-shared-ip: jellyfin
+  name: jellyfin
+  namespace: media
   labels:
     app.kubernetes.io/name: jellyfin
 spec:
@@ -40,15 +34,20 @@ spec:
   - port: 8920
     name: https-tcp
     protocol: TCP
-  type: LoadBalancer
-  loadBalancerIP: 192.168.1.222
+  - port: 1900
+    name: dlna-udp
+    protocol: UDP
+  - port: 7359
+    name: discovery-udp
+    protocol: UDP
+  type: ClusterIP
   sessionAffinity: ClientIP # multipod deployments: route traffic to the same pod based on ip address
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: jellyfin
-  namespace: jellyfin
+  namespace: media
   labels:
     app.kubernetes.io/name: jellyfin
   annotations:
@@ -65,7 +64,7 @@ spec:
       paths:
       - backend:
           service:
-            name: jellyfin-tcp
+            name: jellyfin
             port:
               number: 8096
         path: /

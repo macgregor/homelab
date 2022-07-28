@@ -1,0 +1,40 @@
+# https://artifacthub.io/packages/helm/k8s-at-home/xteve
+# https://github.com/k8s-at-home/container-images/pkgs/container/xteve
+# https://github.com/k8s-at-home/library-charts/tree/main/charts/stable/common
+image:
+  repository: ghcr.io/k8s-at-home/xteve
+  tag: v2.2.0.200
+
+env:
+  TZ: America/New_York
+
+persistence:
+  config:
+    enabled: true
+    existingClaim: xteve-config
+    mountPath:  /config
+    readOnly: false
+    retain: true
+
+ingress:
+  main:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt"
+    labels:
+      app.kubernetes.io/name: xteve
+    ingressClassName:  nginx-internal
+
+    hosts:
+      - host: xteve.matthew-stratton.me
+        paths:
+          - path: /
+            pathType: Prefix
+            service:
+              name: xteve
+              port: 34400
+
+    tls:
+    - hosts:
+      - xteve.matthew-stratton.me
+      secretName: xteve-tls

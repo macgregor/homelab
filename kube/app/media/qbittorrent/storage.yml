@@ -1,0 +1,39 @@
+---
+# manually create a PV for config so we dont loose it when we update
+# Need one per pod if running more than one replica, stateful sets should
+# probably be used in that case
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    app.kubernetes.io/name: qbittorrent
+  name: qbittorrent-config
+spec:
+  storageClassName: "" # needs to be blank so dynamic provisioners dont match
+  capacity:
+    storage: 1Gi # not enforced on NFS shares
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /volume2/kube-nfs/v/qbittorrent-config #not dynamic so make sure it already exists on the NAS
+    server: 192.168.1.200
+    readOnly: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app.kubernetes.io/name: qbittorrent
+  name: qbittorrent-config
+  namespace: media
+spec:
+  storageClassName: "" # needs to be blank so dynamic provisioners dont match
+  volumeName: qbittorrent-config
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---

@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jackett
+  namespace: arr
+  labels:
+    app.kubernetes.io/name: jackett
+    app.kubernetes.io/version: 0.20.1038
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jackett
+  template:
+    metadata:
+      annotations:
+        fluentbit.io/parser: "jackett"
+      labels:
+        app.kubernetes.io/name: jackett
+    spec:
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      restartPolicy: Always
+      volumes:
+      - name: jackett-config
+        persistentVolumeClaim:
+          claimName: jackett-config
+      - name: data
+        nfs: # data folder is a mounted pre-existing NFS share, *not* a PV/PVC
+          server: 192.168.1.200
+          path: /volume1/Media/torrents
+      containers:
+      - env:
+        - name: TZ
+          value: America/New_York
+        - name: PUID
+          value: '444'
+        - name: PGID
+          value: '321'
+        - name: UMASK
+          value: '002'
+        - name: AUTO_UPDATE
+          value: 'false'
+        image: lscr.io/linuxserver/jackett:0.20.1038
+        imagePullPolicy: Always
+        name: jackett
+        resources:
+          requests:
+            memory: 128Mi
+          limits:
+            memory: 512Mi
+        ports:
+        - containerPort: 9117
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /config
+          name: jackett-config
+        - mountPath: /downloads
+          name: data

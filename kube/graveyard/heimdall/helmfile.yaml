@@ -1,0 +1,11 @@
+repositories:
+- name: k8s-at-home
+  url: https://k8s-at-home.com/charts/
+helmDefaults:
+  createNamespace: true
+releases:
+- name: heimdall
+  chart: k8s-at-home/heimdall
+  namespace: dashboards
+  values:
+  - ./helm-values.yml

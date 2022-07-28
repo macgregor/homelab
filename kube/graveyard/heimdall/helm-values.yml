@@ -1,0 +1,43 @@
+# https://artifacthub.io/packages/helm/k8s-at-home/heimdall
+# https://hub.docker.com/r/linuxserver/heimdall
+# https://github.com/k8s-at-home/library-charts/tree/main/charts/stable/common
+image:
+  repository: linuxserver/heimdall
+  tag: 2.4.12
+
+env:
+  TZ: America/New_York
+
+podLabels:
+  app.kubernetes.io/name: heimdall
+
+persistence:
+  config:
+    enabled: true
+    mountPath: /config
+    existingClaim: heimdall-config
+    readOnly: false
+    retain: true
+
+ingress:
+  main:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-staging"
+    labels:
+      app.kubernetes.io/name: heimdall
+    ingressClassName:  nginx-internal
+
+    hosts:
+      - host: heimdall.matthew-stratton.me
+        paths:
+          - path: /
+            pathType: Prefix
+            service:
+              name: heimdall
+              port: 80
+
+    tls:
+    - hosts:
+      - heimdall.matthew-stratton.me
+      secretName: heimdall-tls

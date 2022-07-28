@@ -1,0 +1,11 @@
+repositories:
+- name: k8s-at-home
+  url: https://k8s-at-home.com/charts/
+helmDefaults:
+  createNamespace: true
+releases:
+- name: xteve
+  chart: k8s-at-home/xteve
+  namespace: media
+  values:
+  - ./helm-values.yml

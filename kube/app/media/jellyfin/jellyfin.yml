@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin
+  namespace: media
+  labels:
+    app.kubernetes.io/name: jellyfin
+spec:
+  progressDeadlineSeconds: 300
+  replicas: 1
+  revisionHistoryLimit: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jellyfin
+  template:
+    metadata:
+      annotations:
+        fluentbit.io/parser: "jellyfin"
+      labels:
+        app.kubernetes.io/name: jellyfin
+    spec:
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: jellyfin-config
+          persistentVolumeClaim:
+            claimName: jellyfin-config
+        - name: media
+          nfs: # data folder is a mounted pre-existing NFS share, *not* a PV/PVC
+            server: 192.168.1.200
+            path: /volume1/Media/media
+        - name: device-video10  #Only needed if you want to use your Raspberry Pi V4L2 video encoding.
+          hostPath:
+           path: /dev/video10
+        - name: device-video11  #Only needed if you want to use your Raspberry Pi V4L2 video encoding.
+          hostPath:
+           path: /dev/video11
+        - name: device-video12  #Only needed if you want to use your Raspberry Pi V4L2 video encoding.
+          hostPath:
+            path: /dev/video12
+      containers:
+        - name: jellyfin
+          #image: linuxserver/jellyfin:10.7.7
+          #imagePullPolicy: IfNotPresent
+          
+          # using unstable for now to get HW acceleration support
+          image: jellyfin/jellyfin:unstable
+          imagePullPolicy: Always
+
+          # https://jellyfin.org/docs/general/networking/monitoring.html
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http-tcp
+            failureThreshold: 2
+            periodSeconds: 10
+
+          # first time you hit /health fails so you will see pod events like:
+          #   Startup probe failed: Get "http://10.42.1.57:8096/health": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+          # this is ok/normal
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http-tcp
+            initialDelaySeconds: 20
+            failureThreshold: 29
+            periodSeconds: 10
+          env:
+            - name: JELLYFIN_PublishedServerUrl
+              value: 192.168.1.222
+            - name: TZ
+              value: America/New_York
+          resources:
+            requests:
+              memory: 1Gi
+            limits:
+              memory: 6Gi
+          ports:
+            - containerPort: 8096
+              name: http-tcp
+              protocol: TCP
+            - containerPort: 8920
+              name: https-tcp
+              protocol: TCP
+            - containerPort: 1900
+              name: dlna-udp
+              protocol: UDP
+            - containerPort: 7359
+              name: discovery-udp
+              protocol: TCP
+          stdin: true
+          tty: true
+          volumeMounts:
+            - mountPath: /config
+              name: jellyfin-config
+            - mountPath: /data
+              name: media
+            # Below are the path to mount devices for hardware acceleration
+            - mountPath: /dev/video10
+              name: device-video10
+            - mountPath: /dev/video11
+              name: device-video11
+            - mountPath: /dev/video12
+              name: device-video12
