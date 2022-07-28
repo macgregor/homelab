@@ -2,13 +2,29 @@
 - name: Configure system - general
   include_tasks:
     file: sys.yml
+    apply:
+      tags: [ sys ]
+  tags: [ sys ]
+
+- name: Configure system - cleanup
+  include_tasks:
+    file: cleanup.yml
+    apply:
+      tags: [ sys, cleanup ]
+  tags: [ sys, cleanup ]
 
 - name: Configure system - k3s
   include_tasks:
     file: k3s.yml
+    apply:
+      tags: [ k3s ]
+  tags: [ k3s ]
 
 - name: Install storage requirements
   include_tasks:
     file: storage.yml
+    apply:
+      tags: [ k3s ]
+  tags: [ k3s ]
 
 - meta: flush_handlers

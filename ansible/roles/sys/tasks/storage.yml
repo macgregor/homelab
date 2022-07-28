@@ -9,7 +9,8 @@
     - "multipath-tools"
     - "scsitools"
     - "nfs-common"
-    state: 'latest'
+    state: 'present'
+  tags: [ slow ]
 
 - name: Configure iscsi multipath
   template:
@@ -27,23 +28,24 @@
     group: 'root'
     mode: '0600'
 
-- name: Set startup to automatic in /etc/iscsi/iscsid.conf
+# disable iscsi for now since its crazy slow on boot
+# change to automatic to turn back on
+- name: Set startup to manual in /etc/iscsi/iscsid.conf
   lineinfile:
     path: '/etc/iscsi/iscsid.conf'
-    regex: '^node\.startup\ =\ manual'
-    line: 'node.startup = automatic'
+    regex: '^node\.startup\ =\ automatic'
+    line: 'node.startup = manual'
     owner: 'root'
     group: 'root'
     mode: '0600'
 
-- name: "Start and enable iscsid service"
-  service:
-    name: "iscsid"
-    enabled: true
-    state: 'started'
-
-- name: "Start and enable multipath-tools service"
-  service:
-    name: "multipath-tools"
-    enabled: true
-    state: 'started'
+# change to enabled: true/state: started to turn back on
+- name: Manage iscsi services
+  systemd:
+    name: "{{ item.name }}"
+    state: stopped
+    enabled: no
+  loop:
+    - { name: 'iscsid' }
+    - { name: 'open-iscsi' }
+    - { name: 'multipath-tools' }

@@ -1,4 +1,13 @@
 ---
+- name: configure boot options
+  template:
+    src: usercfg.txt.j2
+    dest: /boot/firmware/usercfg.txt
+    owner: root
+    group: root
+    mode: 0755
+  notify: reboot
+
 - name: set locale
   command: /usr/sbin/update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8
 
@@ -17,9 +26,11 @@
 
 - name: Update apt-get repo and cache
   apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+  tags: [ slow ]
 
 - name: Upgrade all apt packages
   apt: upgrade=dist force_apt_get=yes
+  tags: [ slow ]
 
 - name: changing hostname
   hostname: name="{{ inventory_hostname }}"
@@ -37,13 +48,6 @@
     line: "{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ ansible_hostname }}"
   when: ansible_fqdn != inventory_hostname
 
-- name: disable motd-news
-  become: true
-  lineinfile:
-    path: /etc/default/motd-news
-    regexp: '^ENABLED='
-    line: ENABLED=0
-
 - name: Add kubeinfo to motd
   template:
     src: 60-kubeinfo.j2
@@ -52,14 +56,18 @@
     group: root
     mode: 0755
 
-- name: remove Ubuntu motd-help
-  ansible.builtin.file:
-    path: /etc/update-motd.d/10-help-text
-    state: absent
-
-- name: Check if a reboot is needed for Debian and Ubuntu boxes
-  register: reboot_required_file
-  stat: path=/var/run/reboot-required get_md5=no
+# Hardware watchdog should be enabled by default on rpi 3+ so you shouldnt need
+# to enable it with modprobe or dtparam in /boot/config.txt
+# Useful links:
+#   https://raspberrypi.stackexchange.com/questions/108080/watchdog-on-the-rpi4
+#   https://forums.raspberrypi.com/viewtopic.php?f=29&t=147501
+- name: configure systemd hardware watchdog
+  template:
+    src: system.conf.j2
+    dest: /etc/systemd/system.conf
+    owner: root
+    group: root
+    mode: 0644
   notify: reboot
 
 - name: Copy resolv.conf for my network
@@ -70,8 +78,7 @@
     group: root
     mode: 0644
 
-- name: Stop and disable systemd-resolved
-  systemd:
-    name: systemd-resolved
-    state: stopped
-    enabled: no
+- name: Check if a reboot is needed for Debian and Ubuntu boxes
+  register: reboot_required_file
+  stat: path=/var/run/reboot-required get_md5=no
+  notify: reboot

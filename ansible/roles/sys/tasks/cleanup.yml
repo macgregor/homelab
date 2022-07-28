@@ -1,0 +1,67 @@
+- name: Stop and disable unnecessary services
+  systemd:
+    name: "{{ item.name }}"
+    state: stopped
+    enabled: no
+  loop:
+    - { name: 'ModemManager' }
+    - { name: 'systemd-resolved' }
+    - { name: 'accounts-daemon' }
+    - { name: 'cloud-init-local' }
+    - { name: 'cloud-init' }
+    - { name: 'cloud-config' }
+    - { name: 'cloud-final' }
+
+- name: "Remove unused packages"
+  package:
+    name:
+    - "snapd"
+    state: 'absent'
+
+- name: Get snapd mounted filesystems
+  shell: set -o pipefail && cat /proc/mounts | grep snap\/ | awk '{ print $2}'
+  register: snapd_mounted_fs
+  args:
+    executable: /bin/bash
+  failed_when: false
+  changed_when: snapd_mounted_fs.stdout | length > 0
+  check_mode: false
+
+- name: Umount snapd filesystems
+  mount:
+    path: "{{ item }}"
+    state: unmounted
+  with_items:
+    "{{ snapd_mounted_fs.stdout_lines | reverse | list }}"
+
+- name: Get snapd systemd unit files
+  shell: set -o pipefail && find /etc/systemd/system -name "snap-*.mount" -o -name "snap.*.service" -o -name "snapd.*.service"
+  register: snapd_systemd_units
+  args:
+    executable: /bin/bash
+  failed_when: false
+  changed_when: snapd_systemd_units.stdout | length > 0
+  check_mode: false
+
+- name: Remove snapd systemd unit files
+  file:
+    state: absent
+    path: "{{ item }}"
+  with_items:
+    "{{ snapd_systemd_units.stdout_lines | reverse | list }}"
+
+- name: Delete files and directories
+  file:
+    state: absent
+    path: '{{ item.path }}'
+  loop:
+    - { path: '/etc/update-motd.d/10-help-text' }
+    - { path: '/var/lib/snap' }
+    - { path: '/snap' }
+
+- name: disable motd-news
+  become: true
+  lineinfile:
+    path: /etc/default/motd-news
+    regexp: '^ENABLED='
+    line: ENABLED=0

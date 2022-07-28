@@ -8,6 +8,7 @@
     owner: root
     group: root
     mode: 0755
+  tags: [ slow ]
 
 - name: Copy K3s service file
   register: k3s_service
@@ -23,6 +24,14 @@
     name: k3s
     daemon_reload: yes
     state: restarted
+    enabled: yes
+  tags: [ slow ]
+
+# https://github.com/k3s-io/k3s/issues/2400#issuecomment-1013798094
+- name: Enable cgroup kill to make server shutdown faster
+  systemd:
+    name: cgroup-kill-on-shutdown@k3s.service.service
+    daemon_reload: yes
     enabled: yes
 
 - name: Wait for node-token

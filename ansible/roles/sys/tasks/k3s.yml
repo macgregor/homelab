@@ -20,3 +20,11 @@
     value: "262144"
     state: present
     reload: yes
+
+- name: Add cgroup kill on shutdown systemd template
+  template:
+    src: cgroup-kill-on-shutdown@.service.j2
+    dest: /etc/systemd/system/cgroup-kill-on-shutdown@.service
+    owner: root
+    group: root
+    mode: 0755
