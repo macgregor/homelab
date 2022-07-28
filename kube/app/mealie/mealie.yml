@@ -1,0 +1,93 @@
+# https://hub.docker.com/r/hkotel/mealie
+# https://hay-kot.github.io/mealie/documentation/getting-started/install/
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mealie-config
+  namespace: mealie
+data:
+  PUID: "666"
+  PGID: "321"
+  UMASK: "002"
+  TZ: "America/New_York"
+
+  DEFAULT_EMAIL: matthew.m.stratton@gmail.com
+  BASE_URL: https://cook.matthew-stratton.me
+
+  # Database Settings
+  DB_ENGINE: postgres
+  POSTGRES_USER: mealie
+  POSTGRES_SERVER: 192.168.1.200
+  POSTGRES_PORT: '35432'
+  POSTGRES_DB: mealie
+
+  # Default Recipe Settings
+  RECIPE_PUBLIC: 'true'
+  RECIPE_SHOW_NUTRITION: 'true'
+  RECIPE_SHOW_ASSETS: 'true'
+  RECIPE_LANDSCAPE_VIEW: 'true'
+  RECIPE_DISABLE_COMMENTS: 'false'
+  RECIPE_DISABLE_AMOUNT: 'false'
+
+  # Gunicorn
+  # WEB_CONCURRENCY: 2
+  # WORKERS_PER_CORE: 0.5
+  # MAX_WORKERS: 8
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mealie
+  namespace: mealie
+  labels:
+    app.kubernetes.io/name: mealie
+    app.kubernetes.io/version: v0.5.6
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mealie
+  template:
+    metadata:
+      annotations:
+        fluentbit.io/parser: "mealie"
+      labels:
+        app.kubernetes.io/name: mealie
+    spec:
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      containers:
+        - name: mealie
+          image: hkotel/mealie:v0.5.6
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              memory: 128Mi
+            limits:
+              memory: 1Gi
+          envFrom:
+            - configMapRef:
+                name: mealie-config
+                optional: false
+            - secretRef:
+                name: mealie-env
+                optional: false
+          ports:
+            - containerPort: 80
+              name: http-tcp
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /app/data
+              name: mealie-data
+      volumes:
+        - name: mealie-data
+          persistentVolumeClaim:
+            claimName: mealie-data
