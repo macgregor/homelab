@@ -22,6 +22,7 @@ controller:
 
   hostname: nginx-external-lb
   ingressClass: nginx-external
+  electionID: nginx-external-leader
   ingressClassResource:
     name: nginx-external
     enabled: true
@@ -29,9 +30,9 @@ controller:
     controllerValue: "k8s.io/ingress-nginx-external"
 
   service:
+    loadBalancerIP: 192.168.1.220
     external:
       enabled: true
-      loadBalancerIP: 192.168.1.220
 
   metrics:
     enabled: true

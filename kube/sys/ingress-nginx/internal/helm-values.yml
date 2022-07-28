@@ -22,6 +22,7 @@ controller:
 
   hostname: nginx-internal-lb
   ingressClass: nginx-internal
+  electionID: nginx-internal-leader
   ingressClassResource:
     name: nginx-internal
     enabled: true
@@ -29,9 +30,9 @@ controller:
     controllerValue: "k8s.io/ingress-nginx-internal"
 
   service:
+    loadBalancerIP: 192.168.1.221
     external:
       enabled: true
-      loadBalancerIP: 192.168.1.221
       loadBalancerSourceRanges:
       - 192.168.1.0/24
       - 10.42.0.0/24
