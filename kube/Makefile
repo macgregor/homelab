@@ -4,6 +4,7 @@ pod?=
 n?=default
 DEBUG_POD_NAME?=`kubectl -n kube-system get pods --field-selector spec.nodeName=${node} --no-headers -o name | grep network-multitool | head -n 1`
 
+include sys/coredns/coredns.mk
 include sys/cert-manager/cert-manager.mk
 include sys/democratic-csi/democratic-csi.mk
 include sys/ingress-nginx/internal/ingress-nginx.mk
@@ -13,15 +14,14 @@ include sys/oauth2-proxy/oauth2-proxy.mk
 include sys/loki/loki.mk
 include sys/fluent-bit/fluent-bit.mk
 include sys/kube-prometheus-stack/kube-prometheus-stack.mk
+include app/adguard/adguard.mk
 include app/network-multitool/network-multitool.mk
+include app/dashy/dashy.mk
 include app/foundry-vtt/foundry-vtt.mk
-include app/jellyfin/jellyfin.mk
+include app/media/jellyfin/jellyfin.mk
+include app/media/qbittorrent/qbittorrent.mk
 include app/synology-dsm/synology-dsm.mk
-include app/arr/sonarr/sonarr.mk
-include app/arr/radarr/radarr.mk
-include app/arr/qbittorrent/qbittorrent.mk
-include app/arr/prowlarr/prowlarr.mk
-#include app/grafana/grafana.mk
+include app/mealie/mealie.mk
 include demo/whoami/whoami.mk
 include demo/kuard/kuard.mk
 
@@ -38,19 +38,27 @@ ingress-logs:
 	kubectl -n ingress-nginx logs deployment/ingress-nginx-controller --follow
 
 .PHONY: deploy-sys
-deploy-sys: democratic-csi-deploy cert-manager-deploy metallb-deploy ingress-internal-deploy ingress-external-deploy oauth2-proxy-deploy loki-deploy fluent-bit-deploy kube-prometheus-stack-deploy
+deploy-sys: coredns-deploy democratic-csi-deploy cert-manager-deploy metallb-deploy ingress-internal-deploy ingress-external-deploy oauth2-proxy-deploy loki-deploy fluent-bit-deploy kube-prometheus-stack-deploy
 	@echo "Done."
 
 .PHONY: remove-sys
-remove-sys: democratic-csi-remove cert-manager-remove metallb-remove ingress-internal-remove ingress-external-remove oauth2-proxy-remove loki-remove fluent-bit-remove kube-prometheus-stack-remove
+remove-sys: coredns-remove democratic-csi-remove cert-manager-remove metallb-remove ingress-internal-remove ingress-external-remove oauth2-proxy-remove loki-remove fluent-bit-remove kube-prometheus-stack-remove
 	@echo "Done."
 
 .PHONY: deploy-apps
-deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy synology-dsm-deploy sonarr-deploy prowlarr-deploy radarr-deploy qbittorrent-deploy
+deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy synology-dsm-deploy qbittorrent-deploy dashy-deploy mealie-deploy
+	@echo "Done."
+
+.PHONY: stop-apps
+stop-apps: foundry-vtt-stop jellyfin-stop network-multitool-stop qbittorrent-stop dashy-stop mealie-stop
+	@echo "Done."
+
+.PHONY: start-apps
+start-apps: foundry-vtt-start jellyfin-start network-multitool-start qbittorrent-start dashy-start mealie-start
 	@echo "Done."
 
 .PHONY: remove-apps
-remove-apps: foundry-vtt-remove jellyfin-remove network-multitool-remove synology-dsm-remove sonarr-remove prowlarr-remove radarr-remove qbittorrent-remove
+remove-apps: foundry-vtt-remove jellyfin-remove network-multitool-remove synology-dsm-remove qbittorrent-remove dashy-remove mealie-remove
 	@echo "Done."
 
 .PHONY: deploy-demos
