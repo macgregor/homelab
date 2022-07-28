@@ -1,10 +1,11 @@
 # https://github.com/helm/charts/tree/master/stable/metallb
+# todo: switch to https://github.com/bitnami/charts/tree/master/bitnami/metallb
 configInline:
   address-pools:
    - name: default
      protocol: layer2
      addresses:
-     - 192.168.1.220-192.168.1.229
+     - 192.168.1.220-192.168.1.239
 
 prometheus:
   serviceMonitor:
