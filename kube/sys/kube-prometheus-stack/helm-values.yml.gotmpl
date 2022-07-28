@@ -6,6 +6,14 @@
   value: "true"
   effect: "NoSchedule"
 
+.relabel-pod-node-name: &relabel-pod-node-name
+  - sourceLabels: [__meta_kubernetes_pod_node_name]
+    separator: ;
+    regex: ^(.*)$
+    targetLabel: nodename
+    replacement: $1
+    action: replace
+
 namespaceOverride: obs
 
 commonLabels:
@@ -16,35 +24,6 @@ defaultRules:
 
 alertmanager:
   enabled: false
-
-prometheusOperator:
-  podAnnotations:
-    fluentbit.io/parser: "logfmt"
-
-  tolerations:
-  - <<: *tolerate-control-plane
-  admissionWebhooks:
-    patch:
-      tolerations:
-      - <<: *tolerate-control-plane
-
-prometheus:
-  prometheusSpec:
-    # Setting this value to false makes prometheus pick up all ServiceMonitors,
-    # otherwise the helm chart  configures prometheus to only pick up
-    # ServiceMonitors with the label 'release: $.Release.Name'
-    # see: https://github.com/prometheus-community/helm-charts/blob/902a9561966d41fb2b33fa64dd70d67a930a3ee9/charts/kube-prometheus-stack/templates/prometheus/prometheus.yaml#L123
-    serviceMonitorSelectorNilUsesHelmValues: false
-    tolerations:
-    - <<: *tolerate-control-plane
-    storageSpec:
-      volumeClaimTemplate:
-        spec:
-          storageClassName: synology-nfs-app-data-delete
-          accessModes: ["ReadWriteOnce"]
-          resources:
-            requests:
-              storage: 50Gi
 
 grafana:
   enabled: true
@@ -59,6 +38,178 @@ grafana:
     url: http://loki:3100
     version: 1
     readOnly: false
+  serviceMonitor:
+    enabled: false
 
+# https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+kubeApiServer:
+  serviceMonitor:
+    enabled: true
+    metricRelabelings: []
+    relabelings:
+      - sourceLabels: [__name__]
+        regex: ^apiserver_(client_certificate|cache|flowcontrol|kube_aggregator|registered_watchers|request_filter|request_slo|storage|watch_events).*
+        action: drop
+
+# https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/
+kubelet:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    cAdvisorMetricRelabelings: []
+
+    probesMetricRelabelings: []
+
+    cAdvisorRelabelings: []
+
+    probesRelabelings:
+      - sourceLabels: [__metrics_path__]
+        targetLabel: metrics_path
+
+    metricRelabelings: []
+
+    relabelings:
+      - sourceLabels: [__metrics_path__]
+        targetLabel: metrics_path
+      - sourceLabels: [__meta_kubernetes_pod_node_name]
+        regex: ^(.*)$
+        targetLabel: nodename
+        replacement: $1
+        action: replace
+      - sourceLabels: [__name__, image]
+        separator: ;
+        regex: container_([a-z_]+);
+        replacement: $1
+        action: drop
+      - sourceLabels: [__name__]
+        regex: container_(network_tcp_usage_total|network_udp_usage_total|tasks_state|cpu_load_average_10s)
+        replacement: $1
+        action: drop
+
+# https://kubernetes.io/docs/reference/command-line-tools-reference/kube-controller-manager/
+kubeControllerManager:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+    metricRelabelings: []
+
+    relabelings: []
+
+coreDns:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    metricRelabelings: []
+
+    relabelings:
+      - sourceLabels: [__name__]
+        regex: ^coredns_(build_info|hosts|kubernetes|plugin_enabled|reload_failed_total).*
+        action: drop
+
+# Not needed, using CoreDNS
+kubeDns:
+  enabled: false
+
+# Not needed, using MariaDB
 kubeEtcd:
   enabled: false
+  serviceMonitor:
+    enabled: false
+    metricRelabelings: []
+    relabelings: []
+
+# Dont really care about scheduler metrics
+kubeScheduler:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    metricRelabelings: []
+
+    relabelings: []
+
+kubeProxy:
+  serviceMonitor:
+    enabled: false
+    metricRelabelings: []
+
+    relabelings: []
+
+# https://github.com/kubernetes/kube-state-metrics
+# kube-state-metrics (KSM) is a simple service that listens to the Kubernetes
+# API server and generates metrics about the state of the objects. It is not
+# focused on the health of the individual Kubernetes components, but rather on
+# the health of the various objects inside, such as deployments, nodes and pods.
+kubeStateMetrics:
+  enabled: false
+
+kube-state-metrics:
+  prometheus:
+    monitor:
+      enabled: false
+      metricRelabelings: []
+      relabelings: []
+  selfMonitor:
+    enabled: false
+
+# https://github.com/prometheus/node_exporter
+# Prometheus exporter for hardware and OS metrics exposed by *NIX kernels
+nodeExporter:
+  enabled: true
+
+prometheus-node-exporter:
+  prometheus:
+    monitor:
+      enabled: true
+      metricRelabelings: []
+
+      relabelings:
+        - sourceLabels: [__name__]
+          regex: ^node_(cpu|disk_io|disk_read|disk_writ|filefd|hwmon_temp_celsius|ipvs|load|memory|nfs|pressure|sockstat_TCP|sockstat_UDP|thermal_zone_temp|network_receive|network_speed_bytes|network_transmit|network_up).*
+          action: keep
+
+prometheusOperator:
+  podAnnotations:
+    fluentbit.io/parser: "logfmt"
+
+  tolerations:
+  - <<: *tolerate-control-plane
+  admissionWebhooks:
+    patch:
+      tolerations:
+      - <<: *tolerate-control-plane
+
+  serviceMonitor:
+    selfMonitor: false
+    metricRelabelings: []
+
+    relabelings: []
+
+prometheus:
+  serviceMonitor:
+    selfMonitor: false
+    metricRelabelings: []
+    relabelings: []
+
+  prometheusSpec:
+    # Setting this value to false makes prometheus pick up all ServiceMonitors,
+    # otherwise the helm chart  configures prometheus to only pick up
+    # ServiceMonitors with the label 'release: $.Release.Name'
+    # see: https://github.com/prometheus-community/helm-charts/blob/902a9561966d41fb2b33fa64dd70d67a930a3ee9/charts/kube-prometheus-stack/templates/prometheus/prometheus.yaml#L123
+    serviceMonitorSelectorNilUsesHelmValues: false
+
+    resources:
+      requests:
+        memory: 500Mi
+      limits:
+        memory: 1.5Gi
+
+    tolerations:
+    - <<: *tolerate-control-plane
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: synology-nfs-app-data-delete
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi

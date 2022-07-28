@@ -8,10 +8,10 @@ metadata:
     app.kubernetes.io/name: grafana
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt"
-    nginx.ingress.kubernetes.io/auth-url: "https://sso.matthew-stratton.me/oauth2/auth"
-    nginx.ingress.kubernetes.io/auth-signin: "https://sso.matthew-stratton.me/oauth2/start"
-    nginx.ingress.kubernetes.io/auth-response-headers: "x-auth-request-user, x-auth-request-email, x-auth-request-access-token"
-    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+    #nginx.ingress.kubernetes.io/auth-url: "https://sso.matthew-stratton.me/oauth2/auth"
+    #nginx.ingress.kubernetes.io/auth-signin: "https://sso.matthew-stratton.me/oauth2/start"
+    #nginx.ingress.kubernetes.io/auth-response-headers: "x-auth-request-user, x-auth-request-email, x-auth-request-access-token"
+    #nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
 spec:
   ingressClassName: nginx-internal
   tls:
@@ -39,10 +39,10 @@ metadata:
     app.kubernetes.io/name: prometheus
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt"
-    nginx.ingress.kubernetes.io/auth-url: "https://sso.matthew-stratton.me/oauth2/auth"
-    nginx.ingress.kubernetes.io/auth-signin: "https://sso.matthew-stratton.me/oauth2/start"
-    nginx.ingress.kubernetes.io/auth-response-headers: "x-auth-request-user, x-auth-request-email, x-auth-request-access-token"
-    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+    #nginx.ingress.kubernetes.io/auth-url: "https://sso.matthew-stratton.me/oauth2/auth"
+    #nginx.ingress.kubernetes.io/auth-signin: "https://sso.matthew-stratton.me/oauth2/start"
+    #nginx.ingress.kubernetes.io/auth-response-headers: "x-auth-request-user, x-auth-request-email, x-auth-request-access-token"
+    #nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
 spec:
   ingressClassName: nginx-internal
   tls:

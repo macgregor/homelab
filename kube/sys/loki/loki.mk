@@ -9,7 +9,6 @@ loki-deploy:
 loki-remove:
 	-helmfile --file ./sys/loki/helmfile.yaml destroy
 	-kubectl delete -f ./sys/loki/storage.yml
-	-kubectl delete -f ./sys/loki/namespace.yml --cascade=background
 
 .PHONY: loki-status
 loki-status:

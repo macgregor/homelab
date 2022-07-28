@@ -1,4 +1,5 @@
 include sys/kube-prometheus-stack/prometheus.mk
+include sys/kube-prometheus-stack/grafana.mk
 
 .PHONY: kube-prometheus-stack-crds
 kube-prometheus-stack-crds:
