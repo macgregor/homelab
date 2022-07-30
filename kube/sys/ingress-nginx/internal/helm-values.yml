@@ -13,6 +13,8 @@ controller:
     patch:
       tolerations:
       - <<: *tolerate-control-plane
+  extraArgs:
+    enable-ssl-passthrough: true
 
   name: controller-internal
 
