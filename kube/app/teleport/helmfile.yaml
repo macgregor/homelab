@@ -1,0 +1,11 @@
+repositories:
+- name: teleport
+  url: https://charts.releases.teleport.dev
+helmDefaults:
+  createNamespace: true
+releases:
+- name: teleport-cluster
+  chart: teleport/teleport-cluster
+  namespace: teleport
+  values:
+  - ./helm-values.yml

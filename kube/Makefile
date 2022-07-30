@@ -22,6 +22,7 @@ include app/media/jellyfin/jellyfin.mk
 include app/media/qbittorrent/qbittorrent.mk
 include app/synology-dsm/synology-dsm.mk
 include app/mealie/mealie.mk
+include app/teleport/teleport.mk
 include demo/whoami/whoami.mk
 include demo/kuard/kuard.mk
 
@@ -76,3 +77,7 @@ deploy-all: deploy-sys deploy-apps deploy-demos
 .PHONY: remove-all
 remove-all: remove-apps remove-sys remove-demos
 	@echo "Done."
+
+.PHONY: kube-tunnel
+kube-tunnel:
+	ssh -fNT -L 6443:k3-m1:6443 root@router-public-ip
