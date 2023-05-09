@@ -17,14 +17,14 @@
   include_tasks:
     file: k3s.yml
     apply:
-      tags: [ k3s ]
-  tags: [ k3s ]
+      tags: [ sys ]
+  tags: [ sys ]
 
 - name: Install storage requirements
   include_tasks:
     file: storage.yml
     apply:
-      tags: [ k3s ]
-  tags: [ k3s ]
+      tags: [ sys, storage ]
+  tags: [ sys, storage ]
 
 - meta: flush_handlers

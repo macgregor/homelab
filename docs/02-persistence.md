@@ -6,6 +6,7 @@
 2. setup k3s to use mariadb
   * ssl
 3. install synology-csi driver
+  * synology iscsi driver suuuuucks
 
 Resources:
 * https://dr-b.io/post/Synology-DSM-7-with-Lets-Encrypt-and-DNS-Challenge

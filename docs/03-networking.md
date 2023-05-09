@@ -43,6 +43,52 @@ Configuring your router steps:
   * metallb will assign LAN ips (192. addresses) for kubernetes services that will appear on the device list here. We can then forward traffic to these lan IP addresses (e.g. router -> nginx-external-lb -> pods hosting a service)
 5. firewall script (allow and forward external address from cloudflare ups, allow internal traffic to reach kubernetes)
 
+
+Firewall script
+saved to /mnt/1.44.1-42218/firewall_rules.sh
+```
+KUBE_LB=192.168.1.220
+
+echo "Configuring firewall rules"
+
+# create cloudflare-proxy chains
+iptables -N cloudflare-proxy 2>/dev/null
+iptables -N cloudflare-proxy -t nat 2>/dev/null
+
+# add rules to WANPREROUTING/wanin to jump to the cloudflare-proxy chains
+if ! iptables -t nat --check WANPREROUTING -j cloudflare-proxy 2>/dev/null; then
+  iptables -t nat -A WANPREROUTING -j cloudflare-proxy
+fi
+
+if ! iptables --check wanin -j cloudflare-proxy 2>/dev/null; then
+  iptables -A wanin -j cloudflare-proxy
+fi
+
+# clear old rules
+iptables --flush cloudflare-proxy
+iptables -t nat --flush cloudflare-proxy
+
+# get cloudflare proxy ip addresses and allow them through the firewall
+for i in `curl -s -H 'Cache-Control: no-cache, no-store' https://www.cloudflare.com/ips-v4`; do
+  iptables -t nat -A cloudflare-proxy -s $i -p tcp -m tcp --dport 443 -j DNAT --to-destination $KUBE_LB:443
+  iptables -A cloudflare-proxy -s $i -d $KUBE_LB -p tcp -m tcp --dport 443 -j ACCEPT
+done
+
+# Accept internal ip traffic
+if ! iptables --check INPUT -s 192.168.10.0/24 -j ACCEPT 2>/dev/null; then
+  iptables -I INPUT -s 192.168.10.0/24 -j ACCEPT
+fi
+
+if ! iptables --check INPUT -s 192.168.1.0/24 -j ACCEPT 2>/dev/null; then                              
+  iptables -I INPUT -s 192.168.1.0/24 -j ACCEPT                                                        
+fi
+```
+
+Administration -> Scripts -> Firewall:
+```
+sh /mnt/1.44.1-42218/firewall_rules.sh
+```
+
 ### MetalLB
 
 **Resources**:
@@ -71,28 +117,6 @@ daemonset.apps/speaker created
 deployment.apps/controller created
 $ kubectl apply -f ./kube/network/metallb-config.yml
 configmap/config created
-```
-
-kubectl -n elastic-system get secret/kibana-tls -ojson | jq -r '.data["tls.crt"]' | base64 --decode | openssl x509 -text -noout
-curl -kvL --resolve 'kibana.matthew-stratton.me:443:192.168.1.220' https://kibana.matthew-stratton.me/
-
-```
-
-
-envsubst < deployment.yaml | kubectl apply -f -
-brew install gettext
-brew install helm
-brew install helmfile
-helm plugin install https://github.com/aslafy-z/helm-git
-helm plugin install https://github.com/databus23/helm-diff
-
-helm install rancher rancher-latest/rancher \
-  --namespace cattle-system \
-  --set hostname=rancher.matthew-stratton.me \
-  --set replicas=3 \
-  --set ingress.tls.source=letsEncrypt \
-  --set letsEncrypt.email=me@example.org \
-  --set letsEncrypt.ingress.class=traefik
 ```
 
 # Diagrams

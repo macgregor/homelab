@@ -1,4 +1,8 @@
 
+* elasticsearch is super heavy
+* using fluentd, loki and grafana as a lightweight alternative
+
+
 # Resources
 * Elastic Cloud Operator: https://artifacthub.io/packages/helm/elastic/eck-operator
 * Install elasticsearch: https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-elasticsearch-specification.html

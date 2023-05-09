@@ -1,8 +1,11 @@
 ---
-k3s_version: v1.23.5+k3s1
+k3s_version: v1.25.3+k3s1
+k3s_server_location: /var/lib/rancher/k3s
 ssh_pub_key: /Users/mstratto/.ssh/macgregor.id_rsa.pub
 ansible_user: macgregor
 systemd_dir: /etc/systemd/system
 master_ip: "{{ hostvars[groups['master'][0]]['ansible_host'] | default(groups['master'][0]) }}"
 extra_server_args: "--disable coredns --disable traefik --disable servicelb --disable-cloud-controller --write-kubeconfig-mode 644 --node-taint CriticalAddonsOnly=true:NoSchedule --datastore-endpoint mysql://kubernetes:{{lookup('env', 'KUBE_MYSQL_PASSWORD')}}@tcp(192.168.1.200:3306)/kubernetes --token {{lookup('env', 'KUBE_SERVER_TOKEN')}}"
 extra_agent_args: ""
+gmail_email_address: {{lookup('env', 'GMAIL_EMAIL_ADDRESS')}}
+gmail_app_password: {{lookup('env', 'GMAIL_APP_PASSWORD')}}
