@@ -1,4 +1,11 @@
 ---
+# systemd-journal and adm groups give us access to logs without having to use sudo
+- name: adding existing user '{{ ansible_user }}' to groups
+  user:
+    name: '{{ ansible_user }}'
+    groups: [systemd-journal, adm]
+    append: yes
+
 - name: configure boot options
   template:
     src: usercfg.txt.j2
@@ -28,34 +35,22 @@
   apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
   tags: [ slow ]
 
-- name: Configure postfix (main)
-  template:
-    src: postfix-main.cf.j2
-    dest: /etc/postfix/postfix-main.cf
-    owner: root
-    group: root
-    mode: 0755   
-  notify: restart postfix
+# note - uprade before messing with the unattended-upgrade config/service to avoid lock errors:
+#   Could not get lock /var/lib/dpkg/lock-frontend. It is held by process 3220992 (unattended-upgr)
+- name: Upgrade all apt packages
+  apt: upgrade=dist force_apt_get=yes
+  tags: [ slow ]
 
 - name: "Install system packages"
   package:
     name:
     - "unattended-upgrades"
-    - "bsd-mailx"
     - "apt-listchanges"
-    - "postfix"
     state: 'present'
 
 - name: Enable/Start unattended-upgrades service
   systemd:
     name: unattended-upgrades
-    daemon_reload: yes
-    state: started
-    enabled: yes
-
-- name: Enable/Start postfix service
-  systemd:
-    name: postfix
     daemon_reload: yes
     state: started
     enabled: yes
@@ -68,21 +63,6 @@
     group: root
     mode: 0755
   notify: restart unattended-upgrades
-
-- name: Configure postfix (gmail pass)
-  template:
-    src: postfix-sasl_passwd.j2
-    dest: /etc/postfix/sasl_passwd
-    owner: root
-    group: root
-    mode: 0600
-  notify: 
-    - postmap
-    - restart postfix
-
-- name: Upgrade all apt packages
-  apt: upgrade=dist force_apt_get=yes
-  tags: [ slow ]
 
 - name: changing hostname
   hostname: name="{{ inventory_hostname }}"
@@ -113,6 +93,8 @@
 # Useful links:
 #   https://raspberrypi.stackexchange.com/questions/108080/watchdog-on-the-rpi4
 #   https://forums.raspberrypi.com/viewtopic.php?f=29&t=147501
+#
+# disabled (in config) for now because slow boot times can cause infinite boot loop
 - name: configure systemd hardware watchdog
   template:
     src: system.conf.j2

@@ -16,6 +16,8 @@
   package:
     name:
     - "snapd"
+    - "bsd-mailx"
+    - "postfix"
     state: 'absent'
 
 - name: Get snapd mounted filesystems

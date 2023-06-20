@@ -7,6 +7,11 @@ After=network-online.target
 Type=notify
 ExecStartPre=-/sbin/modprobe br_netfilter
 ExecStartPre=-/sbin/modprobe overlay
+
+# note - need a better way of passing the token between master and node which is generated on first run 
+# then saved in ansible groupvars for continuity between k3s updates. if the master ansible run failed 
+# before populating the token, this we get errors like:
+#   fatal: [k3-n1]: FAILED! => {"changed": false, "msg": "AnsibleUndefinedVariable: 'ansible.vars.hostvars.HostVarsVars object' has no attribute 'token'. 'ansible.vars.hostvars.HostVarsVars object' has no attribute 'token'"}
 ExecStart=/usr/local/bin/k3s agent --server https://{{ master_ip }}:6443 --token {{ hostvars[groups['master'][0]]['token'] }} {{ extra_agent_args | default("") }}
 KillMode=process
 Delegate=yes

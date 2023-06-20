@@ -15,8 +15,8 @@
 - name: update timezone
   command: dpkg-reconfigure --frontend noninteractive tzdata
 
-- name: postmap
-  command: postmap /etc/postfix/sasl_passwd
+- name: "update postfix sasl_passwd"
+  command: postmap /etc/postfix/sasl/sasl_passwd
 
 - name: "restart unattended-upgrades"
   service:
