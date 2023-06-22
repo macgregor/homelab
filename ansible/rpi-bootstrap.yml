@@ -2,13 +2,13 @@
   gather_facts: yes
   become: yes
   vars:
-    ansible_ssh_user: ubuntu
+    ansible_ssh_user: "{{ default_user }}"
   tasks:
   - name: "Add the user '{{ ansible_user }}'"
     ansible.builtin.user:
       name: "{{ ansible_user }}"
       uid: 1001
-      groups: sudo
+      groups: "{{ sudo_group }}"
       shell: /bin/bash
       createhome: yes
 
@@ -18,12 +18,12 @@
       state: present
       key: "{{ lookup('file', '{{ ssh_pub_key }}') }}"
 
-  - name: Allow 'sudo' group to have passwordless sudo
+  - name: Allow "{{ sudo_group }}" group to have passwordless sudo
     lineinfile:
       dest: /etc/sudoers
       state: present
-      regexp: '^%sudo'
-      line: '%sudo ALL=(ALL) NOPASSWD: ALL'
+      regexp: "^%{{ sudo_group }}"
+      line: "%{{ sudo_group }} ALL=(ALL) NOPASSWD: ALL"
       validate: 'visudo -cf %s'
 
 - name: Log in as new user to disable root
@@ -32,9 +32,9 @@
   become: yes
 
   tasks:
-  - name: Remove the user 'ubuntu' if present
+  - name: Remove the default user "{{ default_user }}" if present
     ansible.builtin.user:
-      name: ubuntu
+      name: "{{ default_user }}"
       state: absent
       remove: yes
       force: true
