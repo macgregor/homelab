@@ -1,0 +1,66 @@
+---
+- name: Enable cgroups via boot commandline
+  tags: [ reboot ]
+  lineinfile:
+    path: /boot/cmdline.txt
+    backrefs: yes
+    regexp: '^((?!.*\bcgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory\b).*)$'
+    line: '\1 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory'
+  notify: reboot
+
+- name: Set sysctl values
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: "{{ item.state | default('present') }}"
+    reload: "{{ item.reload | default('yes') }}"
+  loop:
+    - {name: net.ipv4.ip_forward, value: "1"}
+    - {name: net.ipv6.conf.all.forwarding, value: "1"}
+    - {name: vm.max_map_count, value: "262144"}
+
+- name: Create .kube directory
+  file:
+    path: ~{{ ansible_user }}/.kube
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: "u=rwx,g=rx,o="
+
+- name: Download k3s {{ k3s_version }} binary arm64
+  tags: [ slow ]
+  get_url:
+    url: https://github.com/k3s-io/k3s/releases/download/{{ k3s_version }}/k3s-arm64
+    checksum: sha256:https://github.com/k3s-io/k3s/releases/download/{{ k3s_version }}/sha256sum-arm64.txt
+    dest: /usr/local/bin/k3s
+    owner: root
+    group: root
+    mode: 0755
+  notify: restart-k3s
+
+- name: Deploy systemd unit files
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode | default('0644') }}"
+  notify: reload-systemd
+  loop:
+    - { src: cgroup-kill-on-shutdown@.service, dest: /etc/systemd/system/cgroup-kill-on-shutdown@.service }
+
+- name: Create symlinks
+  file:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    state: link
+  loop:
+    - { src: /usr/local/bin/k3s, dest: /usr/local/bin/kubectl }
+    - { src: /usr/local/bin/k3s, dest: /usr/local/bin/crictl }
+
+- name: Manage systemd services
+  tags: [ slow ]
+  ansible.builtin.service:
+    name: cgroup-kill-on-shutdown@k3s.service.service
+    state: reloaded
+    enabled: true
+    masked: false

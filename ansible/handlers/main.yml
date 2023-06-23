@@ -11,3 +11,8 @@
 - name: reload-systemd
   ansible.builtin.systemd:
     daemon_reload: true
+
+- name: restart-k3s
+  ansible.builtin.systemd:
+      name: k3s
+      state: restarted

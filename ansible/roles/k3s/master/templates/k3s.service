@@ -1,0 +1,36 @@
+[Unit]
+Description=Lightweight Kubernetes
+Documentation=https://k3s.io
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+ExecStartPre=-/sbin/modprobe br_netfilter
+ExecStartPre=-/sbin/modprobe overlay
+ExecStart=/usr/local/bin/k3s server \
+    --data-dir /var/lib/rancher/k3s \
+    --disable coredns \
+    --disable traefik \
+    --disable servicelb \
+    --disable-cloud-controller \
+    --disable-helm-controller \
+    --write-kubeconfig-mode 644 \
+    --node-taint CriticalAddonsOnly=true:NoSchedule \
+    --datastore-endpoint "mysql://{{ kube_mysql_user }}:{{ kube_mysql_password }}@tcp({{ kube_mysql_host }}:{{ hube_mysql_port }})/{{ kube_mysql_db_name}}" \
+    --kubelet-arg=image-gc-high-threshold=70 \
+    --kubelet-arg=image-gc-low-threshold=50
+KillMode=process
+Delegate=yes
+# Having non-zero Limit*s causes performance problems due to accounting overhead
+# in the kernel. We recommend using cgroups to do container-local accounting.
+LimitNOFILE=1048576
+LimitNPROC=infinity
+LimitCORE=infinity
+TasksMax=infinity
+TimeoutStartSec=0
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
