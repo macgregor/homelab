@@ -1,6 +1,7 @@
 ---
 - name: reboot
-  reboot:
+  tags: [ reboot ]
+  ansible.builtin.reboot:
     connect_timeout: 5
     reboot_timeout: 300
     pre_reboot_delay: 0

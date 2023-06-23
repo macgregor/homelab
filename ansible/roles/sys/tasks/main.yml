@@ -1,4 +1,5 @@
 ---
+# System User Management
 # systemd-journal and adm groups give us access to logs without having to use sudo
 - name: adding existing user '{{ ansible_user }}' to groups
   user:
@@ -7,17 +8,26 @@
     append: yes
 
 # set locale/timezone
+- name: get current locale
+  ansible.builtin.shell: "localectl status | head -n 1 | sed 's/System Locale: //' | tr -d '\n'"
+  register: current_locale
+  changed_when: false
+
 - name: set locale
   command: localectl set-locale LANG=en_US.UTF-8
+  when: current_locale.stdout != 'LANG=en_US.UTF-8'
 
-- name: Set timezone
-  command: timedatectl set-timezone America/New_York
+- name: Set timezone to America/New_York
+  community.general.timezone:
+    name: America/New_York
 
+# Packages
 - name: Enable additional repositories
   tags: [ slow ]
-  package:
+  dnf:
     name:
       - "epel-release"
+    update_cache: yes
     state: 'present'
 
 - name: "Install system packages"
@@ -28,23 +38,23 @@
       - "dnf-automatic"
       - "nfs-utils"
       - "yum-utils"
-    update_cache: yes
+    update_cache: no
     state: 'present'
 
-- name: Deploy config files, scripts, systemd units, etc
+# Files
+- name: Deploy config files, scripts, etc
   ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
     owner: "{{ item.owner | default('root') }}"
     group: "{{ item.group | default('root') }}"
     mode: "{{ item.mode | default('0644') }}"
-  notify: reload-systemd
   loop:
     - { src: dnf-automatic.conf.j2, dest: /etc/dnf/automatic.conf }
-    - { src: dnf-automatic-reboot.service, dest: /etc/systemd/system/dnf-automatic-reboot.service }
-    - { src: dnf-automatic-reboot.timer, dest: /etc/systemd/system/dnf-automatic-reboot.timer }
-    - { src: motd.sh, dest: /etc/profile.d/motd.sh, mode: '0755' }
+    - { src: motd.txt, dest: /etc/motd.d/00-notes.txt }
+    - { src: neofetch-config.conf, dest: "/home/{{ ansible_user }}/.config/neofetch/config.conf"}
 
+# Raspberry Pi
 - name: Deploy Boot Config
   tags: [ reboot ]
   ansible.builtin.template:
@@ -53,7 +63,21 @@
     mode: '0755'
   notify: reboot
 
+# Systemd
+- name: Deploy systemd unit files
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode | default('0644') }}"
+  notify: reload-systemd
+  loop:
+    - { src: dnf-automatic-reboot.service, dest: /etc/systemd/system/dnf-automatic-reboot.service }
+    - { src: dnf-automatic-reboot.timer, dest: /etc/systemd/system/dnf-automatic-reboot.timer }
+
 - name: Manage systemd services
+  tags: [ slow ]
   ansible.builtin.service:
     name: "{{ item.name }}"
     state: "{{ item.state | default('started') }}"
