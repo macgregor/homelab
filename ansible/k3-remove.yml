@@ -4,4 +4,4 @@
   gather_facts: yes
   become: yes
   roles:
-    - role: reset
+    - role: k3s/remove

@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=dnf-automatic-reboot service
+
+[Service]
+Type=oneshot
+# /bin/needs-restarting is always detecting the need for a reboot due to https://bugzilla.redhat.com/show_bug.cgi?id=2137935
+#ExecStart=/bin/bash -c '/bin/needs-restarting -r || /sbin/reboot'
+ExecStart=/bin/bash -c '/bin/needs-restarting -r'

@@ -1,0 +1,23 @@
+# {{ ansible_managed }}
+
+# the following preferences are documented at
+# https://dnf.readthedocs.org/en/latest/automatic.html
+
+[commands]
+
+apply_updates = yes
+download_updates = yes
+network_online_timeout = 60
+random_sleep = 0
+upgrade_type = default
+reboot = when-needed
+reboot_command = shutdown -r +5 'Rebooting after applying package updates'
+
+[emitters]
+emit_via = motd
+
+[command]
+command_format = cat
+stdin_format = {body}
+
+[base]

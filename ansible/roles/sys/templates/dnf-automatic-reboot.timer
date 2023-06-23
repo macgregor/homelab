@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=dnf-automatic-reboot timer
+
+[Timer]
+OnCalendar=03:00
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

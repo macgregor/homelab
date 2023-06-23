@@ -1,56 +1,65 @@
-- hosts: cluster
+- name: "Create new system user {{ ansible_user }}"
+  hosts: cluster
   gather_facts: yes
   become: yes
+  tags: [ create_user ]
   vars:
     ansible_ssh_user: "{{ default_user }}"
   tasks:
-  - name: "Add the user '{{ ansible_user }}'"
-    ansible.builtin.user:
-      name: "{{ ansible_user }}"
-      uid: 1001
-      groups: "{{ sudo_group }}"
-      shell: /bin/bash
-      createhome: yes
+    - name: "Add the user '{{ ansible_user }}'"
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        uid: 1001
+        groups: "{{ sudo_group }}"
+        shell: /bin/bash
+        createhome: yes
 
-  - name: Set authorized key taken from file
-    ansible.posix.authorized_key:
-      user: "{{ ansible_user }}"
-      state: present
-      key: "{{ lookup('file', '{{ ssh_pub_key }}') }}"
+    - name: Set authorized key taken from file
+      ansible.posix.authorized_key:
+        user: "{{ ansible_user }}"
+        state: present
+        key: "{{ lookup('file', '{{ ssh_pub_key }}') }}"
 
-  - name: Allow "{{ sudo_group }}" group to have passwordless sudo
-    lineinfile:
-      dest: /etc/sudoers
-      state: present
-      regexp: "^%{{ sudo_group }}"
-      line: "%{{ sudo_group }} ALL=(ALL) NOPASSWD: ALL"
-      validate: 'visudo -cf %s'
+    - name: "Allow {{ sudo_group }} group to have passwordless sudo"
+      lineinfile:
+        dest: /etc/sudoers
+        state: present
+        regexp: "^%{{ sudo_group }}"
+        line: "%{{ sudo_group }} ALL=(ALL) NOPASSWD: ALL"
+        validate: 'visudo -cf %s'
 
-- name: Log in as new user to disable root
+- name: "Log in as new user {{ ansible_user }} to finish setup"
   hosts: cluster
   gather_facts: false
   become: yes
+  handlers:
+    - name: restart sshd
+      service:
+        name: sshd
+        state: restarted
 
   tasks:
-  - name: Remove the default user "{{ default_user }}" if present
-    ansible.builtin.user:
-      name: "{{ default_user }}"
-      state: absent
-      remove: yes
-      force: true
+    - name: "Remove the default user {{ default_user }} if present"
+      ansible.builtin.user:
+        name: "{{ default_user }}"
+        state: absent
+        remove: yes
+        force: true
 
-  - name: Disable root login over SSH
-    lineinfile: dest=/etc/ssh/sshd_config regexp="^PermitRootLogin" line="PermitRootLogin no" state=present
-    notify:
-      - restart sshd
+    - name: Disable root login over SSH
+      lineinfile: dest=/etc/ssh/sshd_config regexp="^PermitRootLogin" line="PermitRootLogin no" state=present
+      notify:
+        - restart sshd
 
-  - name: Disable password login
-    lineinfile: dest=/etc/ssh/sshd_config regexp="^PasswordAuthentication" line="PasswordAuthentication no" state=present
-    notify:
-      - restart sshd
+    - name: Disable password login
+      lineinfile: dest=/etc/ssh/sshd_config regexp="^PasswordAuthentication" line="PasswordAuthentication no" state=present
+      notify:
+        - restart sshd
 
-  handlers:
-  - name: restart sshd
-    service:
-      name: sshd
-      state: restarted
+    # this returned a non-zero exit code for me, but it seemed to work...  
+    - name: Expand rootfs
+      ansible.builtin.command: rootfs-expand
+      register: expand_rootfs
+      changed_when: "'reboot required' in expand_rootfs.stdout"
+      notify:
+        - reboot

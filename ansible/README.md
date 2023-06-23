@@ -1,24 +1,29 @@
 # Initialize a Raspberry Pi k3's Cluster with Ansible
 
 **Prereqs**:
-1. Ubuntu Server flashed onto flashcards for the Raspberry Pi's
+1. Linux OS flashed onto flashcards for the Raspberry Pi's
+    * I am using Rocky Linux 9 as of 6/23/2023
 2. Make sure you can resolve hosts from where you are running Ansible
-  * simply assigning each node a static IP w/ hostname on my FreshTomato router was enough for me
-3. Log into each host once to set a new password for the `ubuntu` user
+    * simply assigning each node a static IP w/ hostname on my FreshTomato router was enough for me
+3. Depending on distro, you may need to SSH into each host once to set a new password for the default user
+    * not required for Rock Linux 9
 4. Have an SSH key generated to connect to hosts with
 5. Ansible installed (will also need sshpass for bootstrapping: `brew install hudochenkov/sshpass/sshpass`)
 
 **Config points**:
 1. cluster hostnames in ansible inventory: [hosts.ini](./ansible/inventory/hosts.ini)
-2. remote user name and ssh key paths: [all.yaml](./ansible/inventory/group_vars/all.yaml)
+2. default SSH user name (varies by distro, e.g. "rocky" or "ubuntu") and local ssh key paths and sudo group name: [all.yaml](./ansible/inventory/group_vars/all.yaml)
 
 **Resources**:
 1. https://github.com/k3s-io/k3s-ansible
 
 **tl;dr**:
 ```
-$ ansible-playbook -i inventory/hosts.ini rpi-bootstrap.yml --ask-pass
+$ ansible-playbook -i inventory/hosts.ini rpi-bootstrap.yml --ask-pass --ask-become-pass
 $ ansible-playbook -i inventory/hosts.ini k3-install.yml
+
+# for development, skip slow tasks like app installs
+$ ansible-playbook -i inventory/hosts.ini k3-install.yml --skip-tags=slow
 ```
 
 ### Initial System Config
@@ -27,7 +32,7 @@ on the hosts and removes the defaults.
 
 ```
 $ ssh-add ~/.ssh/macgregor.id_rsa
-$ ansible-playbook -i inventory/hosts.ini rpi-bootstrap.yml --ask-pass
+$ ansible-playbook -i inventory/hosts.ini rpi-bootstrap.yml --ask-pass --ask-become-pass
 ```
 
 ### Installing k3s

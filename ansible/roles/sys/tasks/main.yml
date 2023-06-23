@@ -1,30 +1,65 @@
 ---
-- name: Configure system - general
-  include_tasks:
-    file: sys.yml
-    apply:
-      tags: [ sys ]
-  tags: [ sys ]
+# systemd-journal and adm groups give us access to logs without having to use sudo
+- name: adding existing user '{{ ansible_user }}' to groups
+  user:
+    name: '{{ ansible_user }}'
+    groups: [systemd-journal, adm, chrony, audio, video]
+    append: yes
 
-- name: Configure system - cleanup
-  include_tasks:
-    file: cleanup.yml
-    apply:
-      tags: [ sys, cleanup ]
-  tags: [ sys, cleanup ]
+# set locale/timezone
+- name: set locale
+  command: localectl set-locale LANG=en_US.UTF-8
 
-- name: Configure system - k3s
-  include_tasks:
-    file: k3s.yml
-    apply:
-      tags: [ sys ]
-  tags: [ sys ]
+- name: Set timezone
+  command: timedatectl set-timezone America/New_York
 
-- name: Install storage requirements
-  include_tasks:
-    file: storage.yml
-    apply:
-      tags: [ sys, storage ]
-  tags: [ sys, storage ]
+- name: Enable additional repositories
+  tags: [ slow ]
+  package:
+    name:
+      - "epel-release"
+    state: 'present'
 
-- meta: flush_handlers
+- name: "Install system packages"
+  tags: [ slow ]
+  dnf:
+    name:
+      - "neofetch"
+      - "dnf-automatic"
+      - "nfs-utils"
+      - "yum-utils"
+    update_cache: yes
+    state: 'present'
+
+- name: Deploy config files, scripts, systemd units, etc
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode | default('0644') }}"
+  notify: reload-systemd
+  loop:
+    - { src: dnf-automatic.conf.j2, dest: /etc/dnf/automatic.conf }
+    - { src: dnf-automatic-reboot.service, dest: /etc/systemd/system/dnf-automatic-reboot.service }
+    - { src: dnf-automatic-reboot.timer, dest: /etc/systemd/system/dnf-automatic-reboot.timer }
+    - { src: motd.sh, dest: /etc/profile.d/motd.sh, mode: '0755' }
+
+- name: Deploy Boot Config
+  tags: [ reboot ]
+  ansible.builtin.template:
+    src: rpi-boot-config.txt
+    dest: /boot/config.txt
+    mode: '0755'
+  notify: reboot
+
+- name: Manage systemd services
+  ansible.builtin.service:
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('started') }}"
+    enabled: "{{ item.enabled | default('true') }}"
+    masked: "{{ item.masked | default('false') }}"
+  loop:
+    - {name: dnf-automatic-install.timer}
+    - {name: dnf-automatic-reboot.timer}
+    - {name: firewalld.service, state: stopped, enabled: false, masked: true}

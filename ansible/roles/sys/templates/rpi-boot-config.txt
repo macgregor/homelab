@@ -11,3 +11,10 @@ disable_splash=1
 # Overclock the SD Card from 50 to 100MHz
 # This can only be done with at least a UHS Class 1 card
 #dtoverlay=sdtweak,overclock_50=100
+
+# PoE Hat Fan Speeds
+dtoverlay=rpi-poe
+dtparam=poe_fan_temp0=65000,poe_fan_temp0_hyst=1000
+dtparam=poe_fan_temp1=70000,poe_fan_temp1_hyst=5000
+dtparam=poe_fan_temp2=75000,poe_fan_temp2_hyst=5000
+dtparam=poe_fan_temp3=80000,poe_fan_temp3_hyst=2000
