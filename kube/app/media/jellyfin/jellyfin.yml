@@ -46,12 +46,12 @@ spec:
             path: /dev/video12
       containers:
         - name: jellyfin
-          #image: linuxserver/jellyfin:10.7.7
-          #imagePullPolicy: IfNotPresent
+          image: linuxserver/jellyfin:arm64v8-latest
+          imagePullPolicy: IfNotPresent
           
           # using unstable for now to get HW acceleration support
-          image: jellyfin/jellyfin:unstable
-          imagePullPolicy: Always
+          #image: jellyfin/jellyfin:unstable
+          #imagePullPolicy: Always
 
           # https://jellyfin.org/docs/general/networking/monitoring.html
           livenessProbe:
