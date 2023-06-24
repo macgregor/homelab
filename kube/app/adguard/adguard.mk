@@ -9,7 +9,7 @@ adguard-deploy:
 
 .PHONY: adguard-remove
 adguard-remove:
-	-kubectl apply -f ./app/adguard/network.yml
+	-kubectl delete -f ./app/adguard/network.yml
 	-helmfile --file ./app/adguard/helmfile.yaml destroy
 	-kubectl delete -f ./app/adguard/storage.yml
 
