@@ -42,6 +42,17 @@
     state: 'present'
 
 # Files
+- name: ensures dirs exist
+  file: 
+    path: "{{ item}}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "u=rwx,g=rx,o="
+  loop:
+    - "/home/{{ ansible_user }}/.config"
+    - "/home/{{ ansible_user }}/.config/neofetch"
+
 - name: Deploy config files, scripts, etc
   ansible.builtin.template:
     src: "{{ item.src }}"
@@ -56,7 +67,7 @@
 
 # Raspberry Pi
 - name: Deploy Boot Config
-  tags: [ reboot ]
+  tags: [ sys-reboot ]
   ansible.builtin.template:
     src: rpi-boot-config.txt
     dest: /boot/config.txt

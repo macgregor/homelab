@@ -4,7 +4,8 @@ sudo_group: wheel
 ansible_user: macgregor
 ssh_pub_key: /home/mstratto/.ssh/macgregor.id_rsa.pub
 k3s_version: v1.27.2+k3s1
-master_hostname: "{{ hostvars[groups['master'][0]]['ansible_host'] | default(groups['master'][0]) }}"
+master_hostname: "{{ hostvars[groups['master'][0]]['ansible_host'] }}"
+master_ip: "{{ hostvars[groups['master'][0]]['ansible_default_ipv4']['address'] }}"
 
 # potentially sensitive variables, look up from localhost environment
 # tip quick and dirty (not super secure) vault: https://direnv.net/

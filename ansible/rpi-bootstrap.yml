@@ -1,4 +1,4 @@
-- name: "Create new system user {{ ansible_user }}"
+- name: "Create new system user"
   hosts: cluster
   gather_facts: yes
   become: yes

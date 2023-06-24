@@ -1,21 +1,26 @@
 ---
 
 - hosts: cluster
-  gather_facts: yes
+  gather_facts: no
   become: yes
   handlers:
   - import_tasks: handlers/main.yml
   roles:
     - role: sys
+    - role: k3s/common
 
-#- hosts: master
-#  become: yes
-#  roles:
-#    - role: k3s/common
-#    - role: k3s/master
+- hosts: master
+  gather_facts: yes #need to gather facts on this one to pass it to the node role
+  become: yes
+  handlers:
+  - import_tasks: handlers/main.yml
+  roles:
+    - role: k3s/master
 
-#- hosts: node
-#  become: yes
-#  roles:
-#    - role: k3s/common
-#    - role: k3s/node
+- hosts: node
+  gather_facts: no
+  become: yes
+  handlers:
+  - import_tasks: handlers/main.yml
+  roles:
+    - role: k3s/node

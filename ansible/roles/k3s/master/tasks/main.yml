@@ -1,5 +1,6 @@
 ---
 - name: Deploy systemd unit files
+  tags: [ slow, k3s-reboot ]
   ansible.builtin.template:
     src: k3s.service
     dest: /etc/systemd/system/k3s.service
@@ -11,7 +12,7 @@
     - restart-k3s
 
 - name: Enable and check K3s service
-  #tags: [ slow ]
+  tags: [ slow, k3s-reboot ]
   systemd:
     name: k3s
     daemon_reload: yes
@@ -19,6 +20,9 @@
     enabled: yes
   notify: restart-k3s
 
+# It is a bit awkward to get the agent-token file, which is generated on first `k3s server` startup, 
+# from the master node. role/k3s/master executes first, waits for the file to exist and then uses 
+# ansible.builtin.set_fact to store the file contents for role/k3s/node to use.
 - name: Wait for agent-token
   wait_for:
     path: "/var/lib/rancher/k3s/server/agent-token"
@@ -30,8 +34,9 @@
 
 - name: Store Master node-token
   set_fact:
-    agent_token: "{{ agent_token.content }}"
+    agent_token: "{{ agent_token.content | b64decode | trim }}"
 
+# kubeconfig
 - name: Copy config file to user home directory
   copy:
     src: /etc/rancher/k3s/k3s.yaml
@@ -40,9 +45,9 @@
     owner: "{{ ansible_user }}"
     mode: "u=rw,g=,o="
 
-- name: Replace https://localhost:6443 to https://{{ master_hostname }}:6443
+- name: Replace https://localhost:6443 to https://{{ master_ip }}:6443
   command: >-
     /usr/local/bin/k3s kubectl config set-cluster default
-      --server=https://{{ master_hostname }}:6443
+      --server=https://{{ master_ip }}:6443
       --kubeconfig ~{{ ansible_user }}/.kube/config
   changed_when: true

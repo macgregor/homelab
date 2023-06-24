@@ -1,6 +1,6 @@
 ---
 - name: reboot
-  tags: [ reboot ]
+  tags: [ sys-reboot ]
   ansible.builtin.reboot:
     connect_timeout: 5
     reboot_timeout: 300
@@ -13,6 +13,7 @@
     daemon_reload: true
 
 - name: restart-k3s
+  tags: [ k3s-reboot ]
   ansible.builtin.systemd:
       name: k3s
       state: restarted

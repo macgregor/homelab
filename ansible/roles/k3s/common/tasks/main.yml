@@ -1,6 +1,6 @@
 ---
 - name: Enable cgroups via boot commandline
-  tags: [ reboot ]
+  tags: [ sys-reboot ]
   lineinfile:
     path: /boot/cmdline.txt
     backrefs: yes
@@ -24,10 +24,23 @@
     path: ~{{ ansible_user }}/.kube
     state: directory
     owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     mode: "u=rwx,g=rx,o="
 
+- name: ensures dirs exist
+  file: 
+    path: "{{ item}}"
+    state: directory
+    owner: root
+    group: root
+  loop:
+    - /var/lib/rancher
+    - /var/lib/rancher/k3s
+    - /var/lib/rancher/k3s/agent
+    - /var/lib/rancher/k3s/server
+
 - name: Download k3s {{ k3s_version }} binary arm64
-  tags: [ slow ]
+  tags: [ slow, k3s-reboot ]
   get_url:
     url: https://github.com/k3s-io/k3s/releases/download/{{ k3s_version }}/k3s-arm64
     checksum: sha256:https://github.com/k3s-io/k3s/releases/download/{{ k3s_version }}/sha256sum-arm64.txt

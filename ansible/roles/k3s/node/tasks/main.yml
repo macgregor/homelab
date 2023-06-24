@@ -1,33 +1,30 @@
 ---
-- name: Download k3s binary arm64
-  get_url:
-    url: https://github.com/k3s-io/k3s/releases/download/{{ k3s_version }}/k3s-arm64
-    checksum: sha256:https://github.com/k3s-io/k3s/releases/download/{{ k3s_version }}/sha256sum-arm64.txt
-    dest: /usr/local/bin/k3s
-    owner: root
-    group: root
-    mode: 0755
-  tags: [ slow ]
+# It is a bit awkward to get the agent-token file, which is generated on first `k3s server` startup, 
+# from the master node. role/k3s/master executes first, waits for the file to exist and then uses 
+# ansible.builtin.set_fact to store the file contents for role/k3s/node to use.
+- name: ensure agent-token file exists
+  ansible.builtin.copy:
+    dest: /var/lib/rancher/k3s/agent/agent-token
+    content: "{{ hostvars[groups['master'][0]]['agent_token'] }}"
+  notify: restart-k3s
 
-- name: Copy K3s service file
-  template:
-    src: "k3s.service.j2"
-    dest: "{{ systemd_dir }}/k3s.service"
+- name: Deploy systemd unit files
+  tags: [ slow, k3s-reboot ]
+  ansible.builtin.template:
+    src: k3s.service
+    dest: /etc/systemd/system/k3s.service
     owner: root
     group: root
-    mode: 0755
+    mode: 0644
+  notify: 
+    - reload-systemd
+    - restart-k3s
 
 - name: Enable and check K3s service
+  tags: [ slow, k3s-reboot ]
   systemd:
     name: k3s
     daemon_reload: yes
-    state: restarted
+    state: "started"
     enabled: yes
-  tags: [ slow ]
-
-# https://github.com/k3s-io/k3s/issues/2400#issuecomment-1013798094
-- name: Enable cgroup kill to make server shutdown faster
-  systemd:
-    name: cgroup-kill-on-shutdown@k3s.service.service
-    daemon_reload: yes
-    enabled: yes
+  notify: restart-k3s
