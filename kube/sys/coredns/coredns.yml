@@ -52,7 +52,7 @@ data:
     192.168.1.210 k3-m1
     192.168.1.211 k3-n1
     192.168.1.220 ext-lb synology.matthew-stratton.me dnd.matthew-stratton.me jellyfin.matthew-stratton.me cook.matthew-stratton.me
-    192.168.1.221 int-lb grafana.matthew-stratton.me prometheus.matthew-stratton.me qbittorrent.matthew-stratton.me kuard.matthew-stratton.me whoami.matthew-stratton.me debug.matthew-stratton.me xteve.matthew-stratton.me dashy.matthew-stratton.me adguard.matthew-stratton.me
+    192.168.1.221 int-lb qbittorrent.matthew-stratton.me adguard.matthew-stratton.me
     192.168.1.222 adguard
     192.168.1.223 ns dns.matthew-stratton.me
 ---
@@ -63,7 +63,7 @@ metadata:
   labels:
     k8s-app: kube-dns
     app.kubernetes.io/name: coredns
-    app.kubernetes.io/version: 1.9.2
+    app.kubernetes.io/version: 1.10.1
   name: coredns
   namespace: kube-system
 spec:
@@ -90,7 +90,7 @@ spec:
         args:
         - -conf
         - /etc/coredns/Corefile
-        image: coredns/coredns:1.9.3
+        image: coredns/coredns:1.10.1
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 53
