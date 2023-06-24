@@ -4,6 +4,7 @@ pod?=
 n?=default
 DEBUG_POD_NAME?=`kubectl -n kube-system get pods --field-selector spec.nodeName=${node} --no-headers -o name | grep network-multitool | head -n 1`
 
+# Sys
 include sys/coredns/coredns.mk
 include sys/cert-manager/cert-manager.mk
 include sys/democratic-csi/democratic-csi.mk
@@ -11,18 +12,22 @@ include sys/ingress-nginx/internal/ingress-nginx.mk
 include sys/ingress-nginx/external/ingress-nginx.mk
 include sys/metallb/metallb.mk
 include sys/oauth2-proxy/oauth2-proxy.mk
-include sys/loki/loki.mk
-include sys/fluent-bit/fluent-bit.mk
-include sys/kube-prometheus-stack/kube-prometheus-stack.mk
+
+# Observation
+include observation/loki/loki.mk
+include observation/fluent-bit/fluent-bit.mk
+include observation/kube-prometheus-stack/kube-prometheus-stack.mk
+
+# Apps
 include app/adguard/adguard.mk
 include app/network-multitool/network-multitool.mk
-include app/dashy/dashy.mk
 include app/foundry-vtt/foundry-vtt.mk
 include app/media/jellyfin/jellyfin.mk
 include app/media/qbittorrent/qbittorrent.mk
 include app/synology-dsm/synology-dsm.mk
 include app/mealie/mealie.mk
-include app/teleport/teleport.mk
+
+# Demos
 include demo/whoami/whoami.mk
 include demo/kuard/kuard.mk
 
@@ -47,19 +52,19 @@ remove-sys: coredns-remove democratic-csi-remove cert-manager-remove metallb-rem
 	@echo "Done."
 
 .PHONY: deploy-apps
-deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy synology-dsm-deploy qbittorrent-deploy dashy-deploy mealie-deploy
+deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy synology-dsm-deploy qbittorrent-deploy mealie-deploy
 	@echo "Done."
 
 .PHONY: stop-apps
-stop-apps: foundry-vtt-stop jellyfin-stop network-multitool-stop qbittorrent-stop dashy-stop mealie-stop
+stop-apps: foundry-vtt-stop jellyfin-stop network-multitool-stop qbittorrent-stop mealie-stop
 	@echo "Done."
 
 .PHONY: start-apps
-start-apps: foundry-vtt-start jellyfin-start network-multitool-start qbittorrent-start dashy-start mealie-start
+start-apps: foundry-vtt-start jellyfin-start network-multitool-start qbittorrent-start mealie-start
 	@echo "Done."
 
 .PHONY: remove-apps
-remove-apps: foundry-vtt-remove jellyfin-remove network-multitool-remove synology-dsm-remove qbittorrent-remove dashy-remove mealie-remove
+remove-apps: foundry-vtt-remove jellyfin-remove network-multitool-remove synology-dsm-remove qbittorrent-remove mealie-remove
 	@echo "Done."
 
 .PHONY: deploy-demos

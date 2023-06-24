@@ -1,11 +1,11 @@
 repositories:
-- name: metallb
-  url: https://metallb.github.io/metallb
+- name: bitnami 
+  url: https://charts.bitnami.com/bitnami
 helmDefaults:
   createNamespace: true
 releases:
 - name: metallb
-  chart: metallb/metallb
+  chart: bitnami/metallb
   namespace: metallb
   values:
   - ./helm-values.yml

@@ -1,12 +1,49 @@
 # https://github.com/helm/charts/tree/master/stable/metallb
 # todo: switch to https://github.com/bitnami/charts/tree/master/bitnami/metallb
-configInline:
-  address-pools:
-   - name: default
-     protocol: layer2
-     addresses:
-     - 192.168.1.220-192.168.1.239
+
+# https://artifacthub.io/packages/helm/bitnami/metallb
+# https://github.com/bitnami/charts/tree/main/bitnami/metallb
+.tolerate-control-plane: &tolerate-control-plane
+  key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+
+.node-affinity-prefer-control-plane: &node-affinity-prefer-control-plane
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      preference:
+        matchExpressions:
+        - key: node-role.kubernetes.io/control-plane
+          operator: In
+          values:
+          - 'true'
+
+# PodSecurityPolicy is unavailable in Kubernetes v1.25 or later
+psp: 
+  create: false
+
+controller:
+  tolerations:
+    - <<: *tolerate-control-plane
+  affinity: 
+    <<: *node-affinity-prefer-control-plane
+
+  metrics:
+    enabled: false
+    serviceMonitor:
+      enabled: false
+
+speaker:
+  tolerations:
+    - <<: *tolerate-control-plane
+  
+  metrics:
+    enabled: false
+    serviceMonitor:
+      enabled: false
 
 prometheus:
   serviceMonitor:
-    enabled: true
+    enabled: false
