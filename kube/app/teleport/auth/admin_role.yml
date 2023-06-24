@@ -1,9 +1,0 @@
-kind: role
-version: v5
-metadata:
-  name: admin
-spec:
-  allow:
-    kubernetes_groups: ["system:masters"]
-    kubernetes_labels:
-      '*': '*'
