@@ -2,11 +2,11 @@ FLUENT_BIT_REPLICAS?=2
 
 .PHONY: fluent-bit-deploy
 fluent-bit-deploy:
-	helmfile --file ./sys/fluent-bit/helmfile.yaml apply
+	helmfile --file ./observation/fluent-bit/helmfile.yaml apply
 
 .PHONY: fluent-bit-remove
 fluent-bit-remove:
-	helmfile --file ./sys/fluent-bit/helmfile.yaml destroy
+	helmfile --file ./observation/fluent-bit/helmfile.yaml destroy
 
 .PHONY: fluent-bit-stop
 fluent-bit-stop:

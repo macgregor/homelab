@@ -1,5 +1,5 @@
-include sys/kube-prometheus-stack/prometheus.mk
-include sys/kube-prometheus-stack/grafana.mk
+include observation/kube-prometheus-stack/prometheus.mk
+include observation/kube-prometheus-stack/grafana.mk
 
 .PHONY: kube-prometheus-stack-crds
 kube-prometheus-stack-crds:
@@ -16,10 +16,10 @@ kube-prometheus-stack-crds:
 kube-prometheus-stack-deploy:
 	@echo "Make sure you have applied CRDs to your cluster first: "
 	@echo "  make kube-prometheus-stack-crds\n"
-	helmfile --file ./sys/kube-prometheus-stack/helmfile.yaml apply
-	kubectl apply -f ./sys/kube-prometheus-stack/network.yml
+	helmfile --file ./observation/kube-prometheus-stack/helmfile.yaml apply
+	kubectl apply -f ./observation/kube-prometheus-stack/network.yml
 
 .PHONY: kube-prometheus-stack-remove
 kube-prometheus-stack-remove:
-	kubectl delete -f ./sys/kube-prometheus-stack/network.yml
-	helmfile --file ./sys/kube-prometheus-stack/helmfile.yaml destroy
+	kubectl delete -f ./observation/kube-prometheus-stack/network.yml
+	helmfile --file ./observation/kube-prometheus-stack/helmfile.yaml destroy

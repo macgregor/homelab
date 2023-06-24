@@ -1,14 +1,14 @@
 
 .PHONY: loki-deploy
 loki-deploy:
-	kubectl apply -f ./sys/loki/namespace.yml
-	kubectl apply -f ./sys/loki/storage.yml
-	helmfile --file ./sys/loki/helmfile.yaml apply
+	kubectl apply -f ./observation/loki/namespace.yml
+	kubectl apply -f ./observation/loki/storage.yml
+	helmfile --file ./observation/loki/helmfile.yaml apply
 
 .PHONY: loki-remove
 loki-remove:
-	-helmfile --file ./sys/loki/helmfile.yaml destroy
-	-kubectl delete -f ./sys/loki/storage.yml
+	-helmfile --file ./observation/loki/helmfile.yaml destroy
+	-kubectl delete -f ./observation/loki/storage.yml
 
 .PHONY: loki-status
 loki-status:
