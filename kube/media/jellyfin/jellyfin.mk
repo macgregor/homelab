@@ -2,17 +2,17 @@ JELLYFIN_REPLICAS?=1
 
 .PHONY: jellyfin-deploy
 jellyfin-deploy:
-	kubectl apply -f ./app/media/jellyfin/namespace.yml
-	kubectl apply -f ./app/media/jellyfin/storage.yml
-	kubectl apply -f ./app/media/jellyfin/jellyfin.yml
-	kubectl apply -f ./app/media/jellyfin/network.yml
+	kubectl apply -f ./media/jellyfin/namespace.yml
+	kubectl apply -f ./media/jellyfin/storage.yml
+	kubectl apply -f ./media/jellyfin/jellyfin.yml
+	kubectl apply -f ./media/jellyfin/network.yml
 
 .PHONY: jellyfin-remove
 jellyfin-remove:
-	-kubectl delete -f ./app/media/jellyfin/network.yml
-	-kubectl delete -f ./app/media/jellyfin/jellyfin.yml
-	-kubectl delete -f ./app/media/jellyfin/storage.yml
-	#-kubectl apply -f ./app/media/jellyfin/namespace.yml --cascade=background
+	-kubectl delete -f ./media/jellyfin/network.yml
+	-kubectl delete -f ./media/jellyfin/jellyfin.yml
+	-kubectl delete -f ./media/jellyfin/storage.yml
+	#-kubectl apply -f ./media/jellyfin/namespace.yml --cascade=background
 
 .PHONY: jellyfin-debug
 jellyfin-debug:

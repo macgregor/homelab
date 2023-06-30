@@ -17,13 +17,16 @@ include sys/oauth2-proxy/oauth2-proxy.mk
 include observation/loki/loki.mk
 include observation/fluent-bit/fluent-bit.mk
 include observation/kube-prometheus-stack/kube-prometheus-stack.mk
+include observation/trivy/trivy.mk
+
+# Media
+include media/jellyfin/jellyfin.mk
+include media/qbittorrent/qbittorrent.mk
 
 # Apps
 include app/adguard/adguard.mk
 include app/network-multitool/network-multitool.mk
 include app/foundry-vtt/foundry-vtt.mk
-include app/media/jellyfin/jellyfin.mk
-include app/media/qbittorrent/qbittorrent.mk
 include app/synology-dsm/synology-dsm.mk
 include app/mealie/mealie.mk
 

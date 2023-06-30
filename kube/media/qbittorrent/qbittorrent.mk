@@ -2,7 +2,7 @@ QBITTORRENT_REPLICAS?=1
 
 .PHONY: qbittorrent-deploy
 qbittorrent-deploy:
-	kubectl apply -f ./app/media/qbittorrent/namespace.yml
+	kubectl apply -f ./media/qbittorrent/namespace.yml
 	kubectl create secret generic vpn-credentials \
 		-n media \
 		--save-config \
@@ -10,15 +10,15 @@ qbittorrent-deploy:
 		--from-literal=VPN_USERNAME="${VPN_USERNAME}" \
 		--from-literal=VPN_PASSWORD="${VPN_PASSWORD}" \
 		-o yaml | kubectl apply -f -;
-	kubectl apply -f ./app/media/qbittorrent/storage.yml
-	kubectl apply -f ./app/media/qbittorrent/network.yml
-	kubectl apply -f ./app/media/qbittorrent/qbittorrent.yml
+	kubectl apply -f ./media/qbittorrent/storage.yml
+	kubectl apply -f ./media/qbittorrent/network.yml
+	kubectl apply -f ./media/qbittorrent/qbittorrent.yml
 
 .PHONY: qbittorrent-remove
 qbittorrent-remove:
-	-kubectl delete -f ./app/media/qbittorrent/network.yml
-	-kubectl delete -f ./app/media/qbittorrent/qbittorrent.yml
-	-kubectl delete -f ./app/media/qbittorrent/storage.yml
+	-kubectl delete -f ./media/qbittorrent/network.yml
+	-kubectl delete -f ./media/qbittorrent/qbittorrent.yml
+	-kubectl delete -f ./media/qbittorrent/storage.yml
 	-kubectl -n media delete secret/vpn-credentials
 
 .PHONY: qbittorrent-debug
