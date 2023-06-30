@@ -52,6 +52,9 @@ metadata:
     app.kubernetes.io/name: jellyfin
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt"
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
 spec:
   ingressClassName: nginx-external
   tls:
@@ -62,10 +65,10 @@ spec:
   - host: jellyfin.matthew-stratton.me
     http:
       paths:
-      - backend:
+      - path: /
+        pathType: Prefix
+        backend:
           service:
             name: jellyfin
             port:
-              number: 8096
-        path: /
-        pathType: Prefix
+              name: http-tcp

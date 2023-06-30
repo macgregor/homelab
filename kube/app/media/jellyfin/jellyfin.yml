@@ -31,6 +31,12 @@ spec:
         - name: jellyfin-config
           persistentVolumeClaim:
             claimName: jellyfin-config
+
+        # https://jellyfin.matthew-stratton.me/web/index.html#!/dashboardgeneral.html -> Paths -> Cache Path -> /node-local
+        # https://jellyfin.matthew-stratton.me/web/index.html#!/encodingsettings.html -> Transcoding -> Transcode path -> /node-local
+        - name: jellyfin-volitile
+          persistentVolumeClaim:
+            claimName: jellyfin-volitile
         - name: media
           nfs: # data folder is a mounted pre-existing NFS share, *not* a PV/PVC
             server: 192.168.1.200
@@ -101,6 +107,8 @@ spec:
               name: jellyfin-config
             - mountPath: /data
               name: media
+            - mountPath: /node-local
+              name: jellyfin-volitile
             # Below are the path to mount devices for hardware acceleration
             - mountPath: /dev/video10
               name: device-video10

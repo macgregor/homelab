@@ -37,3 +37,21 @@ spec:
     requests:
       storage: 10Gi
 ---
+# node local storage for cache/transcode speed. not guaranteed to 
+# survive long term but realistically should exist until explicitly 
+# deleted or the OS is reinstalled
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app.kubernetes.io/name: jellyfin
+  name: jellyfin-volitile
+  namespace: media
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: local-path
+  volumeMode: Filesystem
