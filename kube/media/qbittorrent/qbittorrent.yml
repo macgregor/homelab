@@ -11,13 +11,14 @@ data:
   TZ: "America/New_York"
   VPN_SERVICE_PROVIDER: "surfshark"
   VPN_TYPE: "wireguard"
+  SERVER_HOSTNAMES: "us-clt.prod.surfshark.com"
   UPDATER_PERIOD: "24h"
-
-  # k8s pod cidr, k8s svc cidr, LAN cidr
-  WIREGUARD_ADDRESSES: "10.42.0.0/24,10.43.0.0/16,192.168.1.0/24"
+  WIREGUARD_ADDRESSES: "10.14.0.2/16" # from VPN provider Wireguard config
   FIREWALL: "off"
+  DOT: "off"
   LOG_LEVEL: "debug"
-  #SERVER_COUNTRIES: "Netherlands"
+  #DOT_VERBOSITY: "5"
+  #DOT_VERBOSITY_DETAILS: "4"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -39,6 +40,15 @@ spec:
       annotations:
         diun.enable: "true"
     spec:
+      terminationGracePeriodSeconds: 30
+
+      # without this external DNS lookups fail with my setup (api.radarr.video => api.radarr.video.matthew-stratton.me)
+      # https://pracucci.com/kubernetes-dns-resolution-ndots-options-and-why-it-may-affect-application-performances.html
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+
       containers:
         - name: qbittorrent
           image: lscr.io/linuxserver/qbittorrent:arm64v8-4.5.4
@@ -69,6 +79,10 @@ spec:
               name: qbittorrent-config
             - mountPath: /downloads
               name: data
+
+        # to test its working start a debug pod and run `curl https://ipinfo.io` and you should not see your home IP address
+        # > kubectl -n media exec -it `kubectl -n media get pods -l app.kubernetes.io/name=qbittorrent -o name` -- bash
+        # > curl https://ipinfo.io
         - name: gluetun
           image: ghcr.io/qdm12/gluetun:v3.35
           imagePullPolicy: IfNotPresent
@@ -88,23 +102,27 @@ spec:
                 name: qbittorrent-config
                 optional: false
             - secretRef:
-                name: vpn-credentials
+                name: vpn-credentials # WIREGUARD_PRIVATE_KEY=...
                 optional: false
+          ports:
+            - containerPort: 9999
+              name: gluetun-health
+              protocol: TCP
           volumeMounts:
             - name: tunnel
               mountPath: /dev/net/tun
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 9999
-            initialDelaySeconds: 10
-            timeoutSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 9999
-            initialDelaySeconds: 10
-            timeoutSeconds: 5
+          #livenessProbe:
+          #  httpGet:
+          #    path: /
+          #    port: 9999
+          #  initialDelaySeconds: 30
+          #  timeoutSeconds: 30
+          #readinessProbe:
+          #  httpGet:
+          #    path: /
+          #    port: 9999
+          #  initialDelaySeconds: 30
+          #  timeoutSeconds: 10
       volumes:
         - name: qbittorrent-config
           persistentVolumeClaim:
