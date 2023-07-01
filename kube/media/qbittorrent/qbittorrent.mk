@@ -7,8 +7,7 @@ qbittorrent-deploy:
 		-n media \
 		--save-config \
 		--dry-run=client \
-		--from-literal=VPN_USERNAME="${VPN_USERNAME}" \
-		--from-literal=VPN_PASSWORD="${VPN_PASSWORD}" \
+		--from-literal=WIREGUARD_PRIVATE_KEY="${WIREGUARD_PRIVATE_KEY}" \
 		-o yaml | kubectl apply -f -;
 	kubectl apply -f ./media/qbittorrent/storage.yml
 	kubectl apply -f ./media/qbittorrent/network.yml

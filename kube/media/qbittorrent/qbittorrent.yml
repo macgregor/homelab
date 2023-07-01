@@ -8,13 +8,16 @@ data:
   PUID: "111"
   PGID: "321"
   UMASK: "002"
-  VPN_ENABLED: "yes"
-  LAN_CIDR: "192.168.1.0/24"
-  NAME_SERVERS: "8.8.8.8,8.8.4.4"
-  K8S_CLUSTER: "yes"
-  K8S_POD_CIDR: "10.42.0.0/24"
-  K8S_SVC_CIDR: "10.43.0.0/16"
   TZ: "America/New_York"
+  VPN_SERVICE_PROVIDER: "surfshark"
+  VPN_TYPE: "wireguard"
+  UPDATER_PERIOD: "24h"
+
+  # k8s pod cidr, k8s svc cidr, LAN cidr
+  WIREGUARD_ADDRESSES: "10.42.0.0/24,10.43.0.0/16,192.168.1.0/24"
+  FIREWALL: "off"
+  LOG_LEVEL: "debug"
+  #SERVER_COUNTRIES: "Netherlands"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -23,79 +26,93 @@ metadata:
   namespace: media
   labels:
     app.kubernetes.io/name: qbittorrent
-    app.kubernetes.io/version: 0.3.1
 spec:
   replicas: 1
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: qbittorrent
   template:
     metadata:
-      annotations:
-        fluentbit.io/parser: "qbittorrent"
       labels:
         app.kubernetes.io/name: qbittorrent
+      annotations:
+        diun.enable: "true"
     spec:
-      dnsConfig:
-        options:
-          - name: ndots
-            value: "1"
-      restartPolicy: Always
-      volumes:
-      - name: qbittorrent-config
-        persistentVolumeClaim:
-          claimName: qbittorrent-config
-      - name: data
-        nfs: # data folder is a mounted pre-existing NFS share, *not* a PV/PVC
-          server: 192.168.1.200
-          path: /volume1/Media/torrents
-      - name: tunnel
-        hostPath:
-          path: /dev/net/tun
-      - name: localtime
-        hostPath:
-          path: /etc/localtime
       containers:
-      - envFrom:
-        - configMapRef:
-            name: qbittorrent-config
-            optional: false
-        - secretRef:
-            name: vpn-credentials
-            optional: false
-        image: jovalle/qbittorrent-openvpn:v0.3.1
-        imagePullPolicy: IfNotPresent
-        name: qbittorrent
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 1000m
-            memory: 512Mi
-        ports:
-        - containerPort: 8080
-          name: web-ui
-          protocol: TCP
-        - containerPort: 6881
-          name: torrent-tcp
-          protocol: TCP
-        - containerPort: 6881
-          name: torrent-udp
-          protocol: UDP
-        securityContext:
-          privileged: true
-          capabilities:
-            add:
-            - NET_ADMIN
-        volumeMounts:
-        - mountPath: /downloads
-          name: data
-        - mountPath: /config
-          name: qbittorrent-config
+        - name: qbittorrent
+          image: lscr.io/linuxserver/qbittorrent:arm64v8-4.5.4
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          envFrom:
+            - configMapRef:
+                name: qbittorrent-config
+                optional: false
+          ports:
+            - containerPort: 8080
+              name: web-ui
+              protocol: TCP
+            - containerPort: 6881
+              name: torrent-tcp
+              protocol: TCP
+            - containerPort: 6881
+              name: torrent-udp
+              protocol: UDP
+          volumeMounts:
+            - mountPath: "/config"
+              name: qbittorrent-config
+            - mountPath: /downloads
+              name: data
+        - name: gluetun
+          image: ghcr.io/qdm12/gluetun:v3.35
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          envFrom:
+            - configMapRef:
+                name: qbittorrent-config
+                optional: false
+            - secretRef:
+                name: vpn-credentials
+                optional: false
+          volumeMounts:
+            - name: tunnel
+              mountPath: /dev/net/tun
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9999
+            initialDelaySeconds: 10
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9999
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+      volumes:
+        - name: qbittorrent-config
+          persistentVolumeClaim:
+            claimName: qbittorrent-config
+        - name: data
+          nfs: # data folder is a mounted pre-existing NFS share, *not* a PV/PVC
+            server: 192.168.1.200
+            path: /volume1/Media/torrents
         - name: tunnel
-          mountPath: /dev/net/tun
-        - name: localtime
-          mountPath: /etc/localtime
-          readOnly: true
+          hostPath:
+            path: /dev/net/tun
