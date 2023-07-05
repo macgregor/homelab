@@ -1,0 +1,39 @@
+---
+# manually create a PV for config so we dont loose it when we update
+# Need one per pod if running more than one replica, stateful sets should
+# probably be used in that case
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    app.kubernetes.io/name: tailscale
+  name: tailscale-data
+spec:
+  storageClassName: "" # needs to be blank so dynamic provisioners dont match
+  capacity:
+    storage: 10Gi # not enforced on NFS shares
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /volume2/kube-nfs/v/tailscale-data #not dynamic so make sure it already exists on the NAS
+    server: 192.168.1.200
+    readOnly: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app.kubernetes.io/name: tailscale
+  name: tailscale-data
+  namespace: tailscale
+spec:
+  storageClassName: "" # needs to be blank so dynamic provisioners dont match
+  volumeName: tailscale-data
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: jackett
-  namespace: arr
+  namespace: media
   labels:
     app.kubernetes.io/name: jackett
     app.kubernetes.io/version: 0.20.1038

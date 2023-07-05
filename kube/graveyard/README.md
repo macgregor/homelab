@@ -1,0 +1,1 @@
+These applications are not guaranteed to be in working condition, I just keep them around in case I ever want to use them again or need to reference something

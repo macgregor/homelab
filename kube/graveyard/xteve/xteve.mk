@@ -2,14 +2,14 @@ XTEVE_REPLICAS?=1
 
 .PHONY: xteve-deploy
 xteve-deploy:
-	kubectl apply -f ./app/media/xteve/namespace.yml
-	kubectl apply -f ./app/media/xteve/storage.yml
-	helmfile --file ./app/media/xteve/helmfile.yaml apply
+	kubectl apply -f ./media/xteve/namespace.yml
+	kubectl apply -f ./media/xteve/storage.yml
+	helmfile --file ./media/xteve/helmfile.yaml apply
 
 .PHONY: xteve-remove
 xteve-remove:
-	-helmfile --file ./app/media/xteve/helmfile.yaml destroy
-	-kubectl delete -f ./app/media/xteve/storage.yml
+	-helmfile --file ./media/xteve/helmfile.yaml destroy
+	-kubectl delete -f ./media/xteve/storage.yml
 
 .PHONY: xteve-debug
 xteve-debug:

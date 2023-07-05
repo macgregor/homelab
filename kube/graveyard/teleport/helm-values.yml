@@ -1,0 +1,52 @@
+# https://goteleport.com/docs/kubernetes-access/helm/reference/teleport-cluster/
+# https://github.com/gravitational/teleport/tree/master/examples/chart/teleport-cluster
+
+image: ronaldmiranda/teleport-arm
+teleportVersionOverride: 9.2.4
+
+#chartMode: custom
+clusterName: teleport.matthew-stratton.me
+kubeClusterName: homelab
+
+persistence:
+  existingClaimName: "teleport-config"
+
+tls:
+  existingSecretName: "teleport-tls"
+
+proxyListenerMode: "multiplex"
+#kubePublicAddr: ["kube.teleport.matthew-stratton.me:443"]
+#sshPublicAddr: ["ssh.teleport.matthew-stratton.me:443"]
+#tunnelPublicAddr: ["tunnel.teleport.matthew-stratton.me:443"]
+
+service:
+  type: LoadBalancer
+  spec:
+    loadBalancerIP: 192.168.1.228
+
+gcp:
+  credentialSecretName: ""
+
+log:
+  level: DEBUG
+  output: stderr
+extraArgs:
+  - "--debug"
+
+tolerations:
+- key: CriticalAddonsOnly
+  operator: Exists
+
+annotations:
+  config:
+    app.kubernetes.io/name: teleport
+  deployment:
+    app.kubernetes.io/name: teleport
+  pod:
+    app.kubernetes.io/name: teleport
+  service:
+    app.kubernetes.io/name: teleport
+  serviceAccount:
+    app.kubernetes.io/name: teleport
+  certSecret: 
+    app.kubernetes.io/name: teleport

@@ -1,0 +1,183 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tailscale-config
+  namespace: tailscale
+  labels:
+    app.kubernetes.io/name: tailscale
+data:
+  TS_KUBE_SECRET: "tailscale-auth"
+  TS_ROUTES: "192.168.1.0/24"
+  TS_USERSPACE: "false"
+
+  # use persistent volume for state
+  TS_STATE_DIR: "/var/lib/tailscale/state" 
+
+  # make sure this logs dir exists first or it will use some other dir based on env variables
+  # https://github.com/tailscale/tailscale/blob/3c8d257b3e61eecf1d5760af5449096f9b7f4e75/logpolicy/logpolicy.go#L187
+  TS_LOGS_DIR: "/var/lib/tailscale/logs"
+
+  # Save logs to persistent volume and get rid of permission errors like:
+  #   2022/08/19 14:33:18 filch failed: filch: open /.cache/Tailscale/tailscaled.log1.txt: no such file or directory
+  #   2022/08/19 14:33:18 logpolicy: using UserCacheDir, "/.cache/Tailscale"
+  #   logpolicy.ConfigFromFile /.cache/Tailscale/tailscaled.log.conf: open /.cache/Tailscale/tailscaled.log.conf: no such file or directory
+  #   logpolicy.Config.Validate for /.cache/Tailscale/tailscaled.log.conf: config is nil
+  #   logpolicy.Config.Save for /.cache/Tailscale/tailscaled.log.conf: mkdir /.cache: permission denied
+  #XDG_CACHE_HOME: "/var/lib/tailscale"
+
+  TS_TAILSCALED_EXTRA_ARGS: "--verbose=99"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tailscale-override
+  namespace: tailscale
+  labels:
+    app.kubernetes.io/name: tailscale
+data:
+  RunScript: |
+    # Copyright (c) 2022 Tailscale Inc & AUTHORS All rights reserved.
+    # Use of this source code is governed by a BSD-style
+    # license that can be found in the LICENSE file.
+
+    #! /bin/sh
+
+    set -m # enable job control
+
+    export PATH=$PATH:/tailscale/bin
+
+    TS_AUTH_KEY="${TS_AUTH_KEY:-}"
+    TS_ROUTES="${TS_ROUTES:-}"
+    TS_DEST_IP="${TS_DEST_IP:-}"
+    TS_EXTRA_ARGS="${TS_EXTRA_ARGS:-}"
+    TS_USERSPACE="${TS_USERSPACE:-true}"
+    TS_STATE_DIR="${TS_STATE_DIR:-}"
+    TS_ACCEPT_DNS="${TS_ACCEPT_DNS:-false}"
+    TS_KUBE_SECRET="${TS_KUBE_SECRET:-tailscale}"
+    TS_SOCKS5_SERVER="${TS_SOCKS5_SERVER:-}"
+    TS_OUTBOUND_HTTP_PROXY_LISTEN="${TS_OUTBOUND_HTTP_PROXY_LISTEN:-}"
+    TS_TAILSCALED_EXTRA_ARGS="${TS_TAILSCALED_EXTRA_ARGS:-}"
+
+    set -e
+
+    TAILSCALED_ARGS="--socket=/tmp/tailscaled.sock"
+
+    if [[ ! -z "${KUBERNETES_SERVICE_HOST}" ]]; then
+      TAILSCALED_ARGS="${TAILSCALED_ARGS} --state=kube:${TS_KUBE_SECRET} --statedir=${TS_STATE_DIR:-/tmp}"
+    elif [[ ! -z "${TS_STATE_DIR}" ]]; then
+      TAILSCALED_ARGS="${TAILSCALED_ARGS} --statedir=${TS_STATE_DIR}"
+    else
+      TAILSCALED_ARGS="${TAILSCALED_ARGS} --state=mem: --statedir=/tmp"
+    fi
+
+    if [[ "${TS_USERSPACE}" == "true" ]]; then
+      if [[ ! -z "${TS_DEST_IP}" ]]; then
+        echo "IP forwarding is not supported in userspace mode"
+        exit 1
+      fi
+      TAILSCALED_ARGS="${TAILSCALED_ARGS} --tun=userspace-networking"
+    else
+      if [[ ! -d /dev/net ]]; then
+        mkdir -p /dev/net
+      fi
+
+      if [[ ! -c /dev/net/tun ]]; then
+        mknod /dev/net/tun c 10 200
+      fi
+    fi
+
+    if [[ ! -z "${TS_SOCKS5_SERVER}" ]]; then
+      TAILSCALED_ARGS="${TAILSCALED_ARGS} --socks5-server ${TS_SOCKS5_SERVER}"
+    fi
+
+    if [[ ! -z "${TS_OUTBOUND_HTTP_PROXY_LISTEN}" ]]; then
+      TAILSCALED_ARGS="${TAILSCALED_ARGS} --outbound-http-proxy-listen ${TS_OUTBOUND_HTTP_PROXY_LISTEN}"
+    fi
+
+    if [[ ! -z "${TS_TAILSCALED_EXTRA_ARGS}" ]]; then
+      TAILSCALED_ARGS="${TAILSCALED_ARGS} ${TS_TAILSCALED_EXTRA_ARGS}"
+    fi
+
+    echo "Starting tailscaled"
+    tailscaled ${TAILSCALED_ARGS} &
+
+    UP_ARGS="--accept-dns=${TS_ACCEPT_DNS}"
+    if [[ ! -z "${TS_ROUTES}" ]]; then
+      UP_ARGS="--advertise-routes=${TS_ROUTES} ${UP_ARGS}"
+    fi
+    if [[ ! -z "${TS_AUTH_KEY}" ]]; then
+      UP_ARGS="--authkey=${TS_AUTH_KEY} ${UP_ARGS}"
+    fi
+    if [[ ! -z "${TS_EXTRA_ARGS}" ]]; then
+      UP_ARGS="${UP_ARGS} ${TS_EXTRA_ARGS:-}"
+    fi
+
+    echo "Running tailscale up"
+    tailscale --socket=/tmp/tailscaled.sock up ${UP_ARGS}
+
+    if [[ ! -z "${TS_DEST_IP}" ]]; then
+      echo "Adding iptables rule for DNAT"
+      iptables -t nat -I PREROUTING -d "$(tailscale --socket=/tmp/tailscaled.sock ip -4)" -j DNAT --to-destination "${TS_DEST_IP}"
+    fi
+
+    echo "We made a change 1"
+    fg || true
+    echo "We made a change 2"
+    sleep infinity
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tailscale-subnet-router
+  namespace: tailscale
+  labels:
+    app.kubernetes.io/name: tailscale
+    app.kubernetes.io/version: v1.29
+spec:
+  serviceAccountName: tailscale
+  #automountServiceAccountToken: false
+  dnsPolicy: ClusterFirstWithHostNet
+  hostNetwork: true
+  restartPolicy: Never
+  #restartPolicy: Always
+  containers:
+  - name: tailscale
+    imagePullPolicy: IfNotPresent
+    image: "tailscale/tailscale:v1.29"
+    envFrom:
+      - configMapRef:
+          name: tailscale-config
+          optional: false
+    env:
+      - name: TS_AUTH_KEY
+        valueFrom:
+          secretKeyRef:
+            name: tailscale-auth
+            key: TS_AUTH_KEY
+    securityContext:
+      #runAsUser: 1000
+      #runAsGroup: 1000
+      privileged: true
+      allowPrivilegeEscalation: true
+      capabilities:
+        add:
+        - ALL
+        #- NET_ADMIN
+        #- CAP_NET_RAW
+        #- CAP_NET_ADMIN
+        #- CAP_NET_RAW
+    volumeMounts:
+      - mountPath: /var/lib/tailscale
+        name: tailscale-data
+      - mountPath: /tailscale/run.sh
+        name: tailscale-override
+        subPath: RunScript
+  volumes:
+    - name: tailscale-data
+      persistentVolumeClaim:
+        claimName: tailscale-data
+    - name: tailscale-override
+      configMap:
+        name: tailscale-override
+        #defaultMode: 420

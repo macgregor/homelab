@@ -1,0 +1,49 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashy
+  namespace: dashboards
+  labels:
+    app.kubernetes.io/name: dashy
+    app.kubernetes.io/version: 2.0.8
+spec:
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dashy
+  template:
+    metadata:
+      annotations:
+        fluentbit.io/parser: "dashy"
+      labels:
+        app.kubernetes.io/name: dashy
+    spec:
+      restartPolicy: Always
+      volumes:
+      - name: dashy-config
+        persistentVolumeClaim:
+          claimName: dashy-config
+      containers:
+        - name: dashy
+          image: lissy93/dashy:2.0.8
+          imagePullPolicy: IfNotPresent
+#          resources:
+#            requests:
+#              cpu: 0m
+#              memory: 0Mi
+#            limits:
+#              cpu: 100m
+#              memory: 50Mi
+          ports:
+          - containerPort: 80
+            name: http
+            protocol: TCP
+          volumeMounts:
+          - mountPath: /app/public/conf.yml
+            name: dashy-config
+            subPath: homelab.yml
+          - mountPath: /app/public/item-icons/
+            name: dashy-config
+            subPath: icons

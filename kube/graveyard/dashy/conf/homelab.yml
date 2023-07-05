@@ -1,0 +1,218 @@
+appConfig:
+  theme: nord-frost
+  layout: auto
+  iconSize: medium
+  startingView: default
+  defaultOpeningMethod: newtab
+  statusCheck: false
+  statusCheckInterval: 30
+  faviconApi: allesedv
+  routingMode: history
+  enableMultiTasking: false
+  widgetsAlwaysUseProxy: false
+  webSearch:
+    disableWebSearch: false
+    searchEngine: duckduckgo
+    openingMethod: newtab
+    searchBangs: {}
+  enableFontAwesome: true
+  enableMaterialDesignIcons: false
+  hideComponents:
+    hideHeading: false
+    hideNav: false
+    hideSearch: false
+    hideSettings: false
+    hideFooter: false
+  auth:
+    enableGuestAccess: false
+    users: []
+    enableKeycloak: false
+  showSplashScreen: false
+  preventWriteToDisk: false
+  preventLocalSave: false
+  disableConfiguration: false
+  allowConfigEdit: true
+  enableServiceWorker: false
+  disableContextMenu: false
+  disableUpdateChecks: false
+  disableSmartSort: false
+  enableErrorReporting: false
+  language: en
+pageInfo:
+  title: Home Lab
+  description: ''
+  navLinks: []
+  footerText: ''
+sections:
+  - name: Internal Applications
+    items:
+      - title: Grafana
+        description: Data visualised on dashboards
+        icon: hl-grafana
+        url: https://grafana.matthew-stratton.me
+        tags:
+          - internal
+          - observability
+        statusCheck: true
+        id: 0_2116_grafana
+      - title: Prometheus
+        description: System Statistics Aggregation with PromQL
+        icon: hl-prometheus
+        url: https://prometheus.matthew-stratton.me
+        tags:
+          - internal
+          - observability
+        statusCheck: true
+        statusCheckUrl: https://prometheus.matthew-stratton.me
+        id: 1_2116_prometheus
+      - title: QBittorrent
+        description: QBittorrent web interface for managing torrents
+        icon: hl-qbittorrent
+        url: https://qbittorrent.matthew-stratton.me
+        tags:
+          - internal
+          - media
+        statusCheck: true
+        statusCheckAcceptCodes: '''401'''
+        id: 2_2116_qbittorrent
+      - title: XTeve
+        description: IPTV streaming proxy
+        icon: hl-xteve
+        url: https://xteve.matthew-stratton.me/web/
+        tags:
+          - internal
+          - media
+        statusCheck: true
+        id: 3_2116_xteve
+      - title: Adguard
+        description: Pi-hole Done Right
+        icon: hl-adguardhome
+        url: https://adguard.matthew-stratton.me
+        statusCheck: true
+        id: 4_2116_adguard
+      - title: Dashy
+        description: Your'e looking at it.
+        icon: hl-dashy
+        url: https://dashy.matthew-stratton.me/
+        statusCheck: true
+        id: 5_2116_dashy
+      - title: Whoami
+        description: Displays information about the user
+        icon: fas fa-id-card
+        url: https://whoami.matthew-stratton.me
+        statusCheck: true
+        statusCheckAllowInsecure: true
+        id: 6_2116_whoami
+      - title: Kuard
+        description: Kubernetes Up and Running Demo
+        icon: far fa-thumbs-up
+        url: https://kuard.matthew-stratton.me
+        statusCheck: true
+        statusCheckAllowInsecure: true
+        id: 7_2116_kuard
+  - name: External Applications
+    items:
+      - title: Jellyfin
+        description: Self-Hosted Media Streaming Service
+        icon: hl-jellyfin
+        url: https://jellyfin.matthew-stratton.me
+        tags:
+          - external
+          - media
+        statusCheck: true
+        id: 0_2122_jellyfin
+      - title: Foundry VTT
+        description: Self-Hosted tabletop service (ala Roll20)
+        icon: hl-foundry-vtt
+        url: https://dnd.matthew-stratton.me
+        tags:
+          - external
+          - gaming
+        statusCheck: true
+        id: 1_2122_foundryvtt
+      - title: Synology DSM
+        description: Synology NAS server
+        icon: hl-synology-dsm
+        url: https://synology.matthew-stratton.me
+        tags:
+          - external
+          - nas
+          - storage
+        statusCheck: true
+        id: 2_2122_synologydsm
+      - title: Mealie
+        description: Recipe manager
+        icon: hl-mealie
+        url: https://cook.matthew-stratton.me
+        statusCheck: true
+        id: 3_2122_mealie
+  - name: External Services
+    items:
+      - title: Cloudflare
+        description: DNS service
+        icon: hl-cloudflare
+        url: https://dash.cloudflare.com
+        id: 0_1703_cloudflare
+      - title: NordVPN
+        description: DNS service
+        icon: favicon
+        url: https://my.nordaccount.com/dashboard/
+        id: 1_1703_nordvpn
+  - name: Other Devices
+    items:
+      - title: Router
+        description: ASUS R7000 w/ FreshTomato
+        icon: hl-router
+        url: http://192.168.1.1:8080
+        statusCheck: true
+        statusCheckAcceptCodes: '401'
+        id: 0_1253_router
+      - title: Switch
+        description: Netgear Ethernet switch providing power/network to Kubernetes cluster
+        icon: hl-netgear
+        url: http://192.168.1.2:80
+        statusCheck: true
+        id: 1_1253_switch
+  - name: Fun1
+    icon: far fa-smile-beam
+    displayData:
+      collapsed: false
+      hideForGuests: false
+    widgets:
+      - type: xkcd-comic
+        options:
+          comic: latest
+        id: 0_346_xkcdcomic
+  - name: Today
+    icon: far fa-smile-beam
+    displayData:
+      collapsed: false
+      hideForGuests: false
+      sortBy: default
+      rows: 1
+      cols: 2
+    widgets:
+      - type: clock
+        id: 0_513_clock
+      - type: weather
+        options:
+          apiKey: 235fa9ec81c8ad01ce190d407a00de35
+          city: Raleigh
+          units: imperial
+        id: 1_513_weather
+      - type: public-ip
+        options:
+          provider: ipgeolocation
+          apiKey: d59bc7aafa6e41ed8d3658328851956c
+        id: 2_513_publicip
+  - name: Fun2
+    icon: far fa-smile-beam
+    displayData:
+      collapsed: false
+      hideForGuests: false
+    widgets:
+      - type: github-trending-repos
+        options:
+          limit: 5
+          since: weekly
+        id: 0_347_githubtrendingrepos

@@ -1,0 +1,62 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tailscale-config
+  namespace: tailscale
+  labels:
+    app.kubernetes.io/name: tailscale
+data:
+  TS_KUBE_SECRET: "tailscale-auth"
+  TS_USERSPACE: "true"
+  TS_ROUTES: "192.168.1.0/24"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tailscale-subnet-router
+  namespace: tailscale
+  labels:
+    app.kubernetes.io/name: tailscale
+    app.kubernetes.io/version: v1.29
+spec:
+  progressDeadlineSeconds: 300
+  replicas: 1
+  revisionHistoryLimit: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tailscale
+  template:
+    metadata:
+      annotations:
+        fluentbit.io/parser: "tailscale-subnet-router"
+      labels:
+        app.kubernetes.io/name: tailscale
+    spec:
+      serviceAccountName: tailscale
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      restartPolicy: Never
+      #restartPolicy: Always
+      containers:
+      - name: tailscale
+        imagePullPolicy: IfNotPresent
+        image: "tailscale/tailscale:v1.29"
+        envFrom:
+          - configMapRef:
+              name: tailscale-config
+              optional: false
+        env:
+          - name: TS_AUTH_KEY
+            valueFrom:
+              secretKeyRef:
+                name: tailscale-auth
+                key: TS_AUTH_KEY
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000

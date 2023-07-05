@@ -1,0 +1,132 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deluge-config
+  namespace: media
+data:
+  # Deluge Config
+  PUID: "111"
+  PGID: "321"
+  UMASK: "002"
+  TZ: "America/New_York"
+  DELUGE_LOGLEVEL: "error"
+
+  # Gluetun config
+  VPN_SERVICE_PROVIDER: "surfshark"
+  VPN_TYPE: "wireguard"
+  SERVER_HOSTNAMES: "us-clt.prod.surfshark.com"
+  UPDATER_PERIOD: "24h"
+  WIREGUARD_ADDRESSES: "10.14.0.2/16" # from VPN provider Wireguard config
+  FIREWALL: "off"
+  DOT: "off"
+  LOG_LEVEL: "debug"
+  #DOT_VERBOSITY: "5"
+  #DOT_VERBOSITY_DETAILS: "4"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deluge
+  namespace: media
+  labels:
+    app.kubernetes.io/name: deluge
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: deluge
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: deluge
+      annotations:
+        diun.enable: "true"
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: deluge
+          image: lscr.io/linuxserver/deluge:arm64v8-2.1.1
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+          envFrom:
+            - configMapRef:
+                name: deluge-config
+                optional: false
+          ports:
+            - containerPort: 8112
+              name: web-ui
+              protocol: TCP
+            - containerPort: 6881
+              name: torrent-tcp
+              protocol: TCP
+            - containerPort: 6881
+              name: torrent-udp
+              protocol: UDP
+          volumeMounts:
+            - mountPath: "/config"
+              name: deluge-config
+            - mountPath: /downloads
+              name: data
+
+        # to test its working start a debug pod and run `curl https://ipinfo.io` and you should not see your home IP address
+        # > kubectl -n media exec -it `kubectl -n media get pods -l app.kubernetes.io/name=deluge -o name` -- bash
+        # > curl https://ipinfo.io
+        - name: gluetun
+          image: ghcr.io/qdm12/gluetun:v3.35
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          envFrom:
+            - configMapRef:
+                name: deluge-config
+                optional: false
+            - secretRef:
+                name: deluge-vpn-credentials # WIREGUARD_PRIVATE_KEY=...
+                optional: false
+          ports:
+            - containerPort: 9999
+              name: gluetun-health
+              protocol: TCP
+          volumeMounts:
+            - name: tunnel
+              mountPath: /dev/net/tun
+          #livenessProbe:
+          #  httpGet:
+          #    path: /
+          #    port: 9999
+          #  initialDelaySeconds: 30
+          #  timeoutSeconds: 30
+          #readinessProbe:
+          #  httpGet:
+          #    path: /
+          #    port: 9999
+          #  initialDelaySeconds: 30
+          #  timeoutSeconds: 10
+      volumes:
+        - name: deluge-config
+          persistentVolumeClaim:
+            claimName: deluge-config
+        - name: data
+          nfs: # data folder is a mounted pre-existing NFS share, *not* a PV/PVC
+            server: 192.168.1.200
+            path: /volume1/Media/torrents
+        - name: tunnel
+          hostPath:
+            path: /dev/net/tun

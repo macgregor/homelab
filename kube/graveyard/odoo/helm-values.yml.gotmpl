@@ -1,0 +1,54 @@
+# https://bitnami.com/stack/odoo/helm
+# https://github.com/bitnami/charts/tree/master/bitnami/odoo/
+# https://github.com/bitnami/charts/blob/master/bitnami/odoo/values.yaml
+
+odooEmail: {{ requiredEnv "ODOO_EMAIL" | quote}}
+odooPassword: {{ requiredEnv "ODOO_PASSWORD" | quote}}
+odooSkipInstall: true
+loadDemoData: true
+
+commonLabels:
+  app.kubernetes.io/name: odoo
+
+tolerations:
+- key: CriticalAddonsOnly
+  operator: Exists
+
+terminationGracePeriodSeconds: 60
+
+resources:
+  limits:
+    memory: 1024Mi
+    cpu: 1000m
+  requests:
+    memory: 512Mi
+    cpu: 300m
+
+service:
+  type: ClusterIP
+  sessionAffinity: ClientIP # multipod deployments: route traffic to the same pod based on ip address
+
+ingress:
+  enabled: true
+  ingressClassName: nginx-external
+  hostname: odoo.matthew-stratton.me
+  pathType: Prefix
+  tls: true
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/proxy-body-size: 5m
+
+persistence:
+  enabled: false
+  storageClass: synology-nfs-app-data-delete
+
+postgresql:
+  enabled: false
+
+externalDatabase:
+  host: "192.168.1.200"
+  port: 35432
+  user: {{ requiredEnv "ODOO_PG_USER" | quote}}
+  password: {{ requiredEnv "ODOO_PG_PASSWORD" | quote}}
+  database: odoo
+  create: false

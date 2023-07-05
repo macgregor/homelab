@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deluge-tcp
+  namespace: media
+  labels:
+    app.kubernetes.io/name: deluge
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: deluge
+  ports:
+  - name: http
+    port: 8112
+  - name: torrent-tcp
+    port: 6881
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deluge-udp
+  namespace: media
+  labels:
+    app.kubernetes.io/name: deluge
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: deluge
+  ports:
+  - name: torrent-udp
+    port: 6881
+    protocol: UDP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: deluge
+  namespace: media
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+  labels:
+    app.kubernetes.io/name: deluge
+spec:
+  ingressClassName: nginx-internal
+  tls:
+  - hosts:
+    - deluge.matthew-stratton.me
+    secretName: deluge-tls
+  rules:
+  - host: deluge.matthew-stratton.me
+    http:
+      paths:
+      - backend:
+          service:
+            name: deluge-tcp
+            port:
+              number: 8112
+        path: /
+        pathType: Prefix

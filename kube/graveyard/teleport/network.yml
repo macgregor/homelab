@@ -1,0 +1,32 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: teleport-cluster
+  namespace: teleport
+  labels:
+    app: teleport-cluster
+  annotations:
+    app.kubernetes.io/name: teleport-cluster
+    cert-manager.io/cluster-issuer: "letsencrypt"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+spec:
+  ingressClassName: nginx-external
+  tls:
+  - hosts:
+      - teleport.matthew-stratton.me
+      - kube.teleport.matthew-stratton.me
+      - tunnel.teleport.matthew-stratton.me
+      - ssh.teleport.matthew-stratton.me
+    secretName: teleport-tls
+  rules:
+    - host: teleport.matthew-stratton.me
+      http:
+        paths:
+        - backend:
+            service:
+              name: teleport-cluster
+              port:
+                number: 443
+          path: /
+          pathType: Prefix

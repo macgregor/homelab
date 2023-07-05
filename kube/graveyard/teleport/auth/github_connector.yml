@@ -1,0 +1,20 @@
+kind: github
+version: v3
+metadata:
+  # connector name that will be used with `tsh --auth=github login`
+  name: github
+spec:
+  # client ID of your GitHub OAuth app
+  client_id: {{ requiredEnv "OAUTH_CLIENT_ID" | quote}}
+  # client secret of your GitHub OAuth app
+  client_secret: {{ requiredEnv "OAUTH_CLIENT_SECRET" | quote}}
+  # This name will be shown on UI login screen
+  display: GitHub
+  # Change tele.example.com to your domain name
+  redirect_url: https://teleport.matthew-stratton.me/v1/webapi/github/callback
+  # Map github teams to teleport roles
+  teams_to_roles:
+    - organization: octocats # GitHub organization name
+      team: admin            # GitHub team name within that organization
+      # map GitHub's "admin" team to Teleport's "access" role
+      roles: ["access"]
