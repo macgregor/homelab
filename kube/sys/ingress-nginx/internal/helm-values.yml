@@ -6,6 +6,7 @@
   effect: "NoSchedule"
 
 controller:
+  terminationGracePeriodSeconds: 30
   tolerations:
   - <<: *tolerate-control-plane
 
@@ -42,7 +43,7 @@ controller:
       externalTrafficPolicy: Local
 
   metrics:
-    enabled: true
+    enabled: false
     serviceMonitor:
-      enabled: true
+      enabled: false
       namespace: obs

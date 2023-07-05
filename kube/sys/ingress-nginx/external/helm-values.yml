@@ -6,6 +6,7 @@
   effect: "NoSchedule"
 
 controller:
+  terminationGracePeriodSeconds: 30
   tolerations:
   - <<: *tolerate-control-plane
 
@@ -13,6 +14,10 @@ controller:
     patch:
       tolerations:
       - <<: *tolerate-control-plane
+  config:
+    use-proxy-protocol: "true"
+    enable-modsecurity: "true"
+    enable-owasp-modsecurity-crs: "true"
   extraArgs:
     enable-ssl-passthrough: true
 
@@ -37,7 +42,7 @@ controller:
       enabled: true
 
   metrics:
-    enabled: true
+    enabled: false
     serviceMonitor:
-      enabled: true
+      enabled: false
       namespace: obs

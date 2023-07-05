@@ -16,6 +16,10 @@ ingress-external-debug:
 ingress-external-logs:
 	kubectl -n ingress-nginx logs `kubectl -n ingress-nginx get pods -l app.kubernetes.io/instance=ingress-nginx-external -o name | head -n 1` --follow
 
+.PHONY: ingress-external-modesecurity-logs
+ingress-external-modesecurity-logs:
+	kubectl -n ingress-nginx exec -it `kubectl -n ingress-nginx get pods -l app.kubernetes.io/instance=ingress-nginx-external -o name | head -n 1` cat /var/log/modsec_audit.log
+
 .PHONY: ingress-external-stop
 ingress-external-stop:
 	kubectl -n ingress-nginx scale deployment/ingress-nginx-external-controller-external --replicas=0

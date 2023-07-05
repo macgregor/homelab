@@ -30,14 +30,14 @@ grafana:
   defaultDashboardsEnabled: true
   defaultDashboardsTimezone: America/New_York
   adminPassword: {{ requiredEnv "GRAFANA_ADMIN_PASS" | quote}}
-  additionalDataSources:
-  - name: Loki
-    access: proxy
-    orgId: 1
-    type: loki
-    url: http://loki:3100
-    version: 1
-    readOnly: false
+  #additionalDataSources:
+  #- name: Loki
+  #  access: proxy
+  #  orgId: 1
+  #  type: loki
+  #  url: http://loki:3100
+  #  version: 1
+  #  readOnly: false
   serviceMonitor:
     enabled: false
 
@@ -196,6 +196,8 @@ prometheus:
     # ServiceMonitors with the label 'release: $.Release.Name'
     # see: https://github.com/prometheus-community/helm-charts/blob/902a9561966d41fb2b33fa64dd70d67a930a3ee9/charts/kube-prometheus-stack/templates/prometheus/prometheus.yaml#L123
     serviceMonitorSelectorNilUsesHelmValues: false
+    retentionL 5d
+
 
     resources:
       requests:

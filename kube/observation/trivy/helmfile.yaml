@@ -1,0 +1,11 @@
+repositories:
+- name: aqua 
+  url: https://aquasecurity.github.io/helm-charts/
+helmDefaults:
+  createNamespace: true
+releases:
+- name: trivy-operator 
+  chart: aqua/trivy-operator
+  namespace: observation
+  values:
+  - ./helm-values.yml

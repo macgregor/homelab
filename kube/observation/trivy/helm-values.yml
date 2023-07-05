@@ -1,0 +1,44 @@
+# https://artifacthub.io/packages/helm/trivy-operator/trivy-operator
+# https://github.com/aquasecurity/trivy-operator/blob/main/deploy/helm/README.md
+# https://aquasecurity.github.io/trivy-operator/v0.1.5/operator/quick-start/
+.tolerate-control-plane: &tolerate-control-plane
+  key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+
+operator:
+  configAuditScannerScanOnlyCurrentRevisions: true
+  vulnerabilityScannerScanOnlyCurrentRevisions: true
+  scanJobsConcurrentLimit: 3
+  scanJobTTL: "24h"
+  scannerReportTTL: "24h"
+  builtInTrivyServer: false
+  metricsFindingsEnabled: false
+  builtInTrivyServer: true
+
+trivy:
+  # default: "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL" 
+  severity: "MEDIUM,HIGH,CRITICAL"
+  storageClassName: synology-nfs-app-data-delete
+  ignoreUnfixed: true
+
+  server:
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+
+tolerations:
+  - <<: *tolerate-control-plane
+
+trivyOperator:
+  scanJobTolerations:
+    - <<: *tolerate-control-plane
+
+serviceMonitor:
+  enabled: false

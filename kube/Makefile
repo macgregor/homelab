@@ -22,6 +22,9 @@ include observation/trivy/trivy.mk
 # Media
 include media/jellyfin/jellyfin.mk
 include media/qbittorrent/qbittorrent.mk
+include media/radarr/radarr.mk
+include media/prowlarr/prowlarr.mk
+include media/sonarr/sonarr.mk
 
 # Apps
 include app/adguard/adguard.mk
