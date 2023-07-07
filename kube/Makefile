@@ -25,6 +25,8 @@ include media/qbittorrent/qbittorrent.mk
 include media/radarr/radarr.mk
 include media/prowlarr/prowlarr.mk
 include media/sonarr/sonarr.mk
+include media/tdarr-server/tdarr-server.mk
+include media/tdarr-nodes/tdarr-nodes.mk
 
 # Apps
 include app/adguard/adguard.mk

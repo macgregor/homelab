@@ -1,0 +1,99 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tdarr-nodes-config
+  namespace: media
+data:
+  PUID: "666"
+  PGID: "321"
+  UMASK: "002"
+  TZ: "America/New_York"
+  ffmpegPath: ""
+  serverIP: tdarr-server.media.svc.cluster.local
+  serverPort: "8266"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tdarr-nodes
+  namespace: media
+  labels:
+    app.kubernetes.io/name: tdarr-nodes
+spec:
+  revisionHistoryLimit: 3
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tdarr-nodes
+  volumeClaimTemplates:
+    - metadata:
+        name: tdarr-node-config
+      spec:
+        storageClassName: "synology-nfs-app-data-delete"
+        accessModes: [ "ReadWriteOnce" ]
+        volumeMode: Filesystem
+        resources:
+          requests:
+            storage: 1Gi
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tdarr-nodes
+    spec:
+      affinity:
+          podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: "name"
+                    operator: In
+                    values:
+                    - network-multitool
+              topologyKey: "kubernetes.io/hostname"
+      serviceAccountName: default
+      automountServiceAccountToken: true
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      tolerations:
+        - key: "CriticalAddonsOnly"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"
+      containers:
+        - name: tdarr
+          image: "ghcr.io/haveagitgat/tdarr_node:2.00.21"
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 2000m
+              memory: 1024Mi
+          envFrom:
+            - configMapRef:
+                name: tdarr-nodes-config
+                optional: false
+          env:
+            - name: nodeID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: tdarr-node-config
+              mountPath: /app/configs
+            - name: media
+              mountPath: /media
+            - name: shared
+              mountPath: /shared
+      volumes:
+        - name: media
+          nfs: # data folder is a mounted pre-existing NFS share, *not* a PV/PVC
+            server: 192.168.1.200
+            path: /volume1/Media/media
+        - name: shared
+          nfs: # shared folder is a mounted pre-existing NFS share, *not* a PV/PVC
+            server: 192.168.1.200
+            path: /volume1/Media/transcode
+---
