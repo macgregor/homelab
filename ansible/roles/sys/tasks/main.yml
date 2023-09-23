@@ -7,8 +7,14 @@
     groups: [systemd-journal, adm, chrony, audio, video]
     append: yes
 
+- name: Set authorized key taken from local file
+  ansible.posix.authorized_key:
+    user: "{{ ansible_user }}"
+    state: present
+    key: "{{ lookup('file', '{{ ssh_pub_key }}') }}"
+
 # set locale/timezone
-- name: get current locale
+- name: Get current locale
   ansible.builtin.shell: "localectl status | head -n 1 | sed 's/System Locale: //' | tr -d '\n'"
   register: current_locale
   changed_when: false

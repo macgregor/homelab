@@ -17,3 +17,8 @@
   ansible.builtin.systemd:
       name: k3s
       state: restarted
+
+- name: restart-sshd
+  ansible.builtin.service:
+    name: sshd
+    state: restarted

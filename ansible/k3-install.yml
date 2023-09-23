@@ -4,7 +4,7 @@
   gather_facts: no
   become: yes
   handlers:
-  - import_tasks: handlers/main.yml
+    - import_tasks: handlers/main.yml
   roles:
     - role: sys
     - role: k3s/common
