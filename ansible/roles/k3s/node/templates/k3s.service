@@ -13,7 +13,8 @@ ExecStart=/usr/local/bin/k3s agent \
     --token-file /var/lib/rancher/k3s/agent/agent-token \
     --data-dir /var/lib/rancher/k3s \
     --kubelet-arg=image-gc-high-threshold=70 \
-    --kubelet-arg=image-gc-low-threshold=50
+    --kubelet-arg=image-gc-low-threshold=50 \
+    --kubelet-arg=runtime-request-timeout=10m0s
 KillMode=process
 Delegate=yes
 # Having non-zero Limit*s causes performance problems due to accounting overhead
