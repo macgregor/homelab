@@ -1,5 +1,6 @@
 # https://hub.docker.com/r/hkotel/mealie
 # https://hay-kot.github.io/mealie/documentation/getting-started/install/
+# https://nightly.mealie.io/documentation/getting-started/installation/backend-config/
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -11,29 +12,14 @@ data:
   PGID: "321"
   UMASK: "002"
   TZ: "America/New_York"
+  API_PORT: '80'
 
-  DEFAULT_EMAIL: matthew.m.stratton@gmail.com
+  DEFAULT_GROUP: Home
   BASE_URL: https://cook.matthew-stratton.me
+  ALLOW_SIGNUP: 'true'
 
   # Database Settings
   DB_ENGINE: postgres
-  POSTGRES_USER: mealie
-  POSTGRES_SERVER: 192.168.1.200
-  POSTGRES_PORT: '35432'
-  POSTGRES_DB: mealie
-
-  # Default Recipe Settings
-  RECIPE_PUBLIC: 'true'
-  RECIPE_SHOW_NUTRITION: 'true'
-  RECIPE_SHOW_ASSETS: 'true'
-  RECIPE_LANDSCAPE_VIEW: 'true'
-  RECIPE_DISABLE_COMMENTS: 'false'
-  RECIPE_DISABLE_AMOUNT: 'false'
-
-  # Gunicorn
-  # WEB_CONCURRENCY: 2
-  # WORKERS_PER_CORE: 0.5
-  # MAX_WORKERS: 8
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -42,10 +28,10 @@ metadata:
   namespace: mealie
   labels:
     app.kubernetes.io/name: mealie
-    app.kubernetes.io/version: v0.5.6
+    app.kubernetes.io/version: v1.0.0-RC1.1
 spec:
-  progressDeadlineSeconds: 600
-  replicas: 2
+  progressDeadlineSeconds: 300
+  replicas: 1
   revisionHistoryLimit: 1
   strategy:
     rollingUpdate:
@@ -64,9 +50,10 @@ spec:
     spec:
       dnsPolicy: ClusterFirst
       restartPolicy: Always
+      terminationGracePeriodSeconds: 30
       containers:
         - name: mealie
-          image: hkotel/mealie:v0.5.6
+          image: ghcr.io/mealie-recipes/mealie:v1.0.0-RC1.1
           imagePullPolicy: IfNotPresent
           resources:
             requests:

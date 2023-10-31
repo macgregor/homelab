@@ -1,4 +1,4 @@
-MEALIE_REPLICAS?=2
+MEALIE_REPLICAS?=1
 
 .PHONY: mealie-deploy
 mealie-deploy:
@@ -8,6 +8,12 @@ mealie-deploy:
 		--save-config \
 		--dry-run=client \
 		--from-literal=POSTGRES_PASSWORD="${MEALIE_PG_PASSWORD}" \
+		--from-literal=POSTGRES_USER="${MEALIE_PG_USER}" \
+		--from-literal=POSTGRES_SERVER="${MEALIE_PG_HOST}" \
+		--from-literal=POSTGRES_PORT="${MEALIE_PG_PORT}" \
+		--from-literal=POSTGRES_DB="${MEALIE_PG_DB}" \
+		--from-literal=DEFAULT_EMAIL="${MEALIE_DEFAULT_ADMIN_USER}" \
+		--from-literal=DEFAULT_PASSWORD="${MEALIE_DEFAULT_ADMIN_PASSWORD}" \
 		-o yaml | kubectl apply -f -;
 	kubectl apply -f ./app/mealie/storage.yml
 	kubectl apply -f ./app/mealie/mealie.yml
@@ -24,6 +30,11 @@ mealie-remove:
 .PHONY: mealie-debug
 mealie-debug:
 	kubectl -n mealie exec -it `kubectl -n mealie get pods -l app.kubernetes.io/name=mealie -o name` -- bash
+
+.PHONY: mealie-debug-pg
+mealie-debug-pg:
+	kubectl -n mealie run -i --tty --rm debug --image=postgres --restart=Never -- /bin/bash -c "psql postgresql://${MEALIE_PG_ADMIN_USER}:${MEALIE_PG_ADMIN_PASSWORD}@${MEALIE_PG_HOST}:${MEALIE_PG_PORT}/${MEALIE_PG_DB}"
+	#kubectl -n mealie debug -it --image=postgres `kubectl -n mealie get pods -l app.kubernetes.io/name=mealie -o name` -- /bin/bash -c "psql postgresql://mealie:${MEALIE_PG_PASSWORD}@192.168.1.200:35432/mealie"
 
 .PHONY: mealie-logs
 mealie-logs:
