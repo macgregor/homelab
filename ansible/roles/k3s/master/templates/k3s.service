@@ -9,6 +9,7 @@ Type=notify
 ExecStartPre=-/sbin/modprobe br_netfilter
 ExecStartPre=-/sbin/modprobe overlay
 ExecStart=/usr/local/bin/k3s server \
+    --token "{{ kube_server_token }}" \
     --data-dir /var/lib/rancher/k3s \
     --disable coredns \
     --disable traefik \

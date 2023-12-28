@@ -17,6 +17,10 @@
   ansible.builtin.systemd:
       name: k3s
       state: restarted
+  register: output
+  failed_when:
+    - output.failed == true
+    - '"Could not find the requested service" not in output.msg'
 
 - name: restart-sshd
   ansible.builtin.service:

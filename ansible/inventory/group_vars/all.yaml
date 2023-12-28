@@ -1,5 +1,6 @@
 ---
 default_user: rocky
+default_password: rockylinux
 sudo_group: wheel
 ansible_user: macgregor
 ssh_pub_key: /home/mstratto/.ssh/macgregor.id_rsa.pub
@@ -10,6 +11,8 @@ master_ip: "{{ hostvars[groups['master'][0]]['ansible_default_ipv4']['address'] 
 # potentially sensitive variables, look up from localhost environment
 # tip quick and dirty (not super secure) vault: https://direnv.net/
 # keep sensitive variables in .envrc and add .envrc to .gitignore
+ansible_user_password: "{{ lookup('env', 'ANSIBLE_USER_PASSWORD') }}"
+kube_server_token: "{{ lookup('env', 'KUBE_SERVER_TOKEN') }}"
 kube_mysql_user: "{{ lookup('env', 'KUBE_MYSQL_USER', default='kubernetes') }}"
 kube_mysql_password: "{{ lookup('env', 'KUBE_MYSQL_PASSWORD') }}"
 kube_mysql_host: "{{ lookup('env', 'KUBE_MYSQL_HOST', default='192.168.1.200') }}"

@@ -5,10 +5,13 @@
   tags: [ create_user ]
   vars:
     ansible_ssh_user: "{{ default_user }}"
+    ansible_ssh_pass: "{{ default_password }}"
+    ansible_become_pass: "{{ default_password }}"
   tasks:
     - name: "Add the user '{{ ansible_user }}'"
       ansible.builtin.user:
         name: "{{ ansible_user }}"
+        password: "{{ ansible_user_password | password_hash('sha512') }}"
         uid: 1001
         groups: "{{ sudo_group }}"
         shell: /bin/bash
@@ -32,11 +35,6 @@
   hosts: cluster
   gather_facts: false
   become: yes
-  handlers:
-    - name: restart sshd
-      service:
-        name: sshd
-        state: restarted
 
   tasks:
     - name: "Remove the default user {{ default_user }} if present"
@@ -46,20 +44,11 @@
         remove: yes
         force: true
 
-    - name: Disable root login over SSH
-      lineinfile: dest=/etc/ssh/sshd_config regexp="^PermitRootLogin" line="PermitRootLogin no" state=present
-      notify:
-        - restart sshd
-
-    - name: Disable password login
-      lineinfile: dest=/etc/ssh/sshd_config regexp="^PasswordAuthentication" line="PasswordAuthentication no" state=present
-      notify:
-        - restart sshd
-
     # this returned a non-zero exit code for me, but it seemed to work...  
     - name: Expand rootfs
       ansible.builtin.command: rootfs-expand
       register: expand_rootfs
       changed_when: "'reboot required' in expand_rootfs.stdout"
+      ignore_errors: true
       notify:
         - reboot
