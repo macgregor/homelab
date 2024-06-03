@@ -5,9 +5,9 @@ metadata:
   namespace: media
   labels:
     app.kubernetes.io/name: sonarr
-    app.kubernetes.io/version: 3.0.8
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: sonarr
@@ -15,6 +15,7 @@ spec:
     metadata:
       annotations:
         fluentbit.io/parser: "sonarr"
+        diun.enable: "true"
       labels:
         app.kubernetes.io/name: sonarr
     spec:
@@ -46,7 +47,8 @@ spec:
           value: '321'
         - name: UMASK
           value: '002'
-        image: linuxserver/sonarr:arm64v8-latest
+        # https://hub.docker.com/r/linuxserver/sonarr/tags
+        image: linuxserver/sonarr:4.0.5
         imagePullPolicy: IfNotPresent
         name: sonarr
         resources:

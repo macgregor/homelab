@@ -5,9 +5,9 @@ metadata:
   namespace: media
   labels:
     app.kubernetes.io/name: radarr
-    app.kubernetes.io/version: 4.1.0
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: radarr
@@ -15,6 +15,7 @@ spec:
     metadata:
       annotations:
         fluentbit.io/parser: "radarr"
+        diun.enable: "true"
       labels:
         app.kubernetes.io/name: radarr
     spec:
@@ -46,7 +47,9 @@ spec:
           value: '321'
         - name: UMASK
           value: '002'
-        image: linuxserver/radarr:arm64v8-latest
+        
+        # https://registry.hub.docker.com/r/linuxserver/radarr/tags
+        image: linuxserver/radarr:5.6.0
         imagePullPolicy: IfNotPresent
         name: radarr
         resources:

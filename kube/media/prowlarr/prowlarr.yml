@@ -5,9 +5,9 @@ metadata:
   namespace: media
   labels:
     app.kubernetes.io/name: prowlarr
-    app.kubernetes.io/version: nightly
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: prowlarr
@@ -15,6 +15,7 @@ spec:
     metadata:
       annotations:
         fluentbit.io/parser: "prowlarr"
+        diun.enable: "true"
       labels:
         app.kubernetes.io/name: prowlarr
     spec:
@@ -46,8 +47,10 @@ spec:
           value: '321'
         - name: UMASK
           value: '002'
-        image: linuxserver/prowlarr:arm64v8-latest
-        imagePullPolicy: Always
+
+        # https://hub.docker.com/r/linuxserver/prowlarr/tags
+        image: linuxserver/prowlarr:1.18.0
+        imagePullPolicy: IfNotPresent
         name: prowlarr
         resources:
           requests:

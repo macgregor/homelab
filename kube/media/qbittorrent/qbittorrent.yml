@@ -50,8 +50,9 @@ spec:
             value: "1"
 
       containers:
+        # https://hub.docker.com/r/linuxserver/qbittorrent/tags
         - name: qbittorrent
-          image: lscr.io/linuxserver/qbittorrent:arm64v8-4.5.4
+          image: linuxserver/qbittorrent:4.6.5
           imagePullPolicy: IfNotPresent
           resources:
             requests:
@@ -84,7 +85,8 @@ spec:
         # > kubectl -n media exec -it `kubectl -n media get pods -l app.kubernetes.io/name=qbittorrent -o name` -- bash
         # > curl https://ipinfo.io
         - name: gluetun
-          image: ghcr.io/qdm12/gluetun:v3.35
+          # https://hub.docker.com/r/qmcgaw/gluetun/tags
+          image: ghcr.io/qdm12/gluetun:v3.38
           imagePullPolicy: IfNotPresent
           resources:
             requests:
