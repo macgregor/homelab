@@ -40,10 +40,13 @@
   tags: [ slow ]
   dnf:
     name:
-      - "neofetch"
       - "dnf-automatic"
       - "nfs-utils"
       - "yum-utils"
+      - "iotop"
+      - "sysstat"
+      - "tar"
+      - "unzip"
     update_cache: no
     state: 'present'
 
@@ -69,7 +72,7 @@
   loop:
     - { src: dnf-automatic.conf.j2, dest: /etc/dnf/automatic.conf }
     - { src: motd.txt, dest: /etc/motd.d/00-notes.txt }
-    - { src: neofetch-config.conf, dest: "/home/{{ ansible_user }}/.config/neofetch/config.conf"}
+    - { src: journald.conf.j2, dest: /etc/systemd/journald.conf }
 
 # Raspberry Pi
 - name: Deploy Boot Config
@@ -103,4 +106,5 @@
   loop:
     - {name: dnf-automatic-install.timer}
     - {name: dnf-automatic-reboot.timer}
+    - {name: systemd-journald.service}
     - {name: firewalld.service, state: stopped, enabled: false, masked: true}

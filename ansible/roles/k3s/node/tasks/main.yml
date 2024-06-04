@@ -3,6 +3,7 @@
 # from the master node. role/k3s/master executes first, waits for the file to exist and then uses 
 # ansible.builtin.set_fact to store the file contents for role/k3s/node to use.
 - name: ensure agent-token file exists
+  tags: [ agent-token ]
   ansible.builtin.copy:
     dest: /var/lib/rancher/k3s/agent/agent-token
     content: "{{ hostvars[groups['master'][0]]['agent_token'] }}"

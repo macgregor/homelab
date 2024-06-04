@@ -2,3 +2,7 @@
 Kubernetes
     systemd:  /etc/systemd/system/k3s.service
     logs:     journalctl -eu k3s.service
+
+System:
+    systemctl status dnf-automatic-install.service
+    systemctl status log2ram

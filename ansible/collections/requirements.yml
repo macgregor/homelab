@@ -1,3 +1,5 @@
----
-collections:
-  - name: community.general
+# This is used to manage Ansible role dependences
+# http://docs.ansible.com/galaxy.html#installing-multiple-roles-from-a-file
+# Install with: `ansible-galaxy install -r requirements.yml`
+# note: requires tar and unzip commands on the *target* host
+- name: chzerv.log2ram

@@ -7,6 +7,7 @@ gpu_freq=750
 
 # speed up boot time
 boot_delay=0
+dtoverlay=disable-wifi
 dtoverlay=disable-bt
 disable_splash=1
 

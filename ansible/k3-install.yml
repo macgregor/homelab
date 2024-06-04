@@ -1,12 +1,13 @@
 ---
 
 - hosts: cluster
-  gather_facts: no
+  gather_facts: yes
   become: yes
   handlers:
     - import_tasks: handlers/main.yml
   roles:
     - role: sys
+    - role: chzerv.log2ram 
     - role: k3s/common
 
 - hosts: master
