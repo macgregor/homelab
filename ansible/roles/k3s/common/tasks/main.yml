@@ -62,6 +62,7 @@
   notify: reload-systemd
   loop:
     - { src: cgroup-kill-on-shutdown@.service, dest: /etc/systemd/system/cgroup-kill-on-shutdown@.service }
+    - { src: k3s-logs-cleanup.conf, dest: /etc/tmpfiles.d/k3s-logs-cleanup.conf }
 
 - name: Deploy config files, scripts, etc
   ansible.builtin.template:

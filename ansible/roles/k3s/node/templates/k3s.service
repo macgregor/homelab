@@ -14,6 +14,8 @@ ExecStart=/usr/local/bin/k3s agent \
     --data-dir /var/lib/rancher/k3s \
     --kubelet-arg=image-gc-high-threshold=70 \
     --kubelet-arg=image-gc-low-threshold=50 \
+    --kubelet-arg=container-log-max-files=5 \
+    --kubelet-arg=container-log-max-size=10Mi \
     --kubelet-arg=runtime-request-timeout=10m0s
 KillMode=process
 Delegate=yes

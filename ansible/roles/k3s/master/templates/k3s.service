@@ -21,6 +21,8 @@ ExecStart=/usr/local/bin/k3s server \
     --datastore-endpoint "mysql://{{ kube_mysql_user }}:{{ kube_mysql_password }}@tcp({{ kube_mysql_host }}:{{ hube_mysql_port }})/{{ kube_mysql_db_name}}" \
     --kubelet-arg=image-gc-high-threshold=70 \
     --kubelet-arg=image-gc-low-threshold=50 \
+    --kubelet-arg=container-log-max-files=5 \
+    --kubelet-arg=container-log-max-size=10Mi \
     --kubelet-arg=runtime-request-timeout=10m0s
 KillMode=process
 Delegate=yes
