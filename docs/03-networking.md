@@ -210,3 +210,9 @@ graph LR
     User --> |matthew-stratton.me| CF
     CF --> |EXTERNAL_IP:443<br/>Host: matthew-stratton.me| Router
 ```
+
+# DNS
+
+https://man.archlinux.org/man/resolved.conf.5.en
+
+sudo systemctl daemon-reload && sudo systemctl restart systemd-networkd && sudo systemctl restart systemd-resolved

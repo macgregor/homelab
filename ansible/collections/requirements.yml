@@ -2,4 +2,6 @@
 # http://docs.ansible.com/galaxy.html#installing-multiple-roles-from-a-file
 # Install with: `ansible-galaxy install -r requirements.yml`
 # note: requires tar and unzip commands on the *target* host
-- name: chzerv.log2ram
+
+# note: tried this and had some stability problems, leaving it here commented out for history
+#- name: chzerv.log2ram

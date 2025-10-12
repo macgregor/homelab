@@ -5,8 +5,22 @@
   * setup volume for mariadb, install mariadb, create mariadb kubernetes user and database
 2. setup k3s to use mariadb
   * ssl
+  * enabling statistics: https://mariadb.com/kb/en/user-statistics/ 
 3. install synology-csi driver
   * synology iscsi driver suuuuucks
+
+
+## LetsEncrypt, acme.sh
+
+* there is a user defined task configured in the synology control panel that periodically runs `/var/services/homes/certadmin/cert-renew.sh`
+    * this file contains passwords/api tokens
+    * if encountering errors, you can edit this script and add `--debug 2` to the commands its running to get the acme script to provide more information
+* theres a synology system user called "certadmin" we created in the synology control panel that is used by the script to log into the synology admin panel and update the cert when its renewed
+* the scheduled tasks are being run as the root system user, if using ssh you should `sudo su` first
+* acme.sh + cloudflare DNS: https://github.com/acmesh-official/acme.sh/wiki/dnsapi#dns_cf
+    * in particular `/var/services/homes/certadmin/cert-renew.sh` needs an api token/permissions from cloudflare, if something breaks with renewal its probably this authentication piece 
+* upgrade the acme scripts (`sudo su` first): `/usr/local/share/acme.sh/acme.sh --force --upgrade --nocron --home /usr/local/share/acme.sh`
+
 
 Resources:
 * https://dr-b.io/post/Synology-DSM-7-with-Lets-Encrypt-and-DNS-Challenge
@@ -25,70 +39,6 @@ Enter password:
 MariaDB [(none)]> CREATE DATABASE `kubernetes`;
 MariaDB [(none)]> CREATE user 'kubernetes'@'%' IDENTIFIED BY 'password';
 MariaDB [(none)]> GRANT ALL PRIVILEGES ON `kubernetes`.* TO 'kubernetes'@'%';
-```
-
-
-
-
-```
-
-# run with --test first to verify
-
-export CF_Token="redacted"
-acme.sh --issue -d matthew-stratton.me -d *.matthew-stratton.me -w /tmp/mnt/1.44.1-42218/www --server letsencrypt --dns dns_cf
-
-acme.sh --install-cert -d matthew-stratton.me \
---fullchain-file /tmp/mnt/1.44.1-42218/cert/matthew-stratton.me/fullchain.pem \
---key-file /tmp/mnt/1.44.1-42218/cert/matthew-stratton.me/key.pem \
---reloadcmd "service nginx restart"
-chown root:nobody -R /tmp/mnt/1.44.1-42218/cert/matthew-stratton.me/
-chmod -R 0640 /tmp/mnt/1.44.1-42218/cert/matthew-stratton.me/
-
-
-export SYNO_Username="certadmin"
-export SYNO_Password='redacted'
-export SYNO_Certificate="Let's Encrypt"
-export SYNO_Create=1
-export CF_Token="kaCSPkFUWo3qnpDUT0i5qEYNL9hgF6Fu1E8DfEYn"
-
-
-export SYNO_Username="certadmin"
-export SYNO_Password='redacted'
-export SYNO_Certificate="synology.matthew-stratton.me"
-export SYNO_Create=1
-export SYNO_Scheme="https"
-export SYNO_Host="localhost"
-export SYNO_Port="5001"
-export CF_Token="redacted"
-export CF_Email="matthew.m.stratton@gmail.com"
-
-/usr/local/share/acme.sh/acme.sh --renew -d "$SYNO_Certificate" \
-  --home /usr/local/share/acme.sh && \
-/usr/local/share/acme.sh/acme.sh --deploy -d "$SYNO_Certificate" \
-   --deploy-hook synology_dsm \
-   --reloadcmd "/usr/local/bin/reload-certs.sh" \
-   --dnssleep 20 \
-   --home /usr/local/share/acme.sh
-
-/usr/local/share/acme.sh/acme.sh --server letsencrypt --issue \
-  -d "$SYNO_Certificate" \
-  -d "auth.matthew-stratton.me" \
-  -d "sso.matthew-stratton.me" \
-  -d "ldap.matthew-stratton.me" \
-  -d "maraidb.matthew-stratton.me" \
-  -d "nfs.matthew-stratton.me" \
-  --home /usr/local/share/acme.sh \
-  --dns dns_cf
-
-
-  /usr/local/share/acme.sh &&
-  /usr/local/share/acme.sh/acme.sh -d $SYNO_Certificate --deploy \
-     --deploy-hook synology_dsm \
-     --reloadcmd "/usr/local/bin/reload-certs.sh" \
-     --dnssleep 20 \
-     --home $PWD
-
-./acme.sh -d "synology.matthew-stratton.me" -d "www.synology.matthew-stratton.me" --deploy --deploy-hook synology_dsm --home $PWD
 ```
 
 setting up nfs, dont squash permissions and grant "everyone" superduper access

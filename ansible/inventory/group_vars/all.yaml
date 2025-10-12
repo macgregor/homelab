@@ -4,18 +4,21 @@ default_password: rockylinux
 sudo_group: wheel
 ansible_user: macgregor
 ssh_pub_key: /home/mstratto/.ssh/macgregor.id_rsa.pub
-k3s_version: v1.30.1+k3s1
+k3s_version: v1.33.1+k3s1
 master_hostname: "{{ hostvars[groups['master'][0]]['ansible_host'] }}"
 master_ip: "{{ hostvars[groups['master'][0]]['ansible_default_ipv4']['address'] }}"
 
 # https://github.com/chzerv/ansible-role-log2ram
-log2ram_enable_on_boot: true
-log2ram_reboot_after_install: true
-log2ram_size: "50M"
-log2ram_use_rsync: "true"
-log2ram_path_disk: "/var/log"
-log2ram_mail: "false"
-log2ram_use_zl2r: "false"
+# note: tried this and had some stability problems, leaving it here commented out for history
+#log2ram_state: install
+#log2ram_enable_on_boot: true
+#log2ram_reboot_after_install: false
+#log2ram_size: "50M"
+#log2ram_use_rsync: "true"
+#log2ram_path_disk: "/var/log"
+#log2ram_mail: "false"
+#log2ram_use_zl2r: "false"
+#log2ram_compression_algorithm: "lz4"
 
 # potentially sensitive variables, look up from localhost environment
 # tip quick and dirty (not super secure) vault: https://direnv.net/

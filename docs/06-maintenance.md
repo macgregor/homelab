@@ -17,6 +17,11 @@ Jun 02 20:15:03 k3-n1 k3s[2335]: time="2024-06-02T20:15:03-04:00" level=info msg
 
 Solution: from the master node (or any connected kubectl) run `kubectl -n kube-system delete secret <agent-node-name>.node-password.k3s`
 
+In my case it was:
+```
+kubectl -n kube-system delete secrets k3-n1.node-password.k3s
+```
+
 # Server OS Upgrade
 
 DONT DO IT. Its not worth the pain. Start with a fresh install instead.

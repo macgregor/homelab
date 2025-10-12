@@ -23,6 +23,10 @@
 # It is a bit awkward to get the agent-token file, which is generated on first `k3s server` startup, 
 # from the master node. role/k3s/master executes first, waits for the file to exist and then uses 
 # ansible.builtin.set_fact to store the file contents for role/k3s/node to use.
+#
+# Note: when recovering from a lost node (reinstalling fresh) you may also need to run this from 
+# the master node:
+#   kubectl -n kube-system delete secrets k3-n1.node-password.k3s
 - name: Wait for agent-token
   wait_for:
     path: "/var/lib/rancher/k3s/server/agent-token"

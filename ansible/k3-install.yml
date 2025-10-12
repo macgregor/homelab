@@ -7,7 +7,8 @@
     - import_tasks: handlers/main.yml
   roles:
     - role: sys
-    - role: chzerv.log2ram 
+    # note: tried this and had some stability problems, leaving it here commented out for history
+    #- role: chzerv.log2ram 
     - role: k3s/common
 
 - hosts: master

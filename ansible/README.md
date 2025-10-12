@@ -9,6 +9,7 @@
     * not required for Rock Linux 9
 4. Have an SSH key generated to connect to hosts with
 5. Ansible installed (will also need sshpass for bootstrapping: `brew install hudochenkov/sshpass/sshpass`)
+6. `ansible-galaxy install -r requirements.yml`
 
 **Config points**:
 1. cluster hostnames in ansible inventory: [hosts.ini](./ansible/inventory/hosts.ini)
@@ -19,6 +20,7 @@
 
 **tl;dr**:
 ```
+$ ansible-galaxy install -r requirements.yml
 $ ansible-playbook -i inventory/hosts.ini rpi-bootstrap.yml
 $ ansible-playbook -i inventory/hosts.ini k3-install.yml
 
