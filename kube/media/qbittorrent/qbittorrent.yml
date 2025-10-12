@@ -52,7 +52,7 @@ spec:
       containers:
         # https://hub.docker.com/r/linuxserver/qbittorrent/tags
         - name: qbittorrent
-          image: linuxserver/qbittorrent:4.6.5
+          image: linuxserver/qbittorrent:5.1.2
           imagePullPolicy: IfNotPresent
           resources:
             requests:
@@ -86,7 +86,7 @@ spec:
         # > curl https://ipinfo.io
         - name: gluetun
           # https://hub.docker.com/r/qmcgaw/gluetun/tags
-          image: ghcr.io/qdm12/gluetun:v3.38
+          image: ghcr.io/qdm12/gluetun:v3.40
           imagePullPolicy: IfNotPresent
           resources:
             requests:

@@ -58,7 +58,7 @@ spec:
       containers:
         # https://hub.docker.com/r/linuxserver/jellyfin/tags
         - name: jellyfin
-          image: linuxserver/jellyfin:10.9.3
+          image: linuxserver/jellyfin:10.10.7
           imagePullPolicy: IfNotPresent
           
           # using unstable for now to get HW acceleration support
