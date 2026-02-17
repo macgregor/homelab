@@ -18,6 +18,7 @@ include observation/loki/loki.mk
 include observation/fluent-bit/fluent-bit.mk
 include observation/kube-prometheus-stack/kube-prometheus-stack.mk
 include observation/trivy/trivy.mk
+include observation/diun/diun.mk
 
 # Media
 include media/jellyfin/jellyfin.mk
@@ -25,6 +26,7 @@ include media/qbittorrent/qbittorrent.mk
 include media/radarr/radarr.mk
 include media/prowlarr/prowlarr.mk
 include media/sonarr/sonarr.mk
+include media/seerr/seerr.mk
 include media/tdarr-server/tdarr-server.mk
 include media/tdarr-nodes/tdarr-nodes.mk
 
@@ -60,19 +62,19 @@ remove-sys: coredns-remove democratic-csi-remove cert-manager-remove metallb-rem
 	@echo "Done."
 
 .PHONY: deploy-apps
-deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy synology-dsm-deploy qbittorrent-deploy mealie-deploy
+deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy synology-dsm-deploy qbittorrent-deploy mealie-deploy seerr-deploy
 	@echo "Done."
 
 .PHONY: stop-apps
-stop-apps: foundry-vtt-stop jellyfin-stop network-multitool-stop qbittorrent-stop mealie-stop
+stop-apps: foundry-vtt-stop jellyfin-stop network-multitool-stop qbittorrent-stop mealie-stop seerr-stop
 	@echo "Done."
 
 .PHONY: start-apps
-start-apps: foundry-vtt-start jellyfin-start network-multitool-start qbittorrent-start mealie-start
+start-apps: foundry-vtt-start jellyfin-start network-multitool-start qbittorrent-start mealie-start seerr-start
 	@echo "Done."
 
 .PHONY: remove-apps
-remove-apps: foundry-vtt-remove jellyfin-remove network-multitool-remove synology-dsm-remove qbittorrent-remove mealie-remove
+remove-apps: foundry-vtt-remove jellyfin-remove network-multitool-remove synology-dsm-remove qbittorrent-remove mealie-remove seerr-remove
 	@echo "Done."
 
 .PHONY: deploy-demos

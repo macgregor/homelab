@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seerr
+  namespace: media
+  labels:
+    app.kubernetes.io/name: seerr
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seerr
+  template:
+    metadata:
+      annotations:
+        diun.enable: "true"
+      labels:
+        app.kubernetes.io/name: seerr
+    spec:
+      terminationGracePeriodSeconds: 15
+
+      # without this external DNS lookups fail with my setup (api.themoviedb.org => api.themoviedb.org.matthew-stratton.me)
+      # https://pracucci.com/kubernetes-dns-resolution-ndots-options-and-why-it-may-affect-application-performances.html
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+
+      # seerr runs as node (uid 1000); fsGroup ensures the iSCSI volume is group-writable
+      securityContext:
+        fsGroup: 1000
+      restartPolicy: Always
+      volumes:
+      - name: seerr-config
+        persistentVolumeClaim:
+          claimName: seerr-config
+      containers:
+      - env:
+        - name: TZ
+          value: America/New_York
+
+        # https://github.com/seerr-team/seerr/pkgs/container/seerr
+        image: ghcr.io/seerr-team/seerr:v3.0.1
+        imagePullPolicy: IfNotPresent
+        name: seerr
+        resources:
+          requests:
+            memory: 128Mi
+          limits:
+            memory: 512Mi
+        ports:
+        - containerPort: 5055
+          name: http
+          protocol: TCP
+        stdin: true
+        tty: true
+        volumeMounts:
+        - mountPath: /app/config
+          name: seerr-config

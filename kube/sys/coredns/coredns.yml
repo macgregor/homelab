@@ -51,7 +51,7 @@ data:
     192.168.1.201 synology-eth2
     192.168.1.210 k3-m1
     192.168.1.211 k3-n1
-    192.168.1.220 ext-lb synology.matthew-stratton.me dnd.matthew-stratton.me jellyfin.matthew-stratton.me cook.matthew-stratton.me
+    192.168.1.220 ext-lb synology.matthew-stratton.me dnd.matthew-stratton.me jellyfin.matthew-stratton.me cook.matthew-stratton.me seerr.matthew-stratton.me
     192.168.1.221 int-lb qbittorrent.matthew-stratton.me tdarr.matthew-stratton.me adguard.matthew-stratton.me trivy.matthew-stratton.me prowlarr.matthew-stratton.me sonarr.matthew-stratton.me radarr.matthew-stratton.me
     192.168.1.222 adguard
     192.168.1.223 ns dns.matthew-stratton.me
@@ -63,7 +63,6 @@ metadata:
   labels:
     k8s-app: kube-dns
     app.kubernetes.io/name: coredns
-    app.kubernetes.io/version: 1.10.1
   name: coredns
   namespace: kube-system
 spec:
@@ -84,6 +83,8 @@ spec:
       labels:
         k8s-app: kube-dns
         app.kubernetes.io/name: coredns
+      annotations:
+        diun.enable: "true"
     spec:
       containers:
       - name: coredns
