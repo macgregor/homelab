@@ -48,7 +48,7 @@ spec:
         - name: UMASK
           value: '002'
         # https://hub.docker.com/r/linuxserver/sonarr/tags
-        image: linuxserver/sonarr:4.0.5
+        image: linuxserver/sonarr:4.0.16
         imagePullPolicy: IfNotPresent
         name: sonarr
         resources:

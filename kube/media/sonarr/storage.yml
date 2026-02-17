@@ -1,3 +1,27 @@
+---
+# manually create a PV for config so we dont loose it when we update
+# Need one per pod if running more than one replica, stateful sets should
+# probably be used in that case
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    app.kubernetes.io/name: sonarr
+  name: sonarr-config
+spec:
+  storageClassName: ""
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  iscsi:
+    targetPortal: 192.168.1.200:3260
+    iqn: iqn.2000-01.com.synology:synology.default-target.7d1c64e1219
+    lun: 4
+    fsType: ext4
+    readOnly: false
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -6,10 +30,11 @@ metadata:
   name: sonarr-config
   namespace: media
 spec:
+  storageClassName: "" # needs to be blank so dynamic provisioners dont match
+  volumeName: sonarr-config
+  volumeMode: Filesystem
   accessModes:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
-  storageClassName: local-path
-  volumeMode: Filesystem
+      storage: 10Gi
