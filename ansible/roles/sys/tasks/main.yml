@@ -42,6 +42,7 @@
     name:
       - "dnf-automatic"
       - "nfs-utils"
+      - "iscsi-initiator-utils"
       - "yum-utils"
       - "iotop"
       - "sysstat"
@@ -107,4 +108,5 @@
     - {name: dnf-automatic-install.timer}
     - {name: dnf-automatic-reboot.timer}
     - {name: systemd-journald.service}
+    - {name: iscsid.service}
     - {name: firewalld.service, state: stopped, enabled: false, masked: true}
