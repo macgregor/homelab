@@ -1,0 +1,72 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: decluttarr-config
+  namespace: media
+data:
+  TZ: "America/New_York"
+  LOG_LEVEL: "INFO"
+  TEST_RUN: "False"
+  TIMER: "5"
+  REMOVE_STALLED: "True"
+  REMOVE_METADATA_MISSING: "True"
+  REMOVE_FAILED_DOWNLOADS: "True"
+  REMOVE_FAILED_IMPORTS: "True"
+  REMOVE_ORPHANS: "True"
+  REMOVE_MISSING_FILES: "True"
+  REMOVE_SLOW: "False"
+  REMOVE_BAD_FILES: "True"
+  REMOVE_UNMONITORED: "False"
+  SEARCH_MISSING: "False"
+  DETECT_DELETIONS: "False"
+  MAX_STRIKES: "2"
+  RADARR: |
+    - base_url: "http://radarr:7878"
+      api_key: !ENV RADARR_API_KEY
+  SONARR: |
+    - base_url: "http://sonarr:8989"
+      api_key: !ENV SONARR_API_KEY
+  QBITTORRENT: |
+    - base_url: "http://qbittorrent-tcp:8080"
+      username: !ENV QBITTORRENT_USER
+      password: !ENV QBITTORRENT_PASS
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: decluttarr
+  namespace: media
+  labels:
+    app.kubernetes.io/name: decluttarr
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: decluttarr
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: decluttarr
+      annotations:
+        diun.enable: "true"
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        # https://github.com/ManiMatter/decluttarr
+        - name: decluttarr
+          image: ghcr.io/manimatter/decluttarr:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          envFrom:
+            - configMapRef:
+                name: decluttarr-config
+                optional: false
+            - secretRef:
+                name: decluttarr-api-keys
+                optional: false
