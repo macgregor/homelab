@@ -9,16 +9,17 @@ data:
   PGID: "321"
   UMASK: "002"
   TZ: "America/New_York"
-  VPN_SERVICE_PROVIDER: "surfshark"
+  VPN_SERVICE_PROVIDER: "protonvpn"
   VPN_TYPE: "wireguard"
-  SERVER_HOSTNAMES: "us-clt.prod.surfshark.com"
+  SERVER_COUNTRIES: "United States"
+  VPN_PORT_FORWARDING: "on"
+  PORT_FORWARD_ONLY: "on"
+  VPN_PORT_FORWARDING_UP_COMMAND: "/bin/sh -c 'wget -O- --retry-connrefused --post-data \"json={\\\"listen_port\\\":{{PORT}},\\\"random_port\\\":false,\\\"upnp\\\":false}\" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1'"
   UPDATER_PERIOD: "24h"
-  WIREGUARD_ADDRESSES: "10.14.0.2/16" # from VPN provider Wireguard config
-  FIREWALL: "off"
-  DOT: "off"
-  LOG_LEVEL: "debug"
-  #DOT_VERBOSITY: "5"
-  #DOT_VERBOSITY_DETAILS: "4"
+  FIREWALL: "on"
+  DNS_SERVER: "on"
+  HEALTH_SERVER_ADDRESS: ":9999"
+  LOG_LEVEL: "info"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -52,7 +53,7 @@ spec:
       containers:
         # https://hub.docker.com/r/linuxserver/qbittorrent/tags
         - name: qbittorrent
-          image: linuxserver/qbittorrent:5.1.2
+          image: linuxserver/qbittorrent:5.1.4
           imagePullPolicy: IfNotPresent
           resources:
             requests:
@@ -60,7 +61,7 @@ spec:
               memory: 128Mi
             limits:
               cpu: 1000m
-              memory: 512Mi
+              memory: 1Gi
           envFrom:
             - configMapRef:
                 name: qbittorrent-config
@@ -86,7 +87,7 @@ spec:
         # > curl https://ipinfo.io
         - name: gluetun
           # https://hub.docker.com/r/qmcgaw/gluetun/tags
-          image: ghcr.io/qdm12/gluetun:v3.40
+          image: ghcr.io/qdm12/gluetun:v3.41.1
           imagePullPolicy: IfNotPresent
           resources:
             requests:
@@ -94,7 +95,7 @@ spec:
               memory: 128Mi
             limits:
               cpu: 500m
-              memory: 256Mi
+              memory: 512Mi
           securityContext:
             capabilities:
               add:
@@ -113,18 +114,21 @@ spec:
           volumeMounts:
             - name: tunnel
               mountPath: /dev/net/tun
-          #livenessProbe:
-          #  httpGet:
-          #    path: /
-          #    port: 9999
-          #  initialDelaySeconds: 30
-          #  timeoutSeconds: 30
-          #readinessProbe:
-          #  httpGet:
-          #    path: /
-          #    port: 9999
-          #  initialDelaySeconds: 30
-          #  timeoutSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9999
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9999
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 10
       volumes:
         - name: qbittorrent-config
           persistentVolumeClaim:

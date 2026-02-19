@@ -18,9 +18,9 @@ data:
   REMOVE_SLOW: "False"
   REMOVE_BAD_FILES: "True"
   REMOVE_UNMONITORED: "False"
-  SEARCH_MISSING: "False"
+  SEARCH_MISSING: "True"
   DETECT_DELETIONS: "False"
-  MAX_STRIKES: "2"
+  MAX_STRIKES: "4"
   RADARR: |
     - base_url: "http://radarr:7878"
       api_key: !ENV RADARR_API_KEY

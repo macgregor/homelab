@@ -8,8 +8,6 @@ qbittorrent-deploy:
 		--save-config \
 		--dry-run=client \
 		--from-literal=WIREGUARD_PRIVATE_KEY="${WIREGUARD_PRIVATE_KEY}" \
-		--from-literal=OPENVPN_USER="${VPN_USERNAME}" \
-		--from-literal=OPENVPN_PASSWORD="${VPN_PASSWORD}" \
 		-o yaml | kubectl apply -f -;
 	kubectl apply -f ./media/qbittorrent/storage.yml
 	kubectl apply -f ./media/qbittorrent/network.yml
