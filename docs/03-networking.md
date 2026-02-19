@@ -1,218 +1,205 @@
+# Networking
 
-# Outline
+This document covers network topology, DNS architecture, load balancing, ingress routing, TLS, and authentication for the homelab. For the hardware overview, see [Getting Started](00-getting-started.md). For k3s server flags that disable built-in networking components, see [RPis and k3s](01-rpis-and-k3s.md#why-k3s).
 
+## Network Topology
 
-1. High level network design
-  * physical network diagram
-  * DNS
-  * Firewall
-  * Cluster Load Balancing
-2. Router configuration
-  * static ips
-  * ip pools (dont over lap with metallb)
-  * dynamic dns
-  * Firewall
-  * port forwarding
-3. MetalLB and Ingress Controller
-  * what each is responsible for, do you need metallb, etc
-  * configuring MetalLB
-  * configuring ingress-nginx
-4. Demo with whoami
-  * create CNAME in cloudflare
-  * deploy whoami
-  * create ingress rule
-
-
-Resources:
-* https://cert-manager.io/v0.13-docs/tutorials/acme/ingress/#step-7---deploy-a-tls-ingress-resource
-* https://kubernetes.github.io/ingress-nginx/deploy/baremetal/
-* https://docs.openshift.com/container-platform/4.9/networking/metallb/about-metallb.html#nw-metallb-layer2_about-metallb-and-metallb-operator
-
-# FreshTomato
-
-**Note**: use the AIO FreshTomato firmware. The difference between AIO and VPN is really poorly documented. If you install VPN youll be missing a bunch of kernel modules like nfs
-
-Configuring your router steps:
-1. Change web admin to use port 8080 (No TLS) or 8443 (TLS), we will need ports 80/443 to route web traffic to our kubernetes cluster
-2. Enable SSH access, for increased security disable password login and add you SSH public key to "Authorized Keys"
-3. Change the admin username and password from the default if you havent already
-4. Set up static ip addresses for your kubernetes network devices (you can also set a hostname here and you will be able to resolve them via that hostname rather than having to remember the static ip address):
-  * Synology NAS
-  * Network Switch
-  * Raspberry Pis
-  * metallb will assign LAN ips (192. addresses) for kubernetes services that will appear on the device list here. We can then forward traffic to these lan IP addresses (e.g. router -> nginx-external-lb -> pods hosting a service)
-5. firewall script (allow and forward external address from cloudflare ups, allow internal traffic to reach kubernetes)
-
-
-Firewall script
-saved to /mnt/1.44.1-42218/firewall_rules.sh
-```
-KUBE_LB=192.168.1.220
-
-echo "Configuring firewall rules"
-
-# create cloudflare-proxy chains
-iptables -N cloudflare-proxy 2>/dev/null
-iptables -N cloudflare-proxy -t nat 2>/dev/null
-
-# add rules to WANPREROUTING/wanin to jump to the cloudflare-proxy chains
-if ! iptables -t nat --check WANPREROUTING -j cloudflare-proxy 2>/dev/null; then
-  iptables -t nat -A WANPREROUTING -j cloudflare-proxy
-fi
-
-if ! iptables --check wanin -j cloudflare-proxy 2>/dev/null; then
-  iptables -A wanin -j cloudflare-proxy
-fi
-
-# clear old rules
-iptables --flush cloudflare-proxy
-iptables -t nat --flush cloudflare-proxy
-
-# get cloudflare proxy ip addresses and allow them through the firewall
-for i in `curl -s -H 'Cache-Control: no-cache, no-store' https://www.cloudflare.com/ips-v4`; do
-  iptables -t nat -A cloudflare-proxy -s $i -p tcp -m tcp --dport 443 -j DNAT --to-destination $KUBE_LB:443
-  iptables -A cloudflare-proxy -s $i -d $KUBE_LB -p tcp -m tcp --dport 443 -j ACCEPT
-done
-
-# Accept internal ip traffic
-if ! iptables --check INPUT -s 192.168.10.0/24 -j ACCEPT 2>/dev/null; then
-  iptables -I INPUT -s 192.168.10.0/24 -j ACCEPT
-fi
-
-if ! iptables --check INPUT -s 192.168.1.0/24 -j ACCEPT 2>/dev/null; then                              
-  iptables -I INPUT -s 192.168.1.0/24 -j ACCEPT                                                        
-fi
+```mermaid
+graph TD
+    subgraph WAN
+        User([User])
+        CF{Cloudflare<br/>DNS + Proxy}
+    end
+    subgraph LAN [LAN - 192.168.1.0/24]
+        Modem[Modem - BGW210<br/>IP Passthrough]
+        Router{Router - FreshTomato<br/>192.168.1.1}
+        Switch{PoE Switch - GS305EP<br/>192.168.1.2}
+        Synology[Synology NAS<br/>192.168.1.200 / .201]
+        subgraph Cluster [k3s Cluster]
+            M1[k3-m1 control-plane<br/>192.168.1.210]
+            N1[k3-n1 worker<br/>192.168.1.211]
+            MetalLB{MetalLB<br/>192.168.1.220-239}
+        end
+    end
+    User --> CF
+    CF -->|HTTPS 443| Modem
+    Modem -->|IP Passthrough| Router
+    Router -->|Firewall: only<br/>Cloudflare IPs| MetalLB
+    Router --> Switch
+    Switch -->|PoE| M1
+    Switch -->|PoE| N1
+    Router --> Synology
 ```
 
-Administration -> Scripts -> Firewall:
+All devices have static IPs assigned on the router. The Pis are powered via PoE through the managed switch. MetalLB advertises service IPs on the LAN via ARP (L2 mode), making Kubernetes services reachable as first-class LAN devices.
+
+## Traffic Flow
+
+### External Request (Internet -> Service)
+
 ```
+User -> Cloudflare DNS (resolves to WAN IP)
+     -> Cloudflare Proxy (HTTPS termination + re-encryption)
+     -> Router (firewall allows Cloudflare IPs only)
+     -> DNAT to 192.168.1.220:443 (nginx-external LB)
+     -> ingress-nginx matches Host header -> routes to Service -> Pod
+```
+
+### Internal Request (LAN -> Service)
+
+```
+LAN client -> CoreDNS (resolves *.matthew-stratton.me to MetalLB IP)
+           -> 192.168.1.221 (nginx-internal LB)
+           -> ingress-nginx matches Host header -> routes to Service -> Pod
+```
+
+CoreDNS static hosts resolve `*.matthew-stratton.me` domains to the appropriate MetalLB IPs, so LAN clients reach internal services directly without going through Cloudflare or requiring hairpin NAT.
+
+## DNS
+
+DNS resolution flows through a chain: clients query CoreDNS, which forwards unknown queries to AdGuard Home for ad-blocking, which falls back to Cloudflare (`1.1.1.1`) for upstream resolution. Public DNS is managed on Cloudflare.
+
+### Cloudflare (Public DNS)
+
+Cloudflare manages the `matthew-stratton.me` zone. Public A records point to the router's WAN IP. The router runs a dynamic DNS client that updates Cloudflare when the WAN IP changes, keeping records in sync with the ISP-assigned address.
+
+Cloudflare also acts as a reverse proxy for internet-facing services -- external HTTPS traffic passes through Cloudflare before reaching the cluster. The router firewall only accepts traffic from Cloudflare's IP ranges (see [Router Firewall](#router-firewall)).
+
+### CoreDNS (Cluster + LAN DNS)
+
+k3s's built-in CoreDNS is disabled. A custom CoreDNS deployment provides both in-cluster DNS (`cluster.local`) and LAN-wide DNS resolution.
+
+CoreDNS is exposed to the LAN at `192.168.1.223` via two LoadBalancer services (one UDP, one TCP, sharing the same IP via MetalLB's `allow-shared-ip` annotation). LAN clients (or the router's DHCP settings) can point to this IP for DNS.
+
+The Corefile forwards unknown queries to AdGuard Home (`192.168.1.222`) first, then Cloudflare (`1.1.1.1`) as a fallback. A static hosts file maps infrastructure hostnames and `*.matthew-stratton.me` domains to their MetalLB IPs, so LAN clients resolve internal services without hairpin NAT.
+
+Configuration lives in `kube/sys/coredns/coredns.yml`.
+
+### AdGuard Home (Ad-blocking DNS)
+
+AdGuard Home runs at `192.168.1.222` and sits between CoreDNS and the upstream resolver. It filters ads and trackers for all DNS queries originating from the LAN. Configuration is managed via the AdGuard web UI at `adguard.matthew-stratton.me`.
+
+### Local Client DNS (Split DNS)
+
+Internal services have no public DNS records -- they only exist in CoreDNS's static hosts file. LAN clients using an external resolver (Cloudflare, VPN-pushed DNS, etc.) won't be able to resolve them.
+
+A NetworkManager dispatcher script ([`scripts/homelab-split-dns.sh`](../scripts/homelab-split-dns.sh)) handles this for Linux workstations with `systemd-resolved`. On every connection event, it probes CoreDNS to detect the home network, then configures a `~matthew-stratton.me` routing domain via `resolvectl` to direct matching queries to CoreDNS. It works across connection types (wifi, ethernet, thunderbolt dock), is inert off the home network, and survives VPN reconnects. Install to `/etc/NetworkManager/dispatcher.d/` and `chmod 755`.
+
+## Router Configuration (FreshTomato)
+
+The Nighthawk R7000 runs [FreshTomato](https://www.freshtomato.org/) firmware (AIO build -- the VPN build is missing kernel modules like NFS).
+
+### Setup Checklist
+
+1. Move the web admin UI to port 8080 (HTTP) or 8443 (HTTPS) -- ports 80/443 must be free for forwarding to the cluster
+2. Enable SSH with public key auth, disable password login
+3. Change the default admin credentials
+4. Assign static IPs for all infrastructure devices (Synology, switch, Pis)
+5. Configure dynamic DNS to update Cloudflare when the WAN IP changes
+6. Install the firewall script (see below)
+
+### Router Firewall
+
+The firewall script ([`scripts/router-firewall.sh`](../scripts/router-firewall.sh)) restricts inbound internet traffic to Cloudflare's proxy IP ranges and forwards it to the external ingress controller (`192.168.1.220`). Direct-to-IP access from the internet is blocked. Internal LAN traffic (`192.168.1.0/24`) is unrestricted.
+
+The script is saved to the router's persistent storage and executed via Administration > Scripts > Firewall:
+
+```bash
 sh /mnt/1.44.1-42218/firewall_rules.sh
 ```
 
-### MetalLB
+Node-level firewalls are disabled -- `firewalld` is masked on all nodes via Ansible. k3s manages its own iptables rules.
 
-**Resources**:
-1. https://particule.io/en/blog/k8s-no-cloud/
-2. https://www.debontonline.com/2020/09/loadbalancing-on-raberry-pi-kubernetes.html
-3. https://docs.openshift.com/container-platform/4.9/networking/metallb/about-metallb.html#nw-metallb-layer2_about-metallb-and-metallb-operator
-```
-$ kubectl apply -f ./kube/network/metallb.yml
-namespace/metallb-system created
-Warning: policy/v1beta1 PodSecurityPolicy is deprecated in v1.21+, unavailable in v1.25+
-podsecuritypolicy.policy/controller created
-podsecuritypolicy.policy/speaker created
-serviceaccount/controller created
-serviceaccount/speaker created
-clusterrole.rbac.authorization.k8s.io/metallb-system:controller created
-clusterrole.rbac.authorization.k8s.io/metallb-system:speaker created
-role.rbac.authorization.k8s.io/config-watcher created
-role.rbac.authorization.k8s.io/pod-lister created
-role.rbac.authorization.k8s.io/controller created
-clusterrolebinding.rbac.authorization.k8s.io/metallb-system:controller created
-clusterrolebinding.rbac.authorization.k8s.io/metallb-system:speaker created
-rolebinding.rbac.authorization.k8s.io/config-watcher created
-rolebinding.rbac.authorization.k8s.io/pod-lister created
-rolebinding.rbac.authorization.k8s.io/controller created
-daemonset.apps/speaker created
-deployment.apps/controller created
-$ kubectl apply -f ./kube/network/metallb-config.yml
-configmap/config created
-```
+## MetalLB
 
-# Diagrams
+[MetalLB](https://metallb.universe.tf/) provides load balancer IPs for Kubernetes services on bare-metal. It runs in L2 (ARP) mode, announcing service IPs on the LAN so the router and other devices can reach them.
 
-Network Diagram
-```mermaid
-graph TD
-    subgraph LAN
-        Router{Router - FreshTomato<br/>LAN: 192.168.1.1<br/>WAN: EXTERNAL_IP}
-        Modem[Modem - BGW210]
-        Switch{Switch - GS305EP<br/>LAN: 192.168.1.2}
-        RPI1[Raspberry PI]
-        RPI2[Raspberry PI]
-        RPI3[Raspberry PI]
-        RPI4[Raspberry PI]
-        kube{Virtual<br/>Kubernetes<br/>LoadBalancer}
-        Synology[Synology NAS]
-        kubenet((Kubernetes<br/>Subnet))
-    end
-    subgraph WAN
-        User
-        CF{Cloudflare DNS}
-    end
-    User --> CF --> Modem --> |IP Passthrough<br/>EXTERNAL_IP|Router
-    Router --> |Dynamic DNS<br/>Updates DNS resorce<br/> when WAN IP Changes| CF
-    Router --> |192.168.1.200<br/>192.168.1.201| Synology
-    Router --> Switch
-    Switch --> |192.168.1.210| RPI1
-    Switch --> |192.168.1.211| RPI2
-    Switch --> |192.168.1.212| RPI3
-    Switch --> |192.168.1.213| RPI4
-    Router --> |EXTERNAL_IP:443| kube
-    kube --> kubenet
-```
+Configuration:
+- **IP pool**: `192.168.1.220-239` (defined in `kube/sys/metallb/addresspool.yml`)
+- **Mode**: L2Advertisement
+- **Chart**: Bitnami MetalLB via Helmfile (`kube/sys/metallb/helmfile.yaml`)
 
+Services request a specific IP from the pool using `spec.loadBalancerIP` in their Service definition. The pool must not overlap with the router's DHCP range.
 
-MetalLB traffic routing
-```mermaid
-graph LR
-    subgraph LAN
-        Router{Router<br/>WAN: EXTERNAL_IP<br/>LAN: 192.168.1.1}
-        PF[Port Forward Rule<br/>From: EXTERNAL_IP:443<br/>To: 192.168.1.50:30000]
+## Ingress Controllers
 
-        subgraph kubernetes
-            LB{MetalLB<br/>LAN Pool:<br/>192.168.1.220-<br/>192.168.1.229}
-            ServiceLB{Service LB<br/>LAN: 192.168.1.50<br/>NodePort: 30000}
-            IngressRule[IngressRule<br/>Host: matthew-stratton.me<br/>Port: 443]
-            svc[matthew-stratton.me Service<br/>Port:443]
-            pod((Web Server<br/>Host: matthew-stratton.me<br/>Port:443))
+The cluster runs two separate ingress-nginx controllers to separate internet-facing and LAN-only traffic. Both deploy to the `ingress-nginx` namespace as independent Helm releases.
 
+### External (`nginx-external`)
 
-        end
-    end
-    subgraph WAN
-        User
-        CF{Cloudflare DNS}
-    end
+Handles internet-facing traffic arriving via Cloudflare.
 
-    ServiceLB --> IngressRule --> svc --> pod
-    LB --> |Accounces Service LB<br/>ip assignment 192.168.1.50<br/>via ARP| Router
-    Router --> |Dynamic DNS<br/>Updates DNS resorce when WAN IP Changes| CF
-    Router --> PF --> |192.168.1.50:30000<br/>Host: matthew-stratton.me| ServiceLB
-    User --> |matthew-stratton.me| CF
-    CF --> |EXTERNAL_IP:443<br/>Host: matthew-stratton.me| Router
-```
+| Setting | Value |
+| ------- | ----- |
+| IngressClass | `nginx-external` |
+| LoadBalancer IP | `192.168.1.220` |
+| Proxy protocol | Enabled (required for Cloudflare) |
+| ModSecurity + OWASP CRS | Enabled |
+| SSL passthrough | Enabled |
 
+Proxy protocol is needed because traffic arrives through Cloudflare's reverse proxy -- without it, all source IPs would appear as Cloudflare's.
 
-Host network IngressController
-```mermaid
-graph LR
+### Internal (`nginx-internal`)
 
-    subgraph LAN
-        Router{Router<br/>WAN: EXTERNAL_IP<br/>LAN: 192.168.1.1}
-        PF[Port Forward Rule<br/>From: EXTERNAL_IP:443<br/>To: 192.168.1.210:30000]
+Handles LAN-only traffic. Restricted by source IP ranges.
 
-        subgraph kubernetes
-            ServiceLB{Service LB<br/>LAN: 192.168.1.210<br/>NodePort: 30000}
-            IngressRule[IngressRule<br/>Host: matthew-stratton.me<br/>Port: 443]
-            svc[matthew-stratton.me Service<br/>Port:443]
-            pod((Web Server<br/>Host: matthew-stratton.me<br/>Port:443))
-        end
-    end
-    subgraph WAN
-        User
-        CF{Cloudflare DNS}
-    end
+| Setting | Value |
+| ------- | ----- |
+| IngressClass | `nginx-internal` |
+| LoadBalancer IP | `192.168.1.221` |
+| Source IP allowlist | `192.168.1.0/24`, `10.42.0.0/24`, `10.43.0.0/16` |
+| External traffic policy | `Local` (preserves client IP) |
+| SSL passthrough | Enabled |
 
-    ServiceLB --> IngressRule --> svc --> pod
-    Router --> |Dynamic DNS<br/>Updates DNS resorce when WAN IP Changes| CF
-    Router --> PF --> |192.168.1.50:30000<br/>Host: matthew-stratton.me| ServiceLB
-    User --> |matthew-stratton.me| CF
-    CF --> |EXTERNAL_IP:443<br/>Host: matthew-stratton.me| Router
-```
+No ModSecurity or WAF rules -- internal traffic is trusted.
 
-# DNS
+Each app's `network.yml` specifies which ingress class it uses. To see current assignments: `kubectl get ingress -A`.
 
-https://man.archlinux.org/man/resolved.conf.5.en
+## TLS
 
-sudo systemctl daemon-reload && sudo systemctl restart systemd-networkd && sudo systemctl restart systemd-resolved
+### Kubernetes TLS (cert-manager)
+
+[cert-manager](https://cert-manager.io/) automates TLS certificate issuance for Kubernetes ingresses. It uses LetsEncrypt with Cloudflare DNS-01 challenges -- no HTTP-01 challenge is needed since DNS validation works regardless of whether the service is internet-accessible.
+
+Two ClusterIssuers are configured:
+- **`letsencrypt`** -- Production issuer, used by default
+- **`letsencrypt-staging`** -- For testing (avoids rate limits)
+
+The default issuer is set in cert-manager's Helm values (`defaultIssuerName: letsencrypt`), so ingresses get TLS certificates automatically without explicit annotations. Ingresses that need staging certs override with `cert-manager.io/cluster-issuer: "letsencrypt-staging"`.
+
+Cloudflare API credentials (`CF_EMAIL`, `CF_API_KEY`) are injected via `envsubst` from `.envrc` into the ClusterIssuer manifests during deployment.
+
+Configuration lives in `kube/sys/cert-manager/`.
+
+### Synology DSM TLS (acme.sh)
+
+The Synology NAS has its own LetsEncrypt certificate for the DSM web UI, managed separately from cert-manager using [acme.sh](https://github.com/acmesh-official/acme.sh) with Cloudflare DNS validation.
+
+A scheduled task in DSM Control Panel periodically runs a renewal script:
+
+- **Script**: `/var/services/homes/certadmin/cert-renew.sh` (contains Cloudflare API tokens)
+- **Synology user**: `certadmin` -- a dedicated DSM user the script uses to update the certificate in DSM
+- **Scheduled task**: Runs as the `root` system user
+- **Cloudflare auth**: The script needs a [Cloudflare API token](https://github.com/acmesh-official/acme.sh/wiki/dnsapi#dns_cf) -- if renewal breaks, this is the most likely cause
+
+Troubleshooting:
+- Add `--debug 2` to the acme.sh commands in the renewal script for verbose output
+- SSH access requires `sudo su` to interact with the scheduled task or script
+- Upgrade acme.sh (as root): `/usr/local/share/acme.sh/acme.sh --force --upgrade --nocron --home /usr/local/share/acme.sh`
+
+Reference: [Synology DSM 7 with LetsEncrypt and DNS Challenge](https://dr-b.io/post/Synology-DSM-7-with-Lets-Encrypt-and-DNS-Challenge)
+
+## References
+
+- [ingress-nginx bare-metal considerations](https://kubernetes.github.io/ingress-nginx/deploy/baremetal/)
+- [MetalLB L2 mode](https://metallb.universe.tf/concepts/layer2/)
+- [cert-manager ACME ingress tutorial](https://cert-manager.io/docs/tutorials/acme/ingress/)
+- [acme.sh Cloudflare DNS API](https://github.com/acmesh-official/acme.sh/wiki/dnsapi#dns_cf)
+
+## Related Documentation
+
+- [Getting Started](00-getting-started.md) -- Hardware details, software stack overview
+- [RPis and k3s](01-rpis-and-k3s.md) -- k3s configuration, disabled components (Traefik, ServiceLB, CoreDNS)
+- [Persistence](02-persistence.md) -- Synology NAS storage configuration
+- [Security](04-security.md) -- Authentication with oauth2-proxy
+- [Observability](05-observability.md) -- Logging and monitoring

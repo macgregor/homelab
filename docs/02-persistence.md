@@ -1,75 +1,209 @@
+# Persistence
 
-1. Synology
-  * set up lets encrypt cert
-  * set up volumes for kubernetes, create kubernetes user for synology-csi
-  * setup volume for mariadb, install mariadb, create mariadb kubernetes user and database
-2. setup k3s to use mariadb
-  * ssl
-  * enabling statistics: https://mariadb.com/kb/en/user-statistics/
-3. install synology-csi driver
-  * synology iscsi driver suuuuucks
+This document covers the Synology NAS, MariaDB datastore, and Kubernetes storage patterns used by the cluster. For the hardware overview, see [Getting Started](00-getting-started.md). For k3s configuration that references the datastore, see [RPis and k3s](01-rpis-and-k3s.md).
 
-## Storage Patterns
+## Synology NAS
 
-The cluster uses several storage patterns depending on the workload:
+The Synology DS720+ (`192.168.1.200`) serves two roles: network storage for the Kubernetes cluster and host for the MariaDB database that backs k3s.
 
-**NFS (democratic-csi dynamic provisioning)** -- StorageClasses `synology-nfs-app-data-retain` and `synology-nfs-app-data-delete` via the democratic-csi `nfs-client` driver. Auto-creates subdirectories under `/volume2/kube-nfs`. Mount options: `noatime,nolock,nfsvers=3`. No volume expansion or snapshots. Not suitable for SQLite or other databases that need POSIX file locking.
+### Volume Layout
 
-**NFS (static PV)** -- Manually created PV/PVC pointing to pre-existing NFS paths (e.g., `/volume2/kube-nfs/v/<app>-config`). Same locking limitations as dynamic NFS. Uses `storageClassName: ""` to prevent dynamic provisioner matching.
+| Synology Volume | Path | Purpose |
+| --------------- | ---- | ------- |
+| Volume 1 | `/volume1/Media` | Media library (movies, TV, music) -- mounted directly into media app pods |
+| Volume 2 | `/volume2/kube-nfs` | Kubernetes application data -- both democratic-csi dynamic provisioning and static NFS PVs |
+| Volume 2 | (SAN Manager LUNs) | iSCSI block storage for apps that need POSIX file locking |
 
-**NFS (direct volume mount)** -- Media files mounted directly in pod spec, no PV/PVC. For read-heavy workloads where locking isn't an issue.
+### NFS Share Setup
 
-**iSCSI (static PV)** -- Block storage for apps with SQLite databases (Jellyfin, arr apps). Manually provisioned LUNs on Synology Volume 2 via DSM SAN Manager. Supports proper POSIX locking, volume expansion, and snapshots. Formatted ext4.
+NFS shares are configured manually in DSM Control Panel > Shared Folder > NFS Permissions. The key settings: no permission squashing and broad access grants for the cluster subnet. See the [Synology KB on NFS permissions](https://kb.synology.com/en-us/DSM/tutorial/allow_delete_in_folder_except_one_file) for background.
 
-**local-path** -- Node-local storage via k3s default StorageClass. For volatile/cache data (e.g., transcode temp files). Not persistent across nodes.
+Static NFS volumes follow the naming convention `/volume2/kube-nfs/v/<app>-config` and must be created on the Synology before the corresponding PV/PVC is applied.
 
-### Creating a new iSCSI volume
+## MariaDB (k3s Datastore)
 
-1. DSM > SAN Manager > create target + thin-provisioned LUN on Volume 2
-2. Note the IQN, portal is `192.168.1.200:3260`
-3. A fresh target with a single LUN is always LUN ID 0 (verify via `ls /dev/disk/by-path/ | grep iscsi` after login)
-4. Add a static PV to the app's `storage.yml` with `iscsi:` volume source
-5. Requires `iscsi-initiator-utils` on all nodes (installed via the ansible `sys` role)
+k3s uses a MariaDB database on the Synology instead of embedded etcd. This moves write-heavy cluster state off the Raspberry Pi SD cards and onto the NAS's RAID-backed storage. The database was also useful for diagnosing disk activity on the NAS -- [enabling user statistics](https://mariadb.com/kb/en/user-statistics/) helped identify write patterns that led to adding SSD cache drives.
 
-### Resizing an iSCSI volume
-
-1. DSM > SAN Manager > expand the LUN
-2. Delete/recreate the pod (Kubernetes re-mounts and runs `resize2fs` automatically)
-
-### Why not dynamic iSCSI provisioning?
-
-Both the official Synology CSI driver (lacks ARM64 images) and democratic-csi's synology-iscsi mode (experimental) were evaluated and abandoned. Manual provisioning is adequate for this cluster's scale.
-
-## LetsEncrypt, acme.sh
-
-* there is a user defined task configured in the synology control panel that periodically runs `/var/services/homes/certadmin/cert-renew.sh`
-    * this file contains passwords/api tokens
-    * if encountering errors, you can edit this script and add `--debug 2` to the commands its running to get the acme script to provide more information
-* theres a synology system user called "certadmin" we created in the synology control panel that is used by the script to log into the synology admin panel and update the cert when its renewed
-* the scheduled tasks are being run as the root system user, if using ssh you should `sudo su` first
-* acme.sh + cloudflare DNS: https://github.com/acmesh-official/acme.sh/wiki/dnsapi#dns_cf
-    * in particular `/var/services/homes/certadmin/cert-renew.sh` needs an api token/permissions from cloudflare, if something breaks with renewal its probably this authentication piece 
-* upgrade the acme scripts (`sudo su` first): `/usr/local/share/acme.sh/acme.sh --force --upgrade --nocron --home /usr/local/share/acme.sh`
-
-
-Resources:
-* https://dr-b.io/post/Synology-DSM-7-with-Lets-Encrypt-and-DNS-Challenge
-* https://www.cyberciti.biz/faq/issue-lets-encrypt-wildcard-certificate-with-acme-sh-and-cloudflare-dns/
-* https://github.com/SynologyOpenSource/synology-csi
-* https://github.com/christian-schlichtherle/synology-csi-chart
-* https://rene.jochum.dev/rancher-k3s-with-galera/ (only somewhat applicable)
+MariaDB is installed via DSM Package Center. The database and user are created manually:
 
 ```
 $ ssh macgregor@synology
 
-# login as root mysql user using the admin password configured in DSM
+# log in as root mysql user using the admin password configured in DSM
 $ mysql -u root -p
-Enter password:
 
 MariaDB [(none)]> CREATE DATABASE `kubernetes`;
-MariaDB [(none)]> CREATE user 'kubernetes'@'%' IDENTIFIED BY 'password';
+MariaDB [(none)]> CREATE user 'kubernetes'@'%' IDENTIFIED BY '<password>';
 MariaDB [(none)]> GRANT ALL PRIVILEGES ON `kubernetes`.* TO 'kubernetes'@'%';
 ```
 
-setting up nfs, dont squash permissions and grant "everyone" superduper access
-https://kb.synology.com/en-us/DSM/tutorial/allow_delete_in_folder_except_one_file
+The password must match the `KUBE_MYSQL_PASSWORD` environment variable in `.envrc`. k3s connects via the `--datastore-endpoint` flag in the server systemd unit -- see [RPis and k3s](01-rpis-and-k3s.md#k3s-server-configuration) for the connection details and Ansible variables.
+
+## Storage Patterns
+
+The cluster uses several storage patterns depending on the workload.
+
+### Choosing a Pattern
+
+| Workload Characteristic | Pattern | Example |
+| ----------------------- | ------- | ------- |
+| Needs POSIX file locking (SQLite, databases) | iSCSI (static PV) | Jellyfin config, arr app configs |
+| General application config/data | NFS (dynamic or static PV) | AdGuard, Tdarr, Diun |
+| Read-heavy media files, shared across pods | NFS (direct volume mount) | Media libraries |
+| Volatile cache or temp files | local-path | Transcode scratch space |
+
+NFS does not support reliable POSIX advisory locks, which causes SQLite database corruption. Apps that use SQLite (Jellyfin, Sonarr, Radarr, Prowlarr) were migrated from NFS to iSCSI to resolve this.
+
+### NFS -- Dynamic Provisioning (democratic-csi)
+
+StorageClasses `synology-nfs-app-data-retain` and `synology-nfs-app-data-delete` via the democratic-csi `nfs-client` driver. Auto-creates subdirectories under `/volume2/kube-nfs`. Mount options: `noatime,nolock,nfsvers=3`. No volume expansion or snapshots.
+
+Only a PVC is needed -- no PV definition:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-data
+  namespace: example
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: synology-nfs-app-data-delete
+```
+
+Use `synology-nfs-app-data-retain` when data should survive PVC deletion; use `synology-nfs-app-data-delete` for disposable data.
+
+### NFS -- Static PV
+
+Manually created PV/PVC pointing to a pre-existing NFS path. Same locking limitations as dynamic NFS. Uses `storageClassName: ""` to prevent dynamic provisioner matching.
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: app-config
+spec:
+  storageClassName: ""
+  capacity:
+    storage: 1Gi  # not enforced on NFS
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /volume2/kube-nfs/v/app-config
+    server: 192.168.1.200
+    readOnly: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-config
+  namespace: example
+spec:
+  storageClassName: ""
+  volumeName: app-config
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+### NFS -- Direct Volume Mount
+
+Media files mounted directly in the pod spec, no PV/PVC. For read-heavy workloads where locking is not an issue.
+
+```yaml
+volumes:
+  - name: media
+    nfs:
+      server: 192.168.1.200
+      path: /volume1/Media/media
+containers:
+  - name: app
+    volumeMounts:
+      - mountPath: /data
+        name: media
+```
+
+### iSCSI -- Static PV
+
+Block storage for apps that need POSIX file locking. Manually provisioned LUNs on Synology Volume 2 via DSM SAN Manager. Formatted ext4. Supports volume expansion and snapshots.
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: app-config
+spec:
+  storageClassName: ""
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  iscsi:
+    targetPortal: 192.168.1.200:3260
+    iqn: iqn.2000-01.com.synology:synology.<target-name>.<id>
+    lun: 1
+    fsType: ext4
+    readOnly: false
+```
+
+Requires `iscsi-initiator-utils` on all nodes (installed via the Ansible `sys` role).
+
+**LUN ID numbering:** DSM SAN Manager displays LUN IDs starting at 0, but the iSCSI protocol and Linux kernel report them with an offset (e.g., DSM "LUN 0" appears as `lun-1` in `/dev/disk/by-path/`). Verify the correct ID by logging into the target from a node and checking `ls /dev/disk/by-path/ | grep iscsi`.
+
+**Multiple LUNs per target:** Several apps can share a single iSCSI target with different LUN IDs. Each gets its own static PV pointing to the same IQN but a different `lun:` value.
+
+### local-path
+
+Node-local storage via the k3s default StorageClass. For volatile or cache data (e.g., transcode temp files). Data is not persistent across nodes and is lost if the pod moves.
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-volatile
+  namespace: example
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: local-path
+```
+
+### Creating an iSCSI Volume
+
+1. DSM > SAN Manager > create a target and thin-provisioned LUN on Volume 2
+2. Note the IQN and LUN ID (portal is `192.168.1.200:3260`)
+3. Verify the LUN ID from a node: `sudo iscsiadm -m node --login` then `ls /dev/disk/by-path/ | grep iscsi`
+4. Add a static PV/PVC to the app's `storage.yml` with the `iscsi:` volume source
+5. Log out of the test session: `sudo iscsiadm -m node --logout`
+
+### Resizing an iSCSI Volume
+
+1. DSM > SAN Manager > expand the LUN
+2. Delete and recreate the pod -- Kubernetes re-mounts and runs `resize2fs` automatically
+
+### Why Not Dynamic iSCSI Provisioning?
+
+Both the official Synology CSI driver and democratic-csi's synology-iscsi mode were evaluated and abandoned. The official Synology CSI driver lacks ARM64 container images. Democratic-csi's synology-iscsi mode remains marked experimental. For a cluster with a handful of stateful apps, manual LUN provisioning is simpler and more reliable.
+
+## References
+
+- [Synology CSI driver](https://github.com/SynologyOpenSource/synology-csi)
+- [democratic-csi](https://github.com/democratic-csi/democratic-csi)
+
+## Related Documentation
+
+- [Getting Started](00-getting-started.md) -- Hardware details, software stack overview
+- [RPis and k3s](01-rpis-and-k3s.md) -- k3s datastore configuration, Ansible provisioning
+- [Networking](03-networking.md) -- MetalLB, ingress, DNS, TLS (including Synology DSM LetsEncrypt certificates)
+- [Saving Your SD Cards](07-saving-your-sdcards.md) -- Reducing SD card wear
