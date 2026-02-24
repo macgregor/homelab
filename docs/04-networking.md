@@ -2,8 +2,6 @@
 
 This document covers network topology, DNS architecture, load balancing, ingress routing, TLS, and authentication for the homelab. For the hardware overview, see [Getting Started](00-getting-started.md). For k3s server flags that disable built-in networking components, see [RPis and k3s](02-rpis-and-k3s.md#why-k3s).
 
-**Note:** External access (Cloudflare proxy configuration, firewall port forwarding, DDNS) is currently in progress. Core LAN networking (MetalLB, ingress controllers, DNS, TLS within the cluster) is stable.
-
 ## Network Topology
 
 ```mermaid
@@ -92,9 +90,9 @@ A NetworkManager dispatcher script ([`scripts/homelab-split-dns.sh`](../scripts/
 The MikroTik RB5009UPr+S+IN is provisioned via Ansible with system configuration, DHCP, DNS, and service hardening. Two playbooks handle setup:
 
 - **`mikrotik-bootstrap.yml`** (one-time): Migrates from factory defaults (192.168.88.0/24) to 192.168.1.0/24, creates SSH user with key auth
-- **`mikrotik-configure.yml`** (idempotent): Configures system identity, DHCP pool (192.168.1.50-199), DNS (1.1.1.1), static DHCP leases for infrastructure, service hardening, and auto-update scheduling
+- **`mikrotik-configure.yml`** (idempotent): Configures system identity, DHCP pool (192.168.1.50-199), DNS (1.1.1.1), static DHCP leases for infrastructure, service hardening, auto-update scheduling, Cloudflare firewall rules, and DDNS
 
-The router ships with a factory-default firewall (NAT masquerade, input/forward chains). External access configuration (Cloudflare proxy firewall rules, DDNS, port forwarding) is in progress.
+The router ships with a factory-default firewall (NAT masquerade, input/forward chains). The configure playbook adds Cloudflare-specific rules: a DNAT rule forwarding port 443 traffic from Cloudflare IPs to the external ingress VIP (`192.168.1.220`), and a forward-accept rule placed before the default drop-all rule. The Cloudflare IP address list and DDNS record are maintained by scheduled scripts on the router.
 
 Node-level firewalls are disabled -- `firewalld` is masked on all nodes via Ansible. k3s manages its own iptables rules.
 

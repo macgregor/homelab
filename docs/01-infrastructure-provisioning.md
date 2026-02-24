@@ -178,6 +178,7 @@ Ansible reads sensitive values from environment variables via `lookup('env', ...
 - Database credentials (MySQL)
 - Container registry credentials
 - MAC addresses for network devices
+- Cloudflare API credentials (zone ID, DNS record ID, domain name, DDNS token)
 
 Example `.envrc` structure (not checked in):
 ```bash
@@ -186,6 +187,10 @@ export SSH_KEY_PATH="~/.ssh/id_rsa"
 export MIKROTIK_DEFAULT_USER="admin"
 export MIKROTIK_DEFAULT_PASSWORD=""
 export SYNOLOGY_ETH1_MAC="90:09:d0:10:17:53"
+export CF_ZONE_ID="<cloudflare-zone-id>"
+export CF_DNS_RECORD_ID="<cloudflare-dns-record-id>"
+export CF_DNS_RECORD_NAME="example.com"
+export CF_MIKROTIK_DDNS_TOKEN="<cloudflare-api-token>"
 # ... more variables
 ```
 
