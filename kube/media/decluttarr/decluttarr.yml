@@ -8,19 +8,29 @@ data:
   TZ: "America/New_York"
   LOG_LEVEL: "INFO"
   TEST_RUN: "False"
-  TIMER: "5"
-  REMOVE_STALLED: "True"
+  TIMER: "10"
+  MAX_STRIKES: "6"
+  REMOVE_BAD_FILES: "False"
   REMOVE_METADATA_MISSING: "True"
+  REMOVE_STALLED: |
+    max_strikes: 10
   REMOVE_FAILED_DOWNLOADS: "True"
-  REMOVE_FAILED_IMPORTS: "True"
+  REMOVE_FAILED_IMPORTS: |
+    message_patterns:
+      - "Not an upgrade for existing*"
+      - "Not a Custom Format upgrade for existing*"
+      - "*Found potentially dangerous file with extension*"
+      - "Invalid video file*"
+      - "No files found are eligible for import*"
+      - "One or more episodes expected in this release were not imported or missing from the release"
   REMOVE_ORPHANS: "True"
   REMOVE_MISSING_FILES: "True"
   REMOVE_SLOW: "False"
-  REMOVE_BAD_FILES: "True"
   REMOVE_UNMONITORED: "False"
-  SEARCH_MISSING: "True"
+  SEARCH_MISSING: |
+    min_days_between_searches: 1
+    max_concurrent_searches: 3
   DETECT_DELETIONS: "False"
-  MAX_STRIKES: "4"
   RADARR: |
     - base_url: "http://radarr:7878"
       api_key: !ENV RADARR_API_KEY
