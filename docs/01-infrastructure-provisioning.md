@@ -100,13 +100,6 @@ ansible-playbook mikrotik-configure.yml
 
 For detailed configuration specifics, see the playbook itself in `ansible/mikrotik-configure.yml` — it's the source of truth.
 
-### Troubleshooting
-
-- **Locked out after bootstrap:** Factory 192.168.88.0/24 is left intact. Reconnect to 192.168.88.1 and retry.
-- **SSH key auth fails:** Verify the public key in `ansible/inventory/group_vars/all.yaml` matches your private key. RouterOS requires RSA keys.
-- **DHCP leases not assigning:** Check that MAC addresses in `.envrc` match actual device MACs. Verify with `ip mac-address print` on the router.
-- **Scheduler not available:** Confirm device-mode switch to "advanced" completed successfully (`/system device-mode print`).
-
 ## Raspberry Pi Provisioning
 
 Two playbooks provision Rocky Linux 9 ARM on the Pis: bootstrap for one-time user setup, then the main OS/k3s installation.
