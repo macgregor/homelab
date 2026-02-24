@@ -46,7 +46,7 @@ data:
     }
   Hosts: |
     192.168.1.1   edge
-    192.168.1.2   switch
+    192.168.1.2   wifi-ap
     192.168.1.200 synology-eth1
     192.168.1.201 synology-eth2
     192.168.1.210 k3-m1

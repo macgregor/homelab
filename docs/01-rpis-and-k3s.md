@@ -31,18 +31,24 @@ The single-binary packaging can make debugging lower-level issues less straightf
 
 ## Provisioning with Ansible
 
-All Ansible playbooks and roles live in `ansible/`. Provisioning is a two-phase process:
+All Ansible playbooks and roles live in `ansible/`. The MikroTik router and Raspberry Pis are provisioned separately:
 
+**MikroTik Router:**
+- **`mikrotik-bootstrap.yml`** -- One-time subnet migration and user creation (factory defaults → 192.168.1.0/24, creates SSH user with key auth)
+- **`mikrotik-configure.yml`** -- System config, DHCP, DNS, static leases, firewall, auto-updates (idempotent)
+
+**Raspberry Pis:**
 1. **`rpi-bootstrap.yml`** -- One-time system user setup (run once per fresh OS install)
 2. **`k3-install.yml`** -- OS configuration, package installation, and k3s deployment (idempotent, safe to re-run)
 
 ### Prerequisites
 
 - Rocky Linux 9 ARM flashed onto SD cards and booted
-- Static IPs and hostnames assigned on the router (the Pis must be resolvable by hostname)
+- Static IPs assigned via DHCP reservations on the router
 - SSH key generated locally
-- Ansible installed on the control machine (also `sshpass` for the bootstrap step)
-- Galaxy dependencies installed: `ansible-galaxy install -r requirements.yml`
+- Ansible installed on the control machine
+- Galaxy dependencies installed: `ansible-galaxy collection install -r collections/requirements.yml` (includes `community.routeros` for MikroTik)
+- For RouterOS SSH transport: `ansible-pylibssh` and `libssh-devel` (Fedora: `sudo dnf install libssh-devel sshpass && pip install ansible-pylibssh`)
 
 ### Phase 1: Bootstrap (`rpi-bootstrap.yml`)
 

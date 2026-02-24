@@ -2,6 +2,8 @@
 
 This document covers network topology, DNS architecture, load balancing, ingress routing, TLS, and authentication for the homelab. For the hardware overview, see [Getting Started](00-getting-started.md). For k3s server flags that disable built-in networking components, see [RPis and k3s](01-rpis-and-k3s.md#why-k3s).
 
+**Note:** External access (Cloudflare proxy configuration, firewall port forwarding, DDNS) is currently in progress. Core LAN networking (MetalLB, ingress controllers, DNS, TLS within the cluster) is stable.
+
 ## Network Topology
 
 ```mermaid
@@ -12,8 +14,8 @@ graph TD
     end
     subgraph LAN [LAN - 192.168.1.0/24]
         Modem[Modem - BGW210<br/>IP Passthrough]
-        Router{Router - FreshTomato<br/>192.168.1.1}
-        Switch{PoE Switch - GS305EP<br/>192.168.1.2}
+        Router{MikroTik RB5009UPr+S+IN<br/>Router/Switch/PoE<br/>192.168.1.1}
+        AP[TP-Link EAP723<br/>WiFi AP<br/>192.168.1.2]
         Synology[Synology NAS<br/>192.168.1.200 / .201]
         subgraph Cluster [k3s Cluster]
             M1[k3-m1 control-plane<br/>192.168.1.210]
@@ -25,13 +27,13 @@ graph TD
     CF -->|HTTPS 443| Modem
     Modem -->|IP Passthrough| Router
     Router -->|Firewall: only<br/>Cloudflare IPs| MetalLB
-    Router --> Switch
-    Switch -->|PoE| M1
-    Switch -->|PoE| N1
+    Router -->|PoE| AP
+    Router -->|PoE| M1
+    Router -->|PoE| N1
     Router --> Synology
 ```
 
-All devices have static IPs assigned on the router. The Pis are powered via PoE through the managed switch. MetalLB advertises service IPs on the LAN via ARP (L2 mode), making Kubernetes services reachable as first-class LAN devices.
+All devices have static IPs: infrastructure devices (Pis, Synology, AP) via DHCP reservations on the router; Kubernetes services via MetalLB. The Pis and AP are powered via PoE directly from the router. MetalLB advertises service IPs on the LAN via ARP (L2 mode), making Kubernetes services reachable as first-class LAN devices.
 
 ## Traffic Flow
 
@@ -61,9 +63,9 @@ DNS resolution flows through a chain: clients query CoreDNS, which forwards unkn
 
 ### Cloudflare (Public DNS)
 
-Cloudflare manages the `matthew-stratton.me` zone. Public A records point to the router's WAN IP. The router runs a dynamic DNS client that updates Cloudflare when the WAN IP changes, keeping records in sync with the ISP-assigned address.
+Cloudflare manages the `matthew-stratton.me` zone. Public A records point to the router's WAN IP. Dynamic DNS is configured to update Cloudflare when the WAN IP changes (see MikroTik configuration for DDNS setup).
 
-Cloudflare also acts as a reverse proxy for internet-facing services -- external HTTPS traffic passes through Cloudflare before reaching the cluster. The router firewall only accepts traffic from Cloudflare's IP ranges (see [Router Firewall](#router-firewall)).
+Cloudflare also acts as a reverse proxy for internet-facing services -- external HTTPS traffic passes through Cloudflare before reaching the cluster. The router firewall only accepts traffic from Cloudflare's IP ranges.
 
 ### CoreDNS (Cluster + LAN DNS)
 
@@ -85,28 +87,14 @@ Internal services have no public DNS records -- they only exist in CoreDNS's sta
 
 A NetworkManager dispatcher script ([`scripts/homelab-split-dns.sh`](../scripts/homelab-split-dns.sh)) handles this for Linux workstations with `systemd-resolved`. On every connection event, it probes CoreDNS to detect the home network, then configures a `~matthew-stratton.me` routing domain via `resolvectl` to direct matching queries to CoreDNS. It works across connection types (wifi, ethernet, thunderbolt dock), is inert off the home network, and survives VPN reconnects. Install to `/etc/NetworkManager/dispatcher.d/` and `chmod 755`.
 
-## Router Configuration (FreshTomato)
+## Router Configuration (MikroTik)
 
-The Nighthawk R7000 runs [FreshTomato](https://www.freshtomato.org/) firmware (AIO build -- the VPN build is missing kernel modules like NFS).
+The MikroTik RB5009UPr+S+IN is provisioned via Ansible with system configuration, DHCP, DNS, and service hardening. Two playbooks handle setup:
 
-### Setup Checklist
+- **`mikrotik-bootstrap.yml`** (one-time): Migrates from factory defaults (192.168.88.0/24) to 192.168.1.0/24, creates SSH user with key auth
+- **`mikrotik-configure.yml`** (idempotent): Configures system identity, DHCP pool (192.168.1.50-199), DNS (1.1.1.1), static DHCP leases for infrastructure, service hardening, and auto-update scheduling
 
-1. Move the web admin UI to port 8080 (HTTP) or 8443 (HTTPS) -- ports 80/443 must be free for forwarding to the cluster
-2. Enable SSH with public key auth, disable password login
-3. Change the default admin credentials
-4. Assign static IPs for all infrastructure devices (Synology, switch, Pis)
-5. Configure dynamic DNS to update Cloudflare when the WAN IP changes
-6. Install the firewall script (see below)
-
-### Router Firewall
-
-The firewall script ([`scripts/router-firewall.sh`](../scripts/router-firewall.sh)) restricts inbound internet traffic to Cloudflare's proxy IP ranges and forwards it to the external ingress controller (`192.168.1.220`). Direct-to-IP access from the internet is blocked. Internal LAN traffic (`192.168.1.0/24`) is unrestricted.
-
-The script is saved to the router's persistent storage and executed via Administration > Scripts > Firewall:
-
-```bash
-sh /mnt/1.44.1-42218/firewall_rules.sh
-```
+The router ships with a factory-default firewall (NAT masquerade, input/forward chains). External access configuration (Cloudflare proxy firewall rules, DDNS, port forwarding) is in progress.
 
 Node-level firewalls are disabled -- `firewalld` is masked on all nodes via Ansible. k3s manages its own iptables rules.
 
