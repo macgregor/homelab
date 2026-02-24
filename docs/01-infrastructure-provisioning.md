@@ -72,13 +72,7 @@ Set a temporary password when prompted. Record this as `MIKROTIK_DEFAULT_PASSWOR
 
 ### Phase 1: Bootstrap (`mikrotik-bootstrap.yml`)
 
-**One-time setup.** Migrates from factory defaults to 192.168.1.0/24 and creates a secure SSH user. After this, the router is reachable at 192.168.1.1.
-
-**What it does:**
-1. Connects to 192.168.88.1 using factory credentials (stored in `.envrc`)
-2. Creates SSH user with public key auth (from `ssh_pub_key` in `all.yaml`)
-3. Adds 192.168.1.0/24 subnet alongside factory 192.168.88.0/24 (connection stays up during migration)
-4. Creates new DHCP server on the 192.168.1.0/24 subnet
+**One-time setup.** Migrates from factory defaults (192.168.88.1/24) to 192.168.1.0/24 and creates a secure SSH user for ongoing management.
 
 **Running:**
 ```bash
@@ -94,18 +88,9 @@ ssh 192.168.1.1
 
 ### Phase 2: Configure (`mikrotik-configure.yml`)
 
-**Idempotent.** Applies system configuration, security hardening, and auto-update scheduling. Safe to re-run.
+**Idempotent.** Applies system configuration, security hardening, and automation. Safe to re-run.
 
-**What it does:**
-1. System identity, timezone, NTP
-2. DHCP tuning: narrow pool to 192.168.1.50-199 (avoids static IP ranges and MetalLB pool)
-3. DNS: set upstream to Cloudflare (1.1.1.1)
-4. Static DHCP leases: AP (.2), Desktop (.3), Synology LAN 1/2 (.200/.201), k3-m1/k3-n1 (.210/.211)
-5. Service hardening: disable insecure services (telnet, ftp, api), restrict SSH/web UI to LAN only
-6. Discovery hardening: disable MAC-server ping, neighbor discovery on WAN
-7. Auto-update scheduling: daily firmware/package checks with automatic installation on stable channel
-
-MAC addresses for static leases are sourced from `.envrc` environment variables (e.g., `SYNOLOGY_ETH1_MAC`).
+Covers: system identity and time, DHCP pools and static leases, DNS upstreams, service hardening (disabling insecure protocols, restricting SSH/web UI to LAN), auto-update scheduling.
 
 **Running:**
 ```bash
@@ -113,13 +98,7 @@ cd ansible
 ansible-playbook mikrotik-configure.yml
 ```
 
-**Manual prerequisite:** The RB5009 ships in "home" device-mode, which disables the scheduler needed for auto-updates. Before running the configure playbook, switch to "advanced" mode:
-
-```bash
-ssh 192.168.1.1 '/system device-mode update mode=advanced'
-```
-
-The router will request activation via button press or power cycle (within 5 minutes). After activation and reboot, proceed with the configure playbook.
+For detailed configuration specifics, see the playbook itself in `ansible/mikrotik-configure.yml` — it's the source of truth.
 
 ### Troubleshooting
 
