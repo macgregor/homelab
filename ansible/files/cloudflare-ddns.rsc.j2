@@ -1,0 +1,56 @@
+# Cloudflare DDNS: update Cloudflare A record when WAN IP changes
+#
+# Runs every 5 minutes via scheduler (plus once at boot). Safe to run manually:
+#   /import file-name=cloudflare-ddns.rsc
+#
+# Checks the WAN IP on ether1, compares to the last known IP, and calls
+# the Cloudflare API to update the DNS record if it changed.
+
+/log info "cloudflare-ddns: starting"
+
+:onerror e in={
+
+    # ── Get WAN IP from ether1 ────────────────────────────────────────
+    :if ([:len [/ip address find interface=ether1]] = 0) do={
+        /log warning "cloudflare-ddns: ether1 has no IP address, skipping"
+        :error "no WAN IP"
+    }
+
+    :local addrId [:pick [/ip address find interface=ether1] 0]
+    :local addrCidr [/ip address get $addrId address]
+    :local wanIP [:pick $addrCidr 0 [:find $addrCidr "/"]]
+
+    # ── Check if IP changed ───────────────────────────────────────────
+    :global lastWanIP
+    :if ($wanIP = $lastWanIP) do={
+        /log debug ("cloudflare-ddns: IP unchanged (" . $wanIP . ")")
+        :error "unchanged"
+    }
+
+    /log info ("cloudflare-ddns: IP changed from " . $lastWanIP . " to " . $wanIP . ", updating Cloudflare")
+
+    # ── Update Cloudflare DNS record ──────────────────────────────────
+    :local result [/tool fetch \
+        url="https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id }}/dns_records/{{ cf_dns_record_id }}" \
+        http-method=put \
+        http-header-field="Authorization:Bearer {{ cf_mikrotik_ddns_token }},Content-Type:application/json" \
+        http-data=("{\"type\":\"A\",\"name\":\"{{ cf_dns_record_name }}\",\"content\":\"" . $wanIP . "\",\"proxied\":true}") \
+        output=user as-value]
+
+    # ── Validate API response ─────────────────────────────────────────
+    :if ([:find ($result->"data") "\"success\":true"] = nil) do={
+        /log error ("cloudflare-ddns: API update failed: " . ($result->"data"))
+        :error "API update failed"
+    }
+
+    :set lastWanIP $wanIP
+    /log info ("cloudflare-ddns: updated A record to " . $wanIP)
+
+    /log info "cloudflare-ddns: complete"
+
+} do={
+    # "unchanged" and "no WAN IP" are expected early-exit conditions, not errors
+    :if ($e = "unchanged" || $e = "no WAN IP") do={} else={
+        /log error ("cloudflare-ddns: failed: " . $e)
+    }
+}

@@ -17,3 +17,9 @@ router_static_leases:
   - { name: "synology-eth2", mac: "{{ lookup('env', 'SYNOLOGY_ETH2_MAC') | mandatory('SYNOLOGY_ETH2_MAC is not set — source .envrc') }}", ip: "192.168.1.201" }
   - { name: "k3-m1",         mac: "{{ lookup('env', 'K3_M1_MAC')         | mandatory('K3_M1_MAC is not set — source .envrc') }}",         ip: "192.168.1.210" }
   - { name: "k3-n1",         mac: "{{ lookup('env', 'K3_N1_MAC')         | mandatory('K3_N1_MAC is not set — source .envrc') }}",         ip: "192.168.1.211" }
+
+# Cloudflare (read from .envrc env vars)
+cf_zone_id: "{{ lookup('env', 'CF_ZONE_ID') | mandatory('CF_ZONE_ID is not set — source .envrc') }}"
+cf_dns_record_id: "{{ lookup('env', 'CF_DNS_RECORD_ID') | mandatory('CF_DNS_RECORD_ID is not set — source .envrc') }}"
+cf_dns_record_name: "{{ lookup('env', 'CF_DNS_RECORD_NAME') | mandatory('CF_DNS_RECORD_NAME is not set — source .envrc') }}"
+cf_mikrotik_ddns_token: "{{ lookup('env', 'CF_MIKROTIK_DDNS_TOKEN') | mandatory('CF_MIKROTIK_DDNS_TOKEN is not set — source .envrc') }}"

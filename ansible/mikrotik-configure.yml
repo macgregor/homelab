@@ -114,99 +114,77 @@
 
     # ── Service hardening ──────────────────────────────────────────────
 
-    - name: Disable unused services
+    - name: Harden services
       community.routeros.command:
         commands:
-          - /ip service disable {{ item }}
-      loop: [telnet, ftp, api, api-ssl]
-
-    - name: Restrict services to LAN
-      community.routeros.command:
-        commands:
-          - /ip service set {{ item }} address=192.168.1.0/24
-      loop: [ssh, winbox, www]
+          - /ip service disable telnet,ftp,api,api-ssl
+          - /ip service set ssh address=192.168.1.0/24
+          - /ip service set winbox address=192.168.1.0/24
+          - /ip service set www address=192.168.1.0/24
 
     # ── Discovery hardening ────────────────────────────────────────────
 
-    - name: Disable MAC server ping
+    - name: Harden discovery protocols
       community.routeros.command:
         commands:
           - /tool mac-server ping set enabled=no
-
-    - name: Disable neighbor discovery on WAN
-      community.routeros.command:
-        commands:
           - /ip neighbor discovery-settings set discover-interface-list=LAN
-
-    - name: Disable bandwidth server
-      community.routeros.command:
-        commands:
           - /tool bandwidth-server set enabled=no
 
-    # ── Auto-update scheduler ──────────────────────────────────────────
-    #
-    # auto-update.rsc stays on the router — the scheduler calls it daily.
-    # configure-auto-update.rsc is a setup script run once (cleaned up below).
+    # ── Auto-update ──────────────────────────────────────────────────
 
-    - name: Upload auto-update scripts to router
-      ansible.builtin.shell: >-
-        scp
-        -i {{ ssh_pub_key | regex_replace('\.pub$', '') }}
-        -o StrictHostKeyChecking=no
-        -o UserKnownHostsFile=/dev/null
-        {{ item }}
-        {{ base_user }}@{{ ansible_host }}:/{{ item | basename }}
-      delegate_to: localhost
-      ignore_errors: true
-      register: upload_results
-      loop:
-        - "{{ playbook_dir }}/files/auto-update-packages.rsc"
-        - "{{ playbook_dir }}/files/auto-update-firmware.rsc"
-        - "{{ playbook_dir }}/files/configure-auto-update.rsc"
-      loop_control:
-        label: "{{ item | basename }}"
-
-    - name: Report upload failures
-      debug:
-        msg:
-          - "file:   {{ item.item | basename }}"
-          - "stdout: {{ item.stdout }}"
-          - "stderr: {{ item.stderr }}"
-      loop: "{{ upload_results.results | selectattr('failed') | list }}"
-      loop_control:
-        label: "{{ item.item | basename }}"
-
-    - name: Fail if any upload failed
-      fail:
-        msg: "One or more file uploads failed — see above for details"
-      when: upload_results.results | selectattr('failed') | list | length > 0
-
-    - name: Import auto-update setup script
+    - name: Enable firmware auto-upgrade on reboot
       community.routeros.command:
         commands:
-          - /import file-name=configure-auto-update.rsc
-      register: auto_update_import
-      ignore_errors: true
+          - /system routerboard settings set auto-upgrade=yes
 
-    - name: Alert if scheduler setup failed
-      debug:
-        msg:
-          - "WARNING: Auto-update schedulers were not created"
-          - "This device may have device-mode restrictions on /system scheduler"
-          - "To enable scheduler: ssh {{ base_user }}@{{ ansible_host }} '/system device-mode update mode=advanced'"
-          - "Then press the reset/mode button on the device within 5 minutes (or power-cycle)"
-          - "Once rebooted, re-run this playbook: ansible-playbook mikrotik-configure.yml"
-      when: auto_update_import is failed
+    - name: Deploy auto-update scripts and schedulers
+      ansible.builtin.include_tasks:
+        file: tasks/mikrotik-upload-and-schedule.yml
+      vars:
+        upload_files:
+          - "{{ playbook_dir }}/files/auto-update-packages.rsc"
+          - "{{ playbook_dir }}/files/auto-update-firmware.rsc"
+        schedulers:
+          - name: auto-update-packages
+            on_event: "/import file-name=auto-update-packages.rsc"
+            start_time: "04:00:00"
+            interval: 1d
+          - name: auto-update-firmware
+            on_event: "/import file-name=auto-update-firmware.rsc"
+            start_time: "04:30:00"
+            interval: 1d
 
+    # ── Cloudflare ────────────────────────────────────────────────────
+
+    - name: Deploy Cloudflare scripts and schedulers
+      ansible.builtin.include_tasks:
+        file: tasks/mikrotik-upload-and-schedule.yml
+      vars:
+        upload_files:
+          - "{{ playbook_dir }}/files/cloudflare-firewall.rsc"
+          - "{{ playbook_dir }}/files/cloudflare-ddns.rsc.j2"
+        schedulers:
+          - name: cloudflare-firewall-startup
+            on_event: "/import file-name=cloudflare-firewall.rsc"
+            start_time: startup
+            interval: 0
+          - name: cloudflare-firewall
+            on_event: "/import file-name=cloudflare-firewall.rsc"
+            start_time: "00:00:00"
+            interval: 6h
+          - name: cloudflare-ddns-startup
+            on_event: "/import file-name=cloudflare-ddns.rsc"
+            start_time: startup
+            interval: 0
+          - name: cloudflare-ddns
+            on_event: "/import file-name=cloudflare-ddns.rsc"
+            start_time: startup
+            interval: 5m
     # ── Cleanup ────────────────────────────────────────────────────────
 
-    - name: Remove temporary script files from router
+    - name: Remove bootstrap artifacts from router
       community.routeros.command:
         commands:
-          - /file remove {{ item }}
-      loop:
-        - bootstrap-migrate-subnet.rsc
-        - configure-auto-update.rsc
-      ignore_errors: true  # Files may not be present on every run
-      # Note: auto-update-packages.rsc and auto-update-firmware.rsc are intentionally
-      # kept on the router — the schedulers call them daily via /import.
+          - /file remove bootstrap-migrate-subnet.rsc
+      ignore_errors: true

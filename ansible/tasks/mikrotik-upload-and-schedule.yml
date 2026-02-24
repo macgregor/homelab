@@ -1,0 +1,99 @@
+---
+# Upload scripts to a MikroTik router and create schedulers.
+#
+# Parameters (passed via include_tasks vars):
+#   upload_files  - list of local file paths to SCP to the router.
+#                   Files ending in .j2 are rendered as Jinja2 templates
+#                   before upload; the .j2 extension is stripped from the
+#                   destination filename.
+#   schedulers    - list of dicts with: name, on_event, start_time, interval
+#
+# Required variables in scope: base_user, ssh_pub_key, ansible_host
+
+- name: Create temp directory for rendered templates
+  ansible.builtin.tempfile:
+    state: directory
+    prefix: mikrotik_
+  delegate_to: localhost
+  register: _upload_tempdir
+
+- name: Upload scripts to router
+  block:
+    - name: Render .j2 templates
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "{{ _upload_tempdir.path }}/{{ item | basename | regex_replace('\\.j2$', '') }}"
+        mode: '0600'
+      delegate_to: localhost
+      loop: "{{ upload_files | select('match', '.*\\.j2$') | list }}"
+      loop_control:
+        label: "{{ item | basename }}"
+
+    - name: SCP files to router
+      ansible.builtin.shell: >-
+        scp
+        -i {{ ssh_pub_key | regex_replace('\.pub$', '') }}
+        -o StrictHostKeyChecking=no
+        -o UserKnownHostsFile=/dev/null
+        {{ _src }}
+        {{ base_user }}@{{ ansible_host }}:/{{ _dest }}
+      vars:
+        _dest: "{{ item | basename | regex_replace('\\.j2$', '') }}"
+        _src: "{{ (_upload_tempdir.path ~ '/' ~ _dest) if (item | regex_search('\\.j2$')) else item }}"
+      delegate_to: localhost
+      ignore_errors: true
+      register: _upload_results
+      loop: "{{ upload_files }}"
+      loop_control:
+        label: "{{ item | basename }}"
+
+    - name: Report upload failures
+      ansible.builtin.debug:
+        msg:
+          - "file:   {{ item.item | basename }}"
+          - "stdout: {{ item.stdout }}"
+          - "stderr: {{ item.stderr }}"
+      loop: "{{ _upload_results.results | selectattr('failed') | list }}"
+      loop_control:
+        label: "{{ item.item | basename }}"
+
+    - name: Fail if any upload failed
+      ansible.builtin.fail:
+        msg: "One or more file uploads failed — see above for details"
+      when: _upload_results.results | selectattr('failed') | list | length > 0
+
+  always:
+    - name: Clean up temp directory
+      ansible.builtin.file:
+        path: "{{ _upload_tempdir.path }}"
+        state: absent
+      delegate_to: localhost
+
+- name: Create schedulers
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/system scheduler find name={{ item.name }}]] > 0)
+        do={ /system scheduler remove [find name={{ item.name }}] }
+      - >-
+        /system scheduler add name={{ item.name }}
+        on-event="{{ item.on_event }}"
+        start-time={{ item.start_time }}
+        interval={{ item.interval }}
+  register: _scheduler_results
+  ignore_errors: true
+  loop: "{{ schedulers }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Alert if scheduler setup failed
+  ansible.builtin.debug:
+    msg:
+      - "WARNING: Scheduler '{{ item.item.name }}' was not created"
+      - "This device may have device-mode restrictions on /system scheduler"
+      - "To enable scheduler: ssh {{ base_user }}@{{ ansible_host }} '/system device-mode update mode=advanced'"
+      - "Then press the reset/mode button on the device within 5 minutes (or power-cycle)"
+      - "Once rebooted, re-run this playbook: ansible-playbook mikrotik-configure.yml"
+  loop: "{{ _scheduler_results.results | selectattr('failed') | list }}"
+  loop_control:
+    label: "{{ item.item.name }}"

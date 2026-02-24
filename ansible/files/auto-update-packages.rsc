@@ -8,7 +8,7 @@
 
 /log info "auto-update-packages: starting"
 
-:do {
+:onerror e in={
     /system package update set channel=stable
     /system package update check-for-updates once
     # check-for-updates is async; delay is a blind wait for the background request to finish.
@@ -21,6 +21,6 @@
         /log info "auto-update-packages: installing update (reboot follows)"
         /system package update install
     }
-} on-error={ /log warning "auto-update-packages: package update check failed" }
+} do={ /log warning ("auto-update-packages: package update check failed: " . $e) }
 
 /log info "auto-update-packages: complete"

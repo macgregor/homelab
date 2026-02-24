@@ -19,11 +19,11 @@
 } else={
     :if ($rbfw != $rbcur) do={
         /log info "auto-update-firmware: staging upgrade (applies on next reboot)"
-        :do {
+        :onerror e in={
             /system routerboard upgrade
             /log info "auto-update-firmware: upgrade staged successfully"
-        } on-error={
-            /log error "auto-update-firmware: upgrade staging failed"
+        } do={
+            /log error ("auto-update-firmware: upgrade staging failed: " . $e)
         }
     } else={
         /log info "auto-update-firmware: firmware up-to-date"
