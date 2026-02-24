@@ -13,6 +13,11 @@
     state: present
     key: "{{ lookup('file', '{{ ssh_pub_key }}') }}"
 
+# set hostname
+- name: Set hostname to inventory name
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
 # set locale/timezone
 - name: Get current locale
   ansible.builtin.shell: "localectl status | head -n 1 | sed 's/System Locale: //' | tr -d '\n'"
@@ -97,6 +102,38 @@
     - { src: dnf-automatic-reboot.service, dest: /etc/systemd/system/dnf-automatic-reboot.service }
     - { src: dnf-automatic-reboot.timer, dest: /etc/systemd/system/dnf-automatic-reboot.timer }
 
+# Deploy iSCSI cleanup script to all nodes (before service management)
+- name: Deploy iSCSI cleanup script
+  tags: [ slow ]
+  ansible.builtin.copy:
+    src: iscsi-cleanup.sh
+    dest: /usr/local/bin/iscsi-cleanup.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+# Create systemd drop-in to run cleanup on stop (before service management)
+- name: Create iscsid drop-in directory
+  tags: [ slow ]
+  ansible.builtin.file:
+    path: /etc/systemd/system/iscsid.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create iscsid drop-in to cleanup on stop
+  tags: [ slow ]
+  ansible.builtin.copy:
+    content: |
+      [Service]
+      ExecStopPost=/usr/local/bin/iscsi-cleanup.sh
+    dest: /etc/systemd/system/iscsid.service.d/cleanup.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload-systemd
+
 - name: Manage systemd services
   tags: [ slow ]
   ansible.builtin.service:
@@ -108,5 +145,6 @@
     - {name: dnf-automatic-install.timer}
     - {name: dnf-automatic-reboot.timer}
     - {name: systemd-journald.service}
-    - {name: iscsid.service}
+    - {name: iscsid.service, state: "{{ 'stopped' if inventory_hostname in groups['master'] else 'started' }}", enabled: "{{ false if inventory_hostname in groups['master'] else true }}"}
+    - {name: iscsid.socket, state: stopped, enabled: "{{ false if inventory_hostname in groups['master'] else true }}", masked: "{{ true if inventory_hostname in groups['master'] else false }}"}
     - {name: firewalld.service, state: stopped, enabled: false, masked: true}

@@ -1,0 +1,21 @@
+# Bootstrap: create administrative user and import SSH key
+#
+# Idempotent: checks current state before making any change.
+# Logs all actions. Safe to run multiple times.
+
+/log info "bootstrap: configuring user {{ ansible_user_new }}"
+
+:if ([:len [/user find name="{{ ansible_user_new }}"]] = 0) do={
+    /user add name="{{ ansible_user_new }}" group=full password="{{ new_user_password }}"
+    /log info "bootstrap: created user {{ ansible_user_new }}"
+} else={
+    /log info "bootstrap: user {{ ansible_user_new }} already exists, updating password"
+    /user set [find name="{{ ansible_user_new }}"] password="{{ new_user_password }}"
+}
+
+:if ([:len [/user ssh-keys find user="{{ ansible_user_new }}"]] = 0) do={
+    /user ssh-keys import public-key-file="{{ key_dest_filename }}" user="{{ ansible_user_new }}"
+    /log info "bootstrap: imported SSH key for {{ ansible_user_new }}"
+} else={
+    /log info "bootstrap: SSH key for {{ ansible_user_new }} already present, skipping"
+}

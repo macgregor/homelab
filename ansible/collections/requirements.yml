@@ -1,7 +1,11 @@
 # This is used to manage Ansible role dependences
 # http://docs.ansible.com/galaxy.html#installing-multiple-roles-from-a-file
-# Install with: `ansible-galaxy install -r requirements.yml`
+# Install with: `ansible-galaxy collection install -r collections/requirements.yml`
 # note: requires tar and unzip commands on the *target* host
 
 # note: tried this and had some stability problems, leaving it here commented out for history
 #- name: chzerv.log2ram
+
+collections:
+  - name: ansible.netcommon
+  - name: community.routeros

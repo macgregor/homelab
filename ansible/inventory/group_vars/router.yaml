@@ -1,0 +1,19 @@
+---
+ansible_connection: ansible.netcommon.network_cli
+ansible_network_os: community.routeros.routeros
+ansible_become: no
+router_user: macgregor
+
+# MikroTik configuration
+router_timezone: America/New_York
+router_dns_servers: 1.1.1.1
+
+# Static DHCP leases (MAC -> IP mapping)
+# Read MAC addresses from .envrc env vars
+router_static_leases:
+  - { name: "wifi-ap",       mac: "{{ lookup('env', 'AP_MAC')            | mandatory('AP_MAC is not set — source .envrc') }}",            ip: "192.168.1.2" }
+  - { name: "desktop",       mac: "{{ lookup('env', 'DESKTOP_MAC')       | mandatory('DESKTOP_MAC is not set — source .envrc') }}",       ip: "192.168.1.3" }
+  - { name: "synology-eth1", mac: "{{ lookup('env', 'SYNOLOGY_ETH1_MAC') | mandatory('SYNOLOGY_ETH1_MAC is not set — source .envrc') }}", ip: "192.168.1.200" }
+  - { name: "synology-eth2", mac: "{{ lookup('env', 'SYNOLOGY_ETH2_MAC') | mandatory('SYNOLOGY_ETH2_MAC is not set — source .envrc') }}", ip: "192.168.1.201" }
+  - { name: "k3-m1",         mac: "{{ lookup('env', 'K3_M1_MAC')         | mandatory('K3_M1_MAC is not set — source .envrc') }}",         ip: "192.168.1.210" }
+  - { name: "k3-n1",         mac: "{{ lookup('env', 'K3_N1_MAC')         | mandatory('K3_N1_MAC is not set — source .envrc') }}",         ip: "192.168.1.211" }

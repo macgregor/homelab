@@ -1,0 +1,133 @@
+---
+# MikroTik Bootstrap Playbook
+#
+# Run once from a factory-default router. Creates an SSH-key authenticated
+# administrative user and sets up 192.168.1.0/24 alongside the factory default
+# 192.168.88.0/24 (which is left intact). The user created matches the one
+# defined in inventory/group_vars/router.yaml.
+#
+# Prerequisites:
+# - RouterOS forces a password change on first login. SSH to the router once
+#   and complete the password change before running this playbook:
+#   ssh -o StrictHostKeyChecking=no admin@192.168.88.1
+#   (Follow the prompt to change the default password, then exit)
+#
+# After this playbook runs, reconnect your workstation to get a new DHCP lease
+# on 192.168.1.0/24. The mikrotik-configure.yml playbook handles everything else.
+#
+# Usage:
+#   cd ansible
+#   ansible-playbook mikrotik-bootstrap.yml
+#   # Dry-run validation only (no changes):
+#   ansible-playbook mikrotik-bootstrap.yml -e dry_run=true
+#   # Reconnect to pick up a 192.168.1.x lease:
+#   nmcli device disconnect wlp0s20f3 && nmcli device connect wlp0s20f3
+#   # Verify:
+#   ping 192.168.1.1
+#   ssh <user>@192.168.1.1  # where <user> is ansible_user from group_vars/router.yaml
+
+- name: Bootstrap MikroTik from factory defaults
+  hosts: edge
+  gather_facts: no
+  vars:
+    # Override inventory connection settings for factory-default router
+    # Factory credentials are temporary (bootstrap-only), not persisted in inventory
+    ansible_host: 192.168.88.1
+    # Strip any existing +cet<n>w terminal suffix before use
+    factory_user: "{{ lookup('env', 'MIKROTIK_DEFAULT_USER') | regex_replace('\\+cet\\d*w$', '') }}"
+    ansible_user: "{{ factory_user }}+cet512w"
+    ansible_password: "{{ lookup('env', 'MIKROTIK_DEFAULT_PASSWORD') }}"
+    new_user_password: "{{ lookup('env', 'MIKROTIK_NEW_USER_PASSWORD') }}"
+    dry_run: false
+    import_opts: "{{ ' verbose=yes dry-run' if dry_run | bool else '' }}"
+
+  tasks:
+    - name: Validate required environment variables
+      ansible.builtin.assert:
+        that:
+          - lookup('env', 'MIKROTIK_DEFAULT_USER') != ''
+          - lookup('env', 'MIKROTIK_DEFAULT_PASSWORD') != ''
+          - lookup('env', 'MIKROTIK_NEW_USER_PASSWORD') != ''
+        fail_msg: "Missing required environment variable — source .envrc first (need: MIKROTIK_DEFAULT_USER, MIKROTIK_DEFAULT_PASSWORD, MIKROTIK_NEW_USER_PASSWORD)"
+
+    - name: Load inventory group_vars to get the new ansible_user
+      include_vars:
+        file: "{{ inventory_dir }}/group_vars/router.yaml"
+        name: router_vars
+
+    - name: Set derived variables
+      set_fact:
+        ansible_user_new: "{{ router_vars.router_user }}"
+        key_dest_filename: "{{ router_vars.router_user }}.id_rsa.pub"
+
+    - name: Render user creation script
+      ansible.builtin.template:
+        src: files/bootstrap-create-user.rsc.j2
+        dest: /tmp/bootstrap-create-user.rsc
+      delegate_to: localhost
+
+    - name: Upload files to router
+      delegate_to: localhost
+      ansible.builtin.shell: >-
+        sshpass -e scp
+        -o StrictHostKeyChecking=no
+        -o UserKnownHostsFile=/dev/null
+        {{ item.src }}
+        {{ factory_user }}@{{ ansible_host }}:/{{ item.dest }}
+      environment:
+        SSHPASS: "{{ ansible_password }}"
+      no_log: true
+      ignore_errors: true
+      register: upload_results
+      loop:
+        - { src: "/tmp/bootstrap-create-user.rsc",                          dest: "bootstrap-create-user.rsc" }
+        - { src: "{{ ssh_pub_key }}",                                        dest: "{{ key_dest_filename }}" }
+        - { src: "{{ playbook_dir }}/files/bootstrap-migrate-subnet.rsc",   dest: "bootstrap-migrate-subnet.rsc" }
+      loop_control:
+        label: "{{ item.dest }}"
+
+    - name: Report upload failures
+      debug:
+        msg:
+          - "file:   {{ item.item.dest }}"
+          - "stdout: {{ item.stdout }}"
+          - "stderr: {{ item.stderr }}"
+      loop: "{{ upload_results.results | selectattr('failed') | list }}"
+      loop_control:
+        label: "{{ item.item.dest }}"
+
+    - name: Fail if any upload failed
+      fail:
+        msg: "One or more file uploads failed — see above for details"
+      when: upload_results.results | selectattr('failed') | list | length > 0
+
+    - name: Import user creation script
+      community.routeros.command:
+        commands:
+          - /import file-name=bootstrap-create-user.rsc{{ import_opts }}
+      register: user_import
+
+    - name: Clean up uploaded key file
+      community.routeros.command:
+        commands:
+          - /file remove {{ key_dest_filename }}
+      when: not (dry_run | bool)
+
+    - name: Import subnet setup script
+      community.routeros.command:
+        commands:
+          - /import file-name=bootstrap-migrate-subnet.rsc{{ import_opts }}
+      register: subnet_import
+
+    - name: Show import output
+      debug:
+        msg:
+          - "user creation: {{ user_import.stdout_lines }}"
+          - "subnet migration: {{ subnet_import.stdout_lines }}"
+      when: dry_run | bool
+
+    - name: Remove locally rendered user creation script
+      ansible.builtin.file:
+        path: /tmp/bootstrap-create-user.rsc
+        state: absent
+      delegate_to: localhost
