@@ -1,6 +1,6 @@
 # Persistence
 
-This document covers the Synology NAS, MariaDB datastore, and Kubernetes storage patterns used by the cluster. For the hardware overview, see [Getting Started](00-getting-started.md). For k3s configuration that references the datastore, see [RPis and k3s](01-rpis-and-k3s.md).
+This document covers the Synology NAS, MariaDB datastore, and Kubernetes storage patterns used by the cluster. For the hardware overview, see [Getting Started](00-getting-started.md). For k3s configuration that references the datastore, see [RPis and k3s](02-rpis-and-k3s.md).
 
 ## Synology NAS
 
@@ -204,6 +204,7 @@ Both the official Synology CSI driver and democratic-csi's synology-iscsi mode w
 ## Related Documentation
 
 - [Getting Started](00-getting-started.md) -- Hardware details, software stack overview
-- [RPis and k3s](01-rpis-and-k3s.md) -- k3s datastore configuration, Ansible provisioning
-- [Networking](03-networking.md) -- MetalLB, ingress, DNS, TLS (including Synology DSM LetsEncrypt certificates)
-- [Saving Your SD Cards](07-saving-your-sdcards.md) -- Reducing SD card wear
+- [Infrastructure Provisioning](01-infrastructure-provisioning.md) -- Ansible provisioning
+- [RPis and k3s](02-rpis-and-k3s.md) -- k3s datastore configuration
+- [Networking](04-networking.md) -- MetalLB, ingress, DNS, TLS (including Synology DSM LetsEncrypt certificates)
+- [Saving Your SD Cards](08-saving-your-sdcards.md) -- Reducing SD card wear

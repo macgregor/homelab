@@ -1,6 +1,6 @@
 # Networking
 
-This document covers network topology, DNS architecture, load balancing, ingress routing, TLS, and authentication for the homelab. For the hardware overview, see [Getting Started](00-getting-started.md). For k3s server flags that disable built-in networking components, see [RPis and k3s](01-rpis-and-k3s.md#why-k3s).
+This document covers network topology, DNS architecture, load balancing, ingress routing, TLS, and authentication for the homelab. For the hardware overview, see [Getting Started](00-getting-started.md). For k3s server flags that disable built-in networking components, see [RPis and k3s](02-rpis-and-k3s.md#why-k3s).
 
 **Note:** External access (Cloudflare proxy configuration, firewall port forwarding, DDNS) is currently in progress. Core LAN networking (MetalLB, ingress controllers, DNS, TLS within the cluster) is stable.
 
@@ -187,7 +187,7 @@ Reference: [Synology DSM 7 with LetsEncrypt and DNS Challenge](https://dr-b.io/p
 ## Related Documentation
 
 - [Getting Started](00-getting-started.md) -- Hardware details, software stack overview
-- [RPis and k3s](01-rpis-and-k3s.md) -- k3s configuration, disabled components (Traefik, ServiceLB, CoreDNS)
-- [Persistence](02-persistence.md) -- Synology NAS storage configuration
-- [Security](04-security.md) -- Authentication with oauth2-proxy
-- [Observability](05-observability.md) -- Logging and monitoring
+- [RPis and k3s](02-rpis-and-k3s.md) -- k3s configuration, disabled components (Traefik, ServiceLB, CoreDNS)
+- [Persistence](03-persistence.md) -- Synology NAS storage configuration
+- [Security](05-security.md) -- Authentication with oauth2-proxy
+- [Observability](06-observability.md) -- Logging and monitoring
