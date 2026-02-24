@@ -23,7 +23,7 @@ data:
       - "Invalid video file*"
       - "No files found are eligible for import*"
       - "One or more episodes expected in this release were not imported or missing from the release"
-  REMOVE_ORPHANS: "True"
+  REMOVE_ORPHANS: "False"
   REMOVE_MISSING_FILES: "True"
   REMOVE_SLOW: "False"
   REMOVE_UNMONITORED: "False"
