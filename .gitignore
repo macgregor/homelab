@@ -1,1 +1,9 @@
 .envrc
+docs/plans/
+
+# Ignore .claude dirs in subdirectories, keep root
+.claude/
+!/.claude/
+
+# Ignore settings.local.json everywhere
+**/settings.local.json

@@ -19,6 +19,8 @@ Load these documents based on the task at hand. Do not load speculatively.
 | `docs/07-maintenance.md` | Upgrading k3s, rotating certificates, or cluster recovery |
 | `docs/appendix/mikrotik-routeros.md` | Working with MikroTik router config, RouterOS scripting, or firewall rules |
 
+**`docs/plans/`** — Files here are speculative or historical planning documents (gitignored, ephemeral). Never load them unless the user explicitly asks. They contain outdated or hypothetical information that will contradict the actual state of the project. Never reference or link to them from long-lived documentation.
+
 ## Key Commands
 
 All Kubernetes commands run from `kube/` directory. The `KUBECONFIG` env var is set via `.envrc` (direnv).
