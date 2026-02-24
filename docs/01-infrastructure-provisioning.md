@@ -104,13 +104,20 @@ For detailed configuration specifics, see the playbook itself in `ansible/mikrot
 
 Two playbooks provision Rocky Linux 9 ARM on the Pis: bootstrap for one-time user setup, then the main OS/k3s installation.
 
+### Prerequisites: Manual Image Flashing
+
+Before Ansible provisioning can begin, Rocky Linux 9 ARM must be flashed onto each Raspberry Pi's SD card manually:
+
+1. Download the Rocky Linux 9 ARM image for Raspberry Pi from the [SIGAltArch Pi Images wiki](https://wiki.rockylinux.org/rocky/image/#about-pi-images-maintained-by-sigaltarch)
+2. Flash the image to the SD card using [balena Etcher](https://www.balena.io/etcher/) or `dd`
+3. Insert the SD card into the Pi and power on
+4. Connect the Pi to the network via Ethernet
+5. The router assigns it a DHCP IP address (configured in the MikroTik configure step)
+6. Verify network connectivity before proceeding to bootstrap playbook
+
 ### Phase 1: Bootstrap (`rpi-bootstrap.yml`)
 
 **One-time setup.** Creates a secure SSH user with key auth and passwordless sudo, removes default `rocky` user.
-
-**Prerequisites:**
-- Rocky Linux 9 ARM booted on SD card
-- Network connected and DHCP working (or manual IP assigned)
 
 **Running:**
 ```bash
