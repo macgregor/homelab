@@ -49,8 +49,9 @@
     /log info "cloudflare-ddns: complete"
 
 } do={
-    # "unchanged" and "no WAN IP" are expected early-exit conditions, not errors
-    :if ($e = "unchanged" || $e = "no WAN IP") do={} else={
+    # "unchanged" and "no WAN IP" are expected early-exit conditions, not errors.
+    # Use :find (substring match) because RouterOS 7.17+ appends source location to $e.
+    :if ([:find $e "unchanged"] != nil || [:find $e "no WAN IP"] != nil) do={} else={
         /log error ("cloudflare-ddns: failed: " . $e)
     }
 }

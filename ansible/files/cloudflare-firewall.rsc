@@ -95,8 +95,9 @@
     /log info "cloudflare-firewall: complete"
 
 } do={
-    # "validation failed" and "anchor rule missing" are logged at their source
-    :if ($e = "validation failed" || $e = "anchor rule missing") do={} else={
+    # "validation failed" and "anchor rule missing" are logged at their source.
+    # Use :find (substring match) because RouterOS 7.17+ appends source location to $e.
+    :if ([:find $e "validation failed"] != nil || [:find $e "anchor rule missing"] != nil) do={} else={
         /log error ("cloudflare-firewall: failed: " . $e)
     }
     :onerror cleanupErr in={
