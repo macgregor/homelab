@@ -32,6 +32,44 @@ Provisioning follows a bootstrap-then-configure pattern:
 
 The MikroTik RB5009UPr+S+IN ships with factory defaults (192.168.88.1/24, no secure user). Two playbooks transform it into a managed network appliance.
 
+### Prerequisites: Manual Setup
+
+Before running the bootstrap playbook, the router requires two manual configuration steps:
+
+**1. Enable Advanced Device Mode**
+
+The RB5009 ships in "home" device-mode, which disables the scheduler needed for auto-updates. Switch to "advanced" mode using the factory SSH user:
+
+```bash
+ssh -o StrictHostKeyChecking=no admin@192.168.88.1
+/system device-mode update mode=advanced
+```
+
+The router will respond: `update: please activate by turning power off or pressing reset or mode button in 5m00s`
+
+Within 5 minutes, do ONE of:
+- Press the reset/mode button on the front panel (hold 3-5 seconds until LED responds), OR
+- Power-cycle the device (unplug, wait 10 seconds, plug back in)
+
+After activation, wait ~2 minutes for the router to reboot. Verify with:
+
+```bash
+ssh admin@192.168.88.1
+/system device-mode print | grep scheduler
+```
+
+Should return: `scheduler: yes`
+
+**2. SSH Once and Set Factory User Password**
+
+RouterOS requires one SSH login to initialize the `admin` user and dismiss startup dialogs. The router will force you to set a password:
+
+```bash
+ssh -o StrictHostKeyChecking=no admin@192.168.88.1
+```
+
+Set a temporary password when prompted. Record this as `MIKROTIK_DEFAULT_PASSWORD` in `.envrc`. After logout, the bootstrap playbook will use these credentials to connect and set up the long-term SSH user.
+
 ### Phase 1: Bootstrap (`mikrotik-bootstrap.yml`)
 
 **One-time setup.** Migrates from factory defaults to 192.168.1.0/24 and creates a secure SSH user. After this, the router is reachable at 192.168.1.1.
