@@ -2,39 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What This Is
+@README.md
+@docs/01-infrastructure-provisioning.md
 
-A homelab infrastructure repository managing a k3s Kubernetes cluster on Raspberry Pi 4B nodes (Rocky Linux 9 ARM) with a Synology DS720+ NAS for persistent storage. Deployment is Makefile-driven (not GitOps).
+## Project Documentation
+
+Load these documents based on the task at hand. Do not load speculatively.
+
+| Document | Load when... |
+|----------|-------------|
+| `docs/00-getting-started.md` | You need hardware specs, IP addresses, or software stack details |
+| `docs/02-rpis-and-k3s.md` | Working with k3s configuration, cluster topology, or node roles |
+| `docs/03-persistence.md` | Adding/modifying PVs, PVCs, NFS mounts, or Synology storage |
+| `docs/04-networking.md` | Working with MetalLB, ingress, DNS, TLS, or Cloudflare configuration |
+| `docs/06-observability.md` | Working with logging (fluent-bit, Loki) or monitoring (Prometheus, Grafana) |
+| `docs/07-maintenance.md` | Upgrading k3s, rotating certificates, or cluster recovery |
+| `docs/appendix/mikrotik-routeros.md` | Working with MikroTik router config, RouterOS scripting, or firewall rules |
 
 ## Key Commands
 
 All Kubernetes commands run from `kube/` directory. The `KUBECONFIG` env var is set via `.envrc` (direnv).
-
-### Deploying Applications
-
-```bash
-# Deploy a single app (from kube/ directory)
-make jellyfin-deploy
-
-# Other per-app targets: remove, stop, start, restart, status, debug, logs
-make jellyfin-status
-make jellyfin-logs
-make jellyfin-stop
-make jellyfin-start
-
-# Deploy by category
-make deploy-sys      # System infrastructure
-make deploy-apps     # User applications
-make deploy-demos    # Test/demo apps
-make deploy-all      # Everything
-```
-
-### Ansible (from ansible/ directory)
-
-```bash
-ansible-playbook rpi-bootstrap.yml    # Initial Pi setup
-ansible-playbook k3-install.yml       # Install k3s
-```
 
 ### Debugging
 
@@ -44,13 +31,6 @@ make cluster-debug node=k3-m1                 # Shell into network-multitool on 
 ```
 
 ## Architecture
-
-### Directory Layout
-
-- `ansible/` - Playbooks and roles for Pi provisioning and k3s installation
-- `kube/` - All Kubernetes manifests and deployment tooling
-- `docs/` - Operational documentation (setup, networking, maintenance)
-- `.envrc` - Secrets and env vars (gitignored, loaded via direnv)
 
 ### Kubernetes Organization (`kube/`)
 
@@ -82,25 +62,16 @@ Three patterns exist depending on the component:
 
 ### Secrets Management
 
-All secrets live in `.envrc` (gitignored), loaded by direnv. They flow into deployments via:
+All secrets live in `.envrc` (gitignored), loaded by direnv. They flow into Kubernetes deployments via:
 - `envsubst` for plain YAML
 - `.gotmpl` templates for Helmfile values
 - `kubectl create secret --dry-run=client -o yaml | kubectl apply -f -` in Makefile targets
-- `{{ lookup('env', 'VAR_NAME') }}` in Ansible
 
-### Storage Patterns
+For how secrets flow into Ansible provisioning, see `docs/01-infrastructure-provisioning.md`.
 
-- **Config/persistent data**: Static PV/PVC on Synology NFS at `/volume2/kube-nfs/v/<app>-config`
-- **Volatile/cache**: `local-path` StorageClass (node-local)
-- **Media files**: Direct NFS volume mounts (not PV/PVC)
-- **Dynamic provisioning**: `democratic-csi` NFS driver for Synology
+## SSH Access to Systems
 
-### Networking
-
-- **MetalLB**: L2 mode load balancer, IP pool 192.168.1.220-239
-- **Two ingress controllers**: `nginx-internal` (LAN only) and `nginx-external` (internet-facing)
-- **TLS**: cert-manager with LetsEncrypt via Cloudflare DNS-01 challenge
-- **Auth**: oauth2-proxy with GitHub provider for protected services
+When connecting to any system (RPis, Synology, router, etc.), check `~/.ssh/config` for pre-configured hosts and authentication methods. Don't guess connection parameters—the config file defines the correct user, identity file, and other settings for each host. Use the configured host alias when possible (e.g., `ssh k3-m1` instead of `ssh macgregor@192.168.1.210`).
 
 ## Conventions
 
