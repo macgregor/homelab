@@ -24,3 +24,6 @@
           operator: In
           values:
           - 'true'
+
+.commonLabels: &commonLabels
+  - app.kubernetes.io/name: <app-name>

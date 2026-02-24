@@ -21,7 +21,7 @@ metadata:
   labels:
     app.kubernetes.io/name: tdarr-nodes
 spec:
-  revisionHistoryLimit: 3
+  revisionHistoryLimit: 2
   replicas: 1
   selector:
     matchLabels:
@@ -40,6 +40,9 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: tdarr-nodes
+      annotations:
+        fluentbit.io/parser: "tdarr"
+        diun.enable: "true"
     spec:
       affinity:
           podAntiAffinity:
@@ -55,14 +58,16 @@ spec:
       automountServiceAccountToken: true
       dnsPolicy: ClusterFirst
       enableServiceLinks: true
+      terminationGracePeriodSeconds: 30
       tolerations:
         - key: "CriticalAddonsOnly"
           operator: "Equal"
           value: "true"
           effect: "NoSchedule"
       containers:
+        # https://hub.docker.com/r/haveagitgat/tdarr_node/tags
         - name: tdarr
-          image: "ghcr.io/haveagitgat/tdarr_node:2.00.21"
+          image: "ghcr.io/haveagitgat/tdarr_node:2.11.01"
           imagePullPolicy: IfNotPresent
           resources:
             requests:

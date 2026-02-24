@@ -13,7 +13,7 @@ data:
   serverIP: 0.0.0.0
   serverPort: "8266"
   webUIPort: "8265"
-  CHOWN_ON_START: false
+  CHOWN_ON_START: "false"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -23,7 +23,7 @@ metadata:
   labels:
     app.kubernetes.io/name: tdarr-server
 spec:
-  revisionHistoryLimit: 3
+  revisionHistoryLimit: 2
   replicas: 1
   strategy:
     type: Recreate
@@ -34,19 +34,24 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: tdarr-server
+      annotations:
+        fluentbit.io/parser: "tdarr"
+        diun.enable: "true"
     spec:
       serviceAccountName: default
       automountServiceAccountToken: true
       dnsPolicy: ClusterFirst
       enableServiceLinks: true
+      terminationGracePeriodSeconds: 30
       tolerations:
         - key: "CriticalAddonsOnly"
           operator: "Equal"
           value: "true"
           effect: "NoSchedule"
       containers:
+        # https://hub.docker.com/r/haveagitgat/tdarr/tags
         - name: tdarr
-          image: "ghcr.io/haveagitgat/tdarr:2.00.21"
+          image: "haveagitgat/tdarr:2.11.01"
           imagePullPolicy: IfNotPresent
           resources:
             requests:
