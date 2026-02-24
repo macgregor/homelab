@@ -99,4 +99,3 @@ Ansible variables are defined in `ansible/inventory/group_vars/all.yaml`. Sensit
 - [Persistence](03-persistence.md) -- Synology NAS and Kubernetes storage
 - [Networking](04-networking.md) -- MetalLB, ingress, DNS, TLS
 - [Maintenance](07-maintenance.md) -- k3s upgrade procedures
-- [Saving Your SD Cards](08-saving-your-sdcards.md) -- Reducing SD card wear

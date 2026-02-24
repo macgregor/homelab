@@ -35,7 +35,6 @@ make deploy-all       # Everything
 6. [Security](docs/05-security.md) -- Authentication and access control.
 7. [Observability](docs/06-observability.md) -- Logging and monitoring stack.
 8. [Maintenance](docs/07-maintenance.md) -- k3s upgrades and cluster maintenance procedures.
-9. [Saving Your SD Cards](docs/08-saving-your-sdcards.md) -- Reducing SD card wear on Raspberry Pi nodes.
 
 ## Repository Layout
 

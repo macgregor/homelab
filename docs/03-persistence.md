@@ -207,4 +207,3 @@ Both the official Synology CSI driver and democratic-csi's synology-iscsi mode w
 - [Infrastructure Provisioning](01-infrastructure-provisioning.md) -- Ansible provisioning
 - [RPis and k3s](02-rpis-and-k3s.md) -- k3s datastore configuration
 - [Networking](04-networking.md) -- MetalLB, ingress, DNS, TLS (including Synology DSM LetsEncrypt certificates)
-- [Saving Your SD Cards](08-saving-your-sdcards.md) -- Reducing SD card wear

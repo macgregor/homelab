@@ -1,3 +1,5 @@
+PLACEHOLDER
+
 
 * elasticsearch is super heavy
 * using fluentd, loki and grafana as a lightweight alternative
