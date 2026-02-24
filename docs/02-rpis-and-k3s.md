@@ -22,8 +22,8 @@ Several of the bundled components are disabled in favor of separately managed re
 | Disabled Component | Replacement | Why |
 | ------------------- | ----------- | --- |
 | CoreDNS | (re-deployed manually) | More control over configuration |
-| Traefik | ingress-nginx | Dual ingress controller setup needed (see [Networking](03-networking.md)) |
-| ServiceLB | MetalLB | L2 mode with a dedicated IP pool (see [Networking](03-networking.md)) |
+| Traefik | ingress-nginx | Dual ingress controller setup needed (see [Networking](04-networking.md)) |
+| ServiceLB | MetalLB | L2 mode with a dedicated IP pool (see [Networking](04-networking.md)) |
 | Cloud controller | None | No cloud provider |
 | Helm controller | Helmfile | Prefer Helmfile for chart management |
 

@@ -28,17 +28,18 @@ make deploy-all       # Everything
 ## Documentation
 
 1. [Getting Started](docs/00-getting-started.md) -- Project overview, hardware, software stack, and repo layout.
-2. [RPis and k3s](docs/01-rpis-and-k3s.md) -- Cluster topology, k3s configuration, and Ansible provisioning.
-3. [Persistence](docs/02-persistence.md) -- Synology NAS setup and Kubernetes storage configuration.
-4. [Networking](docs/03-networking.md) -- Network topology, DNS, MetalLB, ingress controllers, TLS, and authentication.
-5. [Security](docs/04-security.md) -- Authentication and access control.
-6. [Observability](docs/05-observability.md) -- Logging and monitoring stack.
-7. [Maintenance](docs/06-maintenance.md) -- k3s upgrades and cluster maintenance procedures.
-8. [Saving Your SD Cards](docs/07-saving-your-sdcards.md) -- Reducing SD card wear on Raspberry Pi nodes.
+2. [Infrastructure Provisioning](docs/01-infrastructure-provisioning.md) -- Ansible provisioning of MikroTik router and Raspberry Pis.
+3. [RPis and k3s](docs/02-rpis-and-k3s.md) -- Kubernetes cluster topology and k3s configuration.
+4. [Persistence](docs/03-persistence.md) -- Synology NAS setup and Kubernetes storage configuration.
+5. [Networking](docs/04-networking.md) -- Network topology, DNS, MetalLB, ingress controllers, TLS, and authentication.
+6. [Security](docs/05-security.md) -- Authentication and access control.
+7. [Observability](docs/06-observability.md) -- Logging and monitoring stack.
+8. [Maintenance](docs/07-maintenance.md) -- k3s upgrades and cluster maintenance procedures.
+9. [Saving Your SD Cards](docs/08-saving-your-sdcards.md) -- Reducing SD card wear on Raspberry Pi nodes.
 
 ## Repository Layout
 
-- **`ansible/`** -- Pi provisioning and k3s installation playbooks
+- **`ansible/`** -- Provisioning playbooks for MikroTik router, Raspberry Pi OS, and k3s installation
 - **`kube/`** -- Kubernetes manifests, Helm values, and Makefile-driven deployment tooling
 - **`docs/`** -- Operational documentation
 
