@@ -16,6 +16,7 @@ ExecStart=/usr/local/bin/k3s server \
     --disable servicelb \
     --disable-cloud-controller \
     --disable-helm-controller \
+    --flannel-backend=host-gw \
     --write-kubeconfig-mode 644 \
     --node-taint CriticalAddonsOnly=true:NoSchedule \
     --datastore-endpoint "mysql://{{ kube_mysql_user }}:{{ kube_mysql_password }}@tcp({{ kube_mysql_host }}:{{ hube_mysql_port }})/{{ kube_mysql_db_name}}" \
