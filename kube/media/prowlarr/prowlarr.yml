@@ -61,7 +61,6 @@ spec:
         - containerPort: 9696
           name: http
           protocol: TCP
-        resources: {}
         stdin: true
         tty: true
         volumeMounts:
