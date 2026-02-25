@@ -31,8 +31,8 @@ All Kubernetes commands run from `kube/` directory. The `KUBECONFIG` env var is 
 ### Debugging
 
 ```bash
-make pod-debug pod=<pod-name> n=<namespace>   # Shell into a pod
-make cluster-debug node=k3-m1                 # Shell into network-multitool on a node
+just pod-debug <pod-name> ns=<namespace>   # Shell into a pod
+just cluster-debug node=k3-m1              # Shell into network-multitool on a node
 ```
 
 ## Architecture
@@ -44,7 +44,7 @@ Apps are grouped by category: `sys/`, `app/`, `media/`, `observation/`, `demo/`,
 Each application follows a standard structure:
 ```
 app-name/
-├── app-name.mk       # Makefile targets (deploy, remove, stop, start, etc.)
+├── justfile           # Just recipes (deploy, remove, stop, start, etc.)
 ├── namespace.yml      # Namespace
 ├── storage.yml        # PV/PVC definitions
 ├── app-name.yml       # Deployment/StatefulSet
@@ -70,7 +70,7 @@ Three patterns exist depending on the component:
 All secrets live in `.envrc` (gitignored), loaded by direnv. They flow into Kubernetes deployments via:
 - `envsubst` for plain YAML
 - `.gotmpl` templates for Helmfile values
-- `kubectl create secret --dry-run=client -o yaml | kubectl apply -f -` in Makefile targets
+- `kubectl create secret --dry-run=client -o yaml | kubectl apply -f -` in justfile recipes
 
 For how secrets flow into Ansible provisioning, see `docs/01-infrastructure-provisioning.md`.
 
@@ -80,11 +80,11 @@ When connecting to any system (RPis, Synology, router, etc.), check `~/.ssh/conf
 
 ## Conventions
 
-- Makefile targets follow `<app>-<action>` naming (e.g., `jellyfin-deploy`, `metallb-status`)
-- Each `.mk` file is included by the top-level `kube/Makefile`
+- Just recipes follow `<app>-<action>` naming (e.g., `jellyfin-deploy`, `metallb-status`)
+- Each per-app justfile is imported by the top-level `kube/justfile`
 - Labels use `app.kubernetes.io/name` consistently
-- Replicas are controlled via `<APP>_REPLICAS` env vars with `?=1` defaults
-- `remove` targets prefix commands with `-` to ignore errors during teardown
+- Replicas are controlled via `<APP>_REPLICAS` env vars with defaults
+- `remove` targets use `|| true` to ignore errors during teardown
 
 ## YAML Frontmatter Template
 

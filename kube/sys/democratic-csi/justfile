@@ -1,0 +1,5 @@
+democratic-csi-deploy:
+    helmfile --file ./sys/democratic-csi/helmfile.yaml apply
+
+democratic-csi-remove:
+    helmfile --file ./sys/democratic-csi/helmfile.yaml destroy

@@ -1,0 +1,27 @@
+QBITTORRENT_REPLICAS := env_var_or_default("QBITTORRENT_REPLICAS", "1")
+
+qbittorrent-deploy:
+    #!/usr/bin/env bash
+    set -e
+    kubectl apply -f ./media/qbittorrent/namespace.yml
+    kubectl create secret generic vpn-credentials \
+        -n media --save-config --dry-run=client \
+        --from-literal=WIREGUARD_PRIVATE_KEY="${WIREGUARD_PRIVATE_KEY}" \
+        -o yaml | kubectl apply -f -
+    kubectl apply -f ./media/qbittorrent/storage.yml
+    kubectl apply -f ./media/qbittorrent/network.yml
+    kubectl apply -f ./media/qbittorrent/qbittorrent.yml
+
+qbittorrent-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./media/qbittorrent/network.yml || true
+    kubectl delete -f ./media/qbittorrent/qbittorrent.yml || true
+    kubectl delete -f ./media/qbittorrent/storage.yml || true
+    kubectl -n media delete secret/vpn-credentials || true
+
+qbittorrent-debug: (_kube-debug "qbittorrent" "media")
+qbittorrent-logs: (_kube-logs "qbittorrent" "media")
+qbittorrent-stop: (_kube-stop "media" "deployment/qbittorrent")
+qbittorrent-start: (_kube-start "media" "deployment/qbittorrent" QBITTORRENT_REPLICAS)
+qbittorrent-restart: (_kube-restart "media" "deployment/qbittorrent")
+qbittorrent-status: (_kube-status "qbittorrent" "media")

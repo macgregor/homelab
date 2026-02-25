@@ -1,0 +1,10 @@
+KUARD_REPLICAS := env_var_or_default("KUARD_REPLICAS", "1")
+
+kuard-deploy: (_kube-deploy "kuard" "./demo/kuard")
+kuard-remove: (_kube-remove "kuard" "./demo/kuard")
+kuard-debug: (_kube-debug "kuard" "demo")
+kuard-logs: (_kube-logs "kuard" "demo")
+kuard-stop: (_kube-stop "demo" "deployment/kuard")
+kuard-start: (_kube-start "demo" "deployment/kuard" KUARD_REPLICAS)
+kuard-restart: (_kube-restart "demo" "deployment/kuard")
+kuard-status: (_kube-status "kuard" "demo")

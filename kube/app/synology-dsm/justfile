@@ -1,0 +1,10 @@
+synology-dsm-deploy:
+    #!/usr/bin/env bash
+    set -e
+    kubectl apply -f ./app/synology-dsm/namespace.yml
+    kubectl apply -f ./app/synology-dsm/network.yml
+
+synology-dsm-remove:
+    kubectl delete -f ./app/synology-dsm/network.yml || true
+
+synology-dsm-status: (_kube-status "synology-dsm" "synology-dsm" "app=synology-dsm")

@@ -1,0 +1,30 @@
+CERT_MANAGER_REPLICAS := env_var_or_default("CERT_MANAGER_REPLICAS", "1")
+
+cert-manager-deploy:
+    #!/usr/bin/env bash
+    set -e
+    helmfile --file ./sys/cert-manager/helmfile.yaml apply
+    envsubst < ./sys/cert-manager/cert-manager.yml | kubectl apply -f -
+
+cert-manager-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./sys/cert-manager/cert-manager.yml || true
+    helmfile --file ./sys/cert-manager/helmfile.yaml destroy || true
+
+cert-manager-stop:
+    #!/usr/bin/env bash
+    kubectl -n cert-manager scale deployment/cert-manager --replicas=0
+    kubectl -n cert-manager scale deployment/cert-manager-webhook --replicas=0
+    kubectl -n cert-manager scale deployment/cert-manager-cainjector --replicas=0
+
+cert-manager-start:
+    #!/usr/bin/env bash
+    kubectl -n cert-manager scale deployment/cert-manager --replicas={{CERT_MANAGER_REPLICAS}}
+    kubectl -n cert-manager scale deployment/cert-manager-webhook --replicas={{CERT_MANAGER_REPLICAS}}
+    kubectl -n cert-manager scale deployment/cert-manager-cainjector --replicas={{CERT_MANAGER_REPLICAS}}
+
+cert-manager-restart:
+    #!/usr/bin/env bash
+    kubectl -n cert-manager rollout restart deployment/cert-manager
+    kubectl -n cert-manager rollout restart deployment/cert-manager-webhook
+    kubectl -n cert-manager rollout restart deployment/cert-manager-cainjector

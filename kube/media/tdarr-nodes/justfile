@@ -1,0 +1,10 @@
+TDARR_NODES_REPLICAS := env_var_or_default("TDARR_NODES_REPLICAS", "1")
+
+tdarr-nodes-deploy: (_kube-deploy "tdarr-nodes" "./media/tdarr-nodes")
+tdarr-nodes-remove: (_kube-remove "tdarr-nodes" "./media/tdarr-nodes")
+tdarr-nodes-debug: (_kube-debug "tdarr-nodes" "media")
+tdarr-nodes-logs: (_kube-logs "tdarr-nodes" "media")
+tdarr-nodes-stop: (_kube-stop "media" "statefulset/tdarr-nodes")
+tdarr-nodes-start: (_kube-start "media" "statefulset/tdarr-nodes" TDARR_NODES_REPLICAS)
+tdarr-nodes-restart: (_kube-restart "media" "statefulset/tdarr-nodes")
+tdarr-nodes-status: (_kube-status "tdarr-nodes" "media")

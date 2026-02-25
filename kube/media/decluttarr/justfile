@@ -1,0 +1,25 @@
+DECLUTTARR_REPLICAS := env_var_or_default("DECLUTTARR_REPLICAS", "1")
+
+decluttarr-deploy:
+    #!/usr/bin/env bash
+    set -e
+    kubectl apply -f ./media/decluttarr/namespace.yml
+    kubectl create secret generic decluttarr-api-keys \
+        -n media --save-config --dry-run=client \
+        --from-literal=RADARR_API_KEY="${RADARR_API_KEY}" \
+        --from-literal=SONARR_API_KEY="${SONARR_API_KEY}" \
+        --from-literal=QBITTORRENT_USER="${QBITTORRENT_USER}" \
+        --from-literal=QBITTORRENT_PASS="${QBITTORRENT_PASS}" \
+        -o yaml | kubectl apply -f -
+    kubectl apply -f ./media/decluttarr/decluttarr.yml
+
+decluttarr-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./media/decluttarr/decluttarr.yml || true
+    kubectl -n media delete secret/decluttarr-api-keys || true
+
+decluttarr-logs: (_kube-logs "decluttarr" "media")
+decluttarr-stop: (_kube-stop "media" "deployment/decluttarr")
+decluttarr-start: (_kube-start "media" "deployment/decluttarr" DECLUTTARR_REPLICAS)
+decluttarr-restart: (_kube-restart "media" "deployment/decluttarr")
+decluttarr-status: (_kube-status "decluttarr" "media")

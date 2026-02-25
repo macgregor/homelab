@@ -1,0 +1,60 @@
+GRAFANA_REPLICAS := env_var_or_default("GRAFANA_REPLICAS", "1")
+PROMETHEUS_OPERATOR_REPLICAS := env_var_or_default("PROMETHEUS_OPERATOR_REPLICAS", "1")
+
+# --- kube-prometheus-stack ---
+
+kube-prometheus-stack-crds:
+    #!/usr/bin/env bash
+    set -e
+    kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.56.0/example/prometheus-operator-crd/monitoring.coreos.com_alertmanagerconfigs.yaml
+    kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.56.0/example/prometheus-operator-crd/monitoring.coreos.com_alertmanagers.yaml
+    kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.56.0/example/prometheus-operator-crd/monitoring.coreos.com_podmonitors.yaml
+    kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.56.0/example/prometheus-operator-crd/monitoring.coreos.com_probes.yaml
+    kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.56.0/example/prometheus-operator-crd/monitoring.coreos.com_prometheuses.yaml
+    kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.56.0/example/prometheus-operator-crd/monitoring.coreos.com_prometheusrules.yaml
+    kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.56.0/example/prometheus-operator-crd/monitoring.coreos.com_servicemonitors.yaml
+    kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/v0.56.0/example/prometheus-operator-crd/monitoring.coreos.com_thanosrulers.yaml
+
+kube-prometheus-stack-deploy:
+    #!/usr/bin/env bash
+    set -e
+    echo "Make sure you have applied CRDs to your cluster first:"
+    echo "  just kube-prometheus-stack-crds"
+    echo ""
+    helmfile --file ./observation/kube-prometheus-stack/helmfile.yaml apply
+    kubectl apply -f ./observation/kube-prometheus-stack/network.yml
+
+kube-prometheus-stack-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./observation/kube-prometheus-stack/network.yml || true
+    helmfile --file ./observation/kube-prometheus-stack/helmfile.yaml destroy || true
+
+# --- grafana ---
+
+grafana-debug: (_kube-debug "grafana" "obs")
+
+grafana-logs:
+    kubectl -n obs logs `kubectl -n obs get pods -l app.kubernetes.io/name=grafana -o name` -c grafana --follow
+
+grafana-stop: (_kube-stop "obs" "deployment/kps-grafana")
+grafana-start: (_kube-start "obs" "deployment/kps-grafana" GRAFANA_REPLICAS)
+grafana-restart: (_kube-restart "obs" "deployment/kps-grafana")
+grafana-status: (_kube-status "grafana" "obs")
+
+# --- prometheus ---
+
+prometheus-debug: (_kube-debug "prometheus" "obs")
+prometheus-logs: (_kube-logs "prometheus" "obs")
+
+prometheus-stop:
+    #!/usr/bin/env bash
+    kubectl -n obs scale deployment.apps/kps-kube-prometheus-stack-operator --replicas=0
+    kubectl -n obs scale statefulset.apps/prometheus-kps-kube-prometheus-stack-prometheus --replicas=0
+
+prometheus-start:
+    kubectl -n obs scale deployment.apps/kps-kube-prometheus-stack-operator --replicas={{PROMETHEUS_OPERATOR_REPLICAS}}
+
+prometheus-restart:
+    kubectl -n obs rollout restart statefulset.apps/prometheus-kps-kube-prometheus-stack-prometheus
+
+prometheus-status: (_kube-status "prometheus" "obs")

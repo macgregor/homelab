@@ -1,0 +1,36 @@
+MEALIE_REPLICAS := env_var_or_default("MEALIE_REPLICAS", "1")
+
+mealie-deploy:
+    #!/usr/bin/env bash
+    set -e
+    kubectl apply -f ./app/mealie/namespace.yml
+    kubectl create secret generic mealie-env \
+        -n mealie --save-config --dry-run=client \
+        --from-literal=POSTGRES_PASSWORD="${MEALIE_PG_PASSWORD}" \
+        --from-literal=POSTGRES_USER="${MEALIE_PG_USER}" \
+        --from-literal=POSTGRES_SERVER="${MEALIE_PG_HOST}" \
+        --from-literal=POSTGRES_PORT="${MEALIE_PG_PORT}" \
+        --from-literal=POSTGRES_DB="${MEALIE_PG_DB}" \
+        --from-literal=DEFAULT_EMAIL="${MEALIE_DEFAULT_ADMIN_USER}" \
+        --from-literal=DEFAULT_PASSWORD="${MEALIE_DEFAULT_ADMIN_PASSWORD}" \
+        -o yaml | kubectl apply -f -
+    kubectl apply -f ./app/mealie/storage.yml
+    kubectl apply -f ./app/mealie/mealie.yml
+    kubectl apply -f ./app/mealie/network.yml
+
+mealie-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./app/mealie/network.yml || true
+    kubectl delete -f ./app/mealie/mealie.yml || true
+    kubectl delete -f ./app/mealie/storage.yml || true
+    kubectl -n mealie delete secret mealie-env || true
+
+mealie-debug: (_kube-debug "mealie" "mealie")
+mealie-logs: (_kube-logs "mealie" "mealie")
+mealie-stop: (_kube-stop "mealie" "deployment/mealie")
+mealie-start: (_kube-start "mealie" "deployment/mealie" MEALIE_REPLICAS)
+mealie-restart: (_kube-restart "mealie" "deployment/mealie")
+mealie-status: (_kube-status "mealie" "mealie")
+
+mealie-debug-pg:
+    kubectl -n mealie run -i --tty --rm debug --image=postgres --restart=Never -- /bin/bash -c "psql postgresql://${MEALIE_PG_ADMIN_USER}:${MEALIE_PG_ADMIN_PASSWORD}@${MEALIE_PG_HOST}:${MEALIE_PG_PORT}/${MEALIE_PG_DB}"

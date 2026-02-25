@@ -1,0 +1,13 @@
+loki-deploy:
+    #!/usr/bin/env bash
+    set -e
+    kubectl apply -f ./observation/loki/namespace.yml
+    kubectl apply -f ./observation/loki/storage.yml
+    helmfile --file ./observation/loki/helmfile.yaml apply
+
+loki-remove:
+    #!/usr/bin/env bash
+    helmfile --file ./observation/loki/helmfile.yaml destroy || true
+    kubectl delete -f ./observation/loki/storage.yml || true
+
+loki-status: (_kube-status "loki" "obs")

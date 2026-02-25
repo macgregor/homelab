@@ -1,0 +1,10 @@
+SEERR_REPLICAS := env_var_or_default("SEERR_REPLICAS", "1")
+
+seerr-deploy: (_kube-deploy "seerr" "./media/seerr")
+seerr-remove: (_kube-remove "seerr" "./media/seerr")
+seerr-debug: (_kube-debug "seerr" "media")
+seerr-logs: (_kube-logs "seerr" "media")
+seerr-stop: (_kube-stop "media" "deployment/seerr")
+seerr-start: (_kube-start "media" "deployment/seerr" SEERR_REPLICAS)
+seerr-restart: (_kube-restart "media" "deployment/seerr")
+seerr-status: (_kube-status "seerr" "media")

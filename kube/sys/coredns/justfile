@@ -1,0 +1,18 @@
+COREDNS_REPLICAS := env_var_or_default("COREDNS_REPLICAS", "2")
+
+coredns-deploy:
+    #!/usr/bin/env bash
+    set -e
+    kubectl apply -f ./sys/coredns/roles.yml
+    kubectl apply -f ./sys/coredns/coredns.yml
+    kubectl apply -f ./sys/coredns/network.yml
+
+coredns-remove:
+    kubectl delete -f ./sys/coredns/coredns.yml || true
+
+coredns-debug: (_kube-debug "coredns" "kube-system")
+coredns-logs: (_kube-logs "coredns" "kube-system")
+coredns-stop: (_kube-stop "kube-system" "deployment/coredns")
+coredns-start: (_kube-start "kube-system" "deployment/coredns" COREDNS_REPLICAS)
+coredns-restart: (_kube-restart "kube-system" "deployment/coredns")
+coredns-status: (_kube-status "coredns" "kube-system")

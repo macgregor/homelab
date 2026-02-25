@@ -1,0 +1,32 @@
+RADARR_REPLICAS := env_var_or_default("RADARR_REPLICAS", "1")
+
+radarr-deploy:
+    #!/usr/bin/env bash
+    set -e
+    kubectl apply -f ./media/radarr/namespace.yml
+    kubectl apply -f ./media/radarr/storage.yml
+    kubectl apply -f ./media/radarr/network.yml
+    kubectl apply -f ./media/radarr/radarr.yml
+    kubectl create secret generic radarr-api-key \
+        -n media --save-config --dry-run=client \
+        --from-literal=RADARR_API_KEY="${RADARR_API_KEY}" \
+        -o yaml | kubectl apply -f -
+    kubectl apply -f ./media/radarr/cronjob.yml
+
+radarr-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./media/radarr/cronjob.yml || true
+    kubectl -n media delete secret/radarr-api-key || true
+    kubectl delete -f ./media/radarr/network.yml || true
+    kubectl delete -f ./media/radarr/radarr.yml || true
+    kubectl delete -f ./media/radarr/storage.yml || true
+
+radarr-debug: (_kube-debug "radarr" "media")
+radarr-logs: (_kube-logs "radarr" "media")
+radarr-stop: (_kube-stop "media" "deployment/radarr")
+radarr-start: (_kube-start "media" "deployment/radarr" RADARR_REPLICAS)
+radarr-restart: (_kube-restart "media" "deployment/radarr")
+radarr-status: (_kube-status "radarr" "media")
+
+radarr-search:
+    kubectl -n media create job --from=cronjob/radarr-missing-search radarr-missing-search-manual-$(date +%s)

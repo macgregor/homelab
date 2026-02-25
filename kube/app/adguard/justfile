@@ -1,0 +1,22 @@
+ADGUARD_REPLICAS := env_var_or_default("ADGUARD_REPLICAS", "1")
+
+adguard-deploy:
+    #!/usr/bin/env bash
+    set -e
+    kubectl apply -f ./app/adguard/namespace.yml
+    kubectl apply -f ./app/adguard/storage.yml
+    kubectl apply -f ./app/adguard/network.yml
+    helmfile --file ./app/adguard/helmfile.yaml apply
+
+adguard-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./app/adguard/network.yml || true
+    helmfile --file ./app/adguard/helmfile.yaml destroy || true
+    kubectl delete -f ./app/adguard/storage.yml || true
+
+adguard-debug: (_kube-debug "adguard" "adguard" "app.kubernetes.io/name=adguard-home")
+adguard-logs: (_kube-logs "adguard" "adguard" "app.kubernetes.io/name=adguard-home")
+adguard-stop: (_kube-stop "adguard" "deployment/adguard-home")
+adguard-start: (_kube-start "adguard" "deployment/adguard-home" ADGUARD_REPLICAS)
+adguard-restart: (_kube-restart "adguard" "deployment/adguard-home")
+adguard-status: (_kube-status "adguard" "adguard" "app.kubernetes.io/name=adguard-home")

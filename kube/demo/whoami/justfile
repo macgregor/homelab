@@ -1,0 +1,10 @@
+WHOAMI_REPLICAS := env_var_or_default("WHOAMI_REPLICAS", "1")
+
+whoami-deploy: (_kube-deploy "whoami" "./demo/whoami")
+whoami-remove: (_kube-remove "whoami" "./demo/whoami")
+whoami-debug: (_kube-debug "whoami" "demo")
+whoami-logs: (_kube-logs "whoami" "demo")
+whoami-stop: (_kube-stop "demo" "deployment/whoami")
+whoami-start: (_kube-start "demo" "deployment/whoami" WHOAMI_REPLICAS)
+whoami-restart: (_kube-restart "demo" "deployment/whoami")
+whoami-status: (_kube-status "whoami" "demo")

@@ -1,0 +1,14 @@
+OAUTH2_PROXY_REPLICAS := env_var_or_default("OAUTH2_PROXY_REPLICAS", "1")
+
+oauth2-proxy-deploy:
+    helmfile --file ./sys/oauth2-proxy/helmfile.yaml apply
+
+oauth2-proxy-remove:
+    helmfile --file ./sys/oauth2-proxy/helmfile.yaml destroy
+
+oauth2-proxy-debug: (_kube-debug "oauth2-proxy" "oauth2-proxy")
+oauth2-proxy-logs: (_kube-logs "oauth2-proxy" "oauth2-proxy")
+oauth2-proxy-stop: (_kube-stop "oauth2-proxy" "deployment/oauth2-proxy")
+oauth2-proxy-start: (_kube-start "oauth2-proxy" "deployment/oauth2-proxy" OAUTH2_PROXY_REPLICAS)
+oauth2-proxy-restart: (_kube-restart "oauth2-proxy" "deployment/oauth2-proxy")
+oauth2-proxy-status: (_kube-status "oauth2-proxy" "oauth2-proxy")

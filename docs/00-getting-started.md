@@ -62,11 +62,11 @@ The Synology DS720+ provides reliable, expandable network storage using [Synolog
 | TLS | cert-manager | LetsEncrypt certificates via Cloudflare DNS-01 challenge |
 | Auth | oauth2-proxy | GitHub-backed authentication for protected services |
 | Observability | fluent-bit, Loki, kube-prometheus-stack | Log aggregation and metrics with Grafana dashboards |
-| Deployment | Make + kubectl / Helmfile | Makefile-driven deploys (not GitOps); Helmfile for complex upstream charts |
+| Deployment | just + kubectl / Helmfile | just-driven deploys (not GitOps); Helmfile for complex upstream charts |
 
 ## Repository Layout
 
 - **`ansible/`** -- Playbooks and roles for MikroTik router provisioning, Raspberry Pi OS setup, and k3s installation.
-- **`kube/`** -- All Kubernetes manifests, Helm values, and Makefile-driven deployment tooling. Apps are grouped by category (`sys/`, `app/`, `media/`, `observation/`).
+- **`kube/`** -- All Kubernetes manifests, Helm values, and just-driven deployment tooling. Apps are grouped by category (`sys/`, `app/`, `media/`, `observation/`).
 - **`docs/`** -- Operational documentation covering setup, networking, security, observability, and maintenance.
 - **`.envrc`** -- Secrets and environment variables (gitignored), loaded via [direnv](https://direnv.net/).

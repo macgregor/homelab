@@ -1,0 +1,14 @@
+INGRESS_INTERNAL_REPLICAS := env_var_or_default("INGRESS_INTERNAL_REPLICAS", "1")
+
+ingress-internal-deploy:
+    helmfile --file ./sys/ingress-nginx/internal/helmfile.yaml apply
+
+ingress-internal-remove:
+    helmfile --file ./sys/ingress-nginx/internal/helmfile.yaml destroy
+
+ingress-internal-debug: (_kube-debug "ingress-internal" "ingress-nginx" "app.kubernetes.io/instance=ingress-nginx-internal")
+ingress-internal-logs: (_kube-logs "ingress-internal" "ingress-nginx" "app.kubernetes.io/instance=ingress-nginx-internal")
+ingress-internal-stop: (_kube-stop "ingress-nginx" "deployment/ingress-nginx-internal-controller-internal")
+ingress-internal-start: (_kube-start "ingress-nginx" "deployment/ingress-nginx-internal-controller-internal" INGRESS_INTERNAL_REPLICAS)
+ingress-internal-restart: (_kube-restart "ingress-nginx" "deployment/ingress-nginx-internal-controller-internal")
+ingress-internal-status: (_kube-status "ingress-internal" "ingress-nginx" "app.kubernetes.io/instance=ingress-nginx-internal")

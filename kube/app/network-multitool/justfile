@@ -1,0 +1,20 @@
+NETWORK_MULTITOOL_REPLICAS := env_var_or_default("NETWORK_MULTITOOL_REPLICAS", "2")
+
+network-multitool-deploy:
+    #!/usr/bin/env bash
+    set -e
+    kubectl apply -f ./app/network-multitool/network.yml
+    kubectl apply -f ./app/network-multitool/network-multitool.yml
+
+network-multitool-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./app/network-multitool/network-multitool.yml || true
+    kubectl -n kube-system get pvc -l 'app.kubernetes.io/name=network-multitool' -o name | xargs -I{} kubectl -n kube-system delete "{}" || true
+    kubectl delete -f ./app/network-multitool/network.yml || true
+
+network-multitool-debug: (_kube-debug "network-multitool" "kube-system")
+network-multitool-logs: (_kube-logs "network-multitool" "kube-system")
+network-multitool-stop: (_kube-stop "kube-system" "statefulset/network-multitool")
+network-multitool-start: (_kube-start "kube-system" "statefulset/network-multitool" NETWORK_MULTITOOL_REPLICAS)
+network-multitool-restart: (_kube-restart "kube-system" "statefulset/network-multitool")
+network-multitool-status: (_kube-status "network-multitool" "kube-system")

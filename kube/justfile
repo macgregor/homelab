@@ -1,0 +1,124 @@
+export KUBECONFIG := env_var_or_default("KUBECONFIG", env_var("HOME") + "/.kube/homelab_config")
+
+# --- Helper recipes (private, hidden from `just --list`) ---
+
+[private]
+_kube-debug app ns label='':
+    kubectl -n {{ns}} exec -it `kubectl -n {{ns}} get pods -l '{{ if label != "" { label } else { "app.kubernetes.io/name=" + app } }}' -o name | head -n 1` -- sh
+
+[private]
+_kube-logs app ns label='':
+    kubectl -n {{ns}} logs -l '{{ if label != "" { label } else { "app.kubernetes.io/name=" + app } }}' --follow --tail=50
+
+[private]
+_kube-stop ns workload:
+    kubectl -n {{ns}} scale {{workload}} --replicas=0
+
+[private]
+_kube-start ns workload replicas:
+    kubectl -n {{ns}} scale {{workload}} --replicas={{replicas}}
+
+[private]
+_kube-restart ns workload:
+    kubectl -n {{ns}} rollout restart {{workload}}
+
+[private]
+_kube-status app ns label='':
+    #!/usr/bin/env bash
+    label='{{ if label != "" { label } else { "app.kubernetes.io/name=" + app } }}'
+    echo "--- {{app}} network ---"
+    kubectl -n {{ns}} get svc -l "$label" -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP 2>/dev/null || true
+    kubectl -n {{ns}} get endpoints,ingress -l "$label" 2>/dev/null || true
+    echo ""
+    echo "--- {{app}} storage ---"
+    kubectl -n {{ns}} get pvc -l "$label" -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName 2>/dev/null || true
+    echo ""
+    echo "--- {{app}} workloads ---"
+    kubectl -n {{ns}} get deployment,statefulset,daemonset,rs,pods -l "$label" 2>/dev/null || true
+
+[private]
+_kube-deploy app dir:
+    #!/usr/bin/env bash
+    set -e
+    if [ -f "{{dir}}/namespace.yml" ]; then kubectl apply -f "{{dir}}/namespace.yml"; fi
+    if [ -f "{{dir}}/storage.yml" ]; then kubectl apply -f "{{dir}}/storage.yml"; fi
+    if [ -f "{{dir}}/network.yml" ]; then kubectl apply -f "{{dir}}/network.yml"; fi
+    kubectl apply -f "{{dir}}/{{app}}.yml"
+    if [ -f "{{dir}}/cronjob.yml" ]; then kubectl apply -f "{{dir}}/cronjob.yml"; fi
+
+[private]
+_kube-remove app dir:
+    #!/usr/bin/env bash
+    [ -f "{{dir}}/cronjob.yml" ] && kubectl delete -f "{{dir}}/cronjob.yml" || true
+    kubectl delete -f "{{dir}}/{{app}}.yml" || true
+    [ -f "{{dir}}/network.yml" ] && kubectl delete -f "{{dir}}/network.yml" || true
+    [ -f "{{dir}}/storage.yml" ] && kubectl delete -f "{{dir}}/storage.yml" || true
+
+# --- Imports ---
+
+import 'media/prowlarr/justfile'
+import 'media/sonarr/justfile'
+import 'media/radarr/justfile'
+import 'media/seerr/justfile'
+import 'media/qbittorrent/justfile'
+import 'media/jellyfin/justfile'
+import 'media/tdarr-server/justfile'
+import 'media/tdarr-nodes/justfile'
+import 'media/decluttarr/justfile'
+
+import 'app/foundry-vtt/justfile'
+import 'app/mealie/justfile'
+import 'app/adguard/justfile'
+import 'app/network-multitool/justfile'
+import 'app/synology-dsm/justfile'
+
+import 'demo/whoami/justfile'
+import 'demo/kuard/justfile'
+
+import 'sys/coredns/justfile'
+import 'sys/oauth2-proxy/justfile'
+import 'sys/cert-manager/justfile'
+import 'sys/democratic-csi/justfile'
+import 'sys/metallb/justfile'
+import 'sys/ingress-nginx/internal/justfile'
+import 'sys/ingress-nginx/external/justfile'
+
+import 'observation/loki/justfile'
+import 'observation/fluent-bit/justfile'
+import 'observation/kube-prometheus-stack/justfile'
+
+# --- Aggregate targets ---
+
+deploy-sys: coredns-deploy democratic-csi-deploy cert-manager-deploy metallb-deploy ingress-internal-deploy ingress-external-deploy oauth2-proxy-deploy loki-deploy fluent-bit-deploy kube-prometheus-stack-deploy
+
+remove-sys: coredns-remove democratic-csi-remove cert-manager-remove metallb-remove ingress-internal-remove ingress-external-remove oauth2-proxy-remove loki-remove fluent-bit-remove kube-prometheus-stack-remove
+
+deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy synology-dsm-deploy qbittorrent-deploy mealie-deploy seerr-deploy decluttarr-deploy
+
+stop-apps: foundry-vtt-stop jellyfin-stop network-multitool-stop qbittorrent-stop mealie-stop seerr-stop decluttarr-stop
+
+start-apps: foundry-vtt-start jellyfin-start network-multitool-start qbittorrent-start mealie-start seerr-start decluttarr-start
+
+remove-apps: foundry-vtt-remove jellyfin-remove network-multitool-remove synology-dsm-remove qbittorrent-remove mealie-remove seerr-remove decluttarr-remove
+
+deploy-demos: whoami-deploy kuard-deploy
+
+remove-demos: whoami-remove kuard-remove
+
+deploy-all: deploy-sys deploy-apps deploy-demos
+
+remove-all: remove-apps remove-sys remove-demos
+
+# --- Utility targets ---
+
+pod-debug pod ns='default':
+    kubectl -n {{ns}} exec -it {{pod}} -- sh
+
+cluster-debug node='k3-m1':
+    kubectl -n kube-system exec -it `kubectl -n kube-system get pods --field-selector spec.nodeName={{node}} --no-headers -o name | grep network-multitool | head -n 1` -- bash
+
+ingress-logs:
+    kubectl -n ingress-nginx logs deployment/ingress-nginx-controller --follow
+
+kube-tunnel:
+    ssh -fNT -L 6443:k3-m1:6443 root@router-public-ip

@@ -1,0 +1,9 @@
+fluent-bit-deploy:
+    helmfile --file ./observation/fluent-bit/helmfile.yaml apply
+
+fluent-bit-remove:
+    helmfile --file ./observation/fluent-bit/helmfile.yaml destroy
+
+fluent-bit-restart: (_kube-restart "obs" "daemonset/fluent-bit")
+fluent-bit-logs: (_kube-logs "fluent-bit" "obs")
+fluent-bit-status: (_kube-status "fluent-bit" "obs")

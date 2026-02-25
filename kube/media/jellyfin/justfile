@@ -1,0 +1,16 @@
+JELLYFIN_REPLICAS := env_var_or_default("JELLYFIN_REPLICAS", "1")
+
+jellyfin-deploy: (_kube-deploy "jellyfin" "./media/jellyfin")
+jellyfin-remove: (_kube-remove "jellyfin" "./media/jellyfin")
+jellyfin-debug: (_kube-debug "jellyfin" "media")
+jellyfin-logs: (_kube-logs "jellyfin" "media")
+jellyfin-stop: (_kube-stop "media" "deployment/jellyfin")
+jellyfin-start: (_kube-start "media" "deployment/jellyfin" JELLYFIN_REPLICAS)
+jellyfin-restart: (_kube-restart "media" "deployment/jellyfin")
+jellyfin-status: (_kube-status "jellyfin" "media")
+
+jellyfin-cert:
+    kubectl -n media get secret/jellyfin-tls -o json | jq '.data["tls.crt"]' -r | base64 -d | openssl x509 -noout -text
+
+jellyfin-lb-test:
+    curl -kvL --resolve 'jellyfin.matthew-stratton.me:443:192.168.1.220' https://jellyfin.matthew-stratton.me/

@@ -1,0 +1,30 @@
+FOUNDRY_VTT_REPLICAS := env_var_or_default("FOUNDRY_VTT_REPLICAS", "1")
+
+foundry-vtt-deploy:
+    #!/usr/bin/env bash
+    set -e
+    kubectl apply -f ./app/foundry-vtt/namespace.yml
+    kubectl apply -f ./app/foundry-vtt/storage.yml
+    kubectl create secret generic foundry-vtt-credentials \
+        -n foundry-vtt --save-config --dry-run=client \
+        --from-literal=adminKey="${FOUNDRY_INSTANCE_ADMIN_PASS}" \
+        --from-literal=username="${FOUNDRY_LICENSE_USER}" \
+        --from-literal=password="${FOUNDRY_LICENSE_PASS}" \
+        -o yaml | kubectl apply -f -
+    kubectl apply -f ./app/foundry-vtt/foundry-vtt.yml
+    kubectl apply -f ./app/foundry-vtt/network.yml
+
+foundry-vtt-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./app/foundry-vtt/network.yml || true
+    kubectl delete -f ./app/foundry-vtt/foundry-vtt.yml || true
+    kubectl -n foundry-vtt delete secret/foundry-vtt-credentials || true
+    kubectl delete -f ./app/foundry-vtt/storage.yml || true
+    kubectl delete -f ./app/foundry-vtt/namespace.yml --cascade=background || true
+
+foundry-vtt-debug: (_kube-debug "foundry-vtt" "foundry-vtt")
+foundry-vtt-logs: (_kube-logs "foundry-vtt" "foundry-vtt")
+foundry-vtt-stop: (_kube-stop "foundry-vtt" "deployment/foundry-vtt")
+foundry-vtt-start: (_kube-start "foundry-vtt" "deployment/foundry-vtt" FOUNDRY_VTT_REPLICAS)
+foundry-vtt-restart: (_kube-restart "foundry-vtt" "deployment/foundry-vtt")
+foundry-vtt-status: (_kube-status "foundry-vtt" "foundry-vtt")

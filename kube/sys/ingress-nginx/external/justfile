@@ -1,0 +1,17 @@
+INGRESS_EXTERNAL_REPLICAS := env_var_or_default("INGRESS_EXTERNAL_REPLICAS", "1")
+
+ingress-external-deploy:
+    helmfile --file ./sys/ingress-nginx/external/helmfile.yaml apply
+
+ingress-external-remove:
+    helmfile --file ./sys/ingress-nginx/external/helmfile.yaml destroy
+
+ingress-external-debug: (_kube-debug "ingress-external" "ingress-nginx" "app.kubernetes.io/instance=ingress-nginx-external")
+ingress-external-logs: (_kube-logs "ingress-external" "ingress-nginx" "app.kubernetes.io/instance=ingress-nginx-external")
+ingress-external-stop: (_kube-stop "ingress-nginx" "deployment/ingress-nginx-external-controller-external")
+ingress-external-start: (_kube-start "ingress-nginx" "deployment/ingress-nginx-external-controller-external" INGRESS_EXTERNAL_REPLICAS)
+ingress-external-restart: (_kube-restart "ingress-nginx" "deployment/ingress-nginx-external-controller-external")
+ingress-external-status: (_kube-status "ingress-external" "ingress-nginx" "app.kubernetes.io/instance=ingress-nginx-external")
+
+ingress-external-modesecurity-logs:
+    kubectl -n ingress-nginx exec -it `kubectl -n ingress-nginx get pods -l app.kubernetes.io/instance=ingress-nginx-external -o name | head -n 1` cat /var/log/modsec_audit.log

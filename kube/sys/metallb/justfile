@@ -1,0 +1,17 @@
+metallb-deploy-first-time:
+    #!/usr/bin/env bash
+    set -e
+    helmfile --file ./sys/metallb/helmfile.yaml apply
+    kubectl apply -f ./sys/metallb/addresspool.yml
+
+metallb-deploy:
+    #!/usr/bin/env bash
+    set -e
+    SECRETKEY=$(kubectl get secret --namespace "metallb" metallb-memberlist -o jsonpath="{.data.secretkey}" | base64 -d)
+    helmfile --file ./sys/metallb/helmfile.yaml apply --set "speaker.secretValue=${SECRETKEY}"
+    kubectl apply -f ./sys/metallb/addresspool.yml
+
+metallb-remove:
+    #!/usr/bin/env bash
+    helmfile --file ./sys/metallb/helmfile.yaml destroy || true
+    kubectl delete -f ./sys/metallb/addresspool.yml || true
