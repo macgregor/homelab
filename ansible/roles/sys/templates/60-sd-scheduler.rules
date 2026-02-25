@@ -1,0 +1,3 @@
+# {{ ansible_managed }}
+# Use noop scheduler for SD cards (no seek optimization needed for flash)
+ACTION=="add|change", KERNEL=="mmcblk[0-9]*", ATTR{queue/scheduler}="none"

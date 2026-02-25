@@ -79,6 +79,7 @@
     - { src: dnf-automatic.conf.j2, dest: /etc/dnf/automatic.conf }
     - { src: motd.txt, dest: /etc/motd.d/00-notes.txt }
     - { src: journald.conf.j2, dest: /etc/systemd/journald.conf }
+    - { src: 60-sd-scheduler.rules, dest: /etc/udev/rules.d/60-sd-scheduler.rules }
 
 # Raspberry Pi
 - name: Deploy Boot Config
@@ -148,3 +149,4 @@
     - {name: iscsid.service, state: "{{ 'stopped' if inventory_hostname in groups['master'] else 'started' }}", enabled: "{{ false if inventory_hostname in groups['master'] else true }}"}
     - {name: iscsid.socket, state: stopped, enabled: "{{ false if inventory_hostname in groups['master'] else true }}", masked: "{{ true if inventory_hostname in groups['master'] else false }}"}
     - {name: firewalld.service, state: stopped, enabled: false, masked: true}
+    - {name: rsyslog.service, state: stopped, enabled: false, masked: true}
