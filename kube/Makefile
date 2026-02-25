@@ -17,8 +17,6 @@ include sys/oauth2-proxy/oauth2-proxy.mk
 include observation/loki/loki.mk
 include observation/fluent-bit/fluent-bit.mk
 include observation/kube-prometheus-stack/kube-prometheus-stack.mk
-include observation/trivy/trivy.mk
-include observation/diun/diun.mk
 
 # Media
 include media/jellyfin/jellyfin.mk

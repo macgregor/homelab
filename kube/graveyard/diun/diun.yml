@@ -1,0 +1,85 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: diun-config
+  namespace: observation
+  labels:
+    app.kubernetes.io/name: diun
+data:
+  diun.yml: |
+    watch:
+      workers: 10
+      schedule: "0 15 * * *"
+      jitter: 30s
+      firstCheckNotif: false
+      runOnStartup: true
+      compareDigest: true
+    providers:
+      kubernetes:
+        watchByDefault: false
+    notif:
+      ntfy:
+        endpoint: https://ntfy.sh
+        topic: uNo4AkMhuNcU4JSp-diun
+        priority: 3
+        tags:
+          - package
+        timeout: 10s
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: observation
+  name: diun
+  labels:
+    app.kubernetes.io/name: diun
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: diun
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: diun
+      annotations:
+        diun.enable: "true"
+    spec:
+      serviceAccountName: diun
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: diun
+          image: crazymax/diun:4.25.0
+          imagePullPolicy: IfNotPresent
+          args: ["serve"]
+          env:
+            - name: TZ
+              value: "America/New_York"
+            - name: DIUN_PROVIDERS_KUBERNETES
+              value: "true"
+            - name: CONFIG
+              value: "/diun.yml" # mounted from configmap
+            - name: LOG_LEVEL
+              value: "debug"
+            - name: LOG_JSON
+              value: "false"
+          envFrom:
+            - secretRef:
+                name: registry-credentials
+                optional: false
+          volumeMounts:
+            - mountPath: /data
+              name: data
+            - mountPath: /diun.yml
+              name: config
+              subPath: diun.yml
+      restartPolicy: Always
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: diun-data
+        - name: config
+          configMap:
+            name: diun-config
