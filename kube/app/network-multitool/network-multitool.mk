@@ -34,19 +34,19 @@ network-multitool-restart:
 .PHONY: network-multitool-status
 network-multitool-status:
 	@echo "======================================================================="
-	@echo "= network-multitool Network Resources:                                         ="
-	@echo "=   kubectl -n kube-system get svc,endpoints,ingress -l app.kubernetes.io/name=network-multitool'    ="
+	@echo "= network-multitool Network Resources:                                ="
+	@echo "=   kubectl -n kube-system get svc,endpoints,ingress -l app.kubernetes.io/name=network-multitool' ="
 	@echo "======================================================================="
 	@kubectl -n kube-system get svc -l 'app.kubernetes.io/name=network-multitool' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n kube-system get endpoints,ingress
-	@echo "\n======================================================================="
-	@echo "= network-multitool Storage Resources:                                          ="
-	@echo "=   kubectl -n kube-system get pvc -l 'app=network-multitool'                      ="
+	@echo -e "\n======================================================================="
+	@echo "= network-multitool Storage Resources:                                ="
+	@echo "=   kubectl -n kube-system get pvc -l 'app=network-multitool'         ="
 	@echo "======================================================================="
 	@kubectl -n kube-system-multitool get pvc -l 'app.kubernetes.io/name=network-multitool' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================="
-	@echo "= network-multitool Deployment Resources:                                       ="
-	@echo "=   kubectl -n kube-system get deployment,rs,pods -l 'app.kubernetes.io/name=network-multitool'       ="
+	@echo -e "\n======================================================================="
+	@echo "= network-multitool Deployment Resources:                             ="
+	@echo "=   kubectl -n kube-system get deployment,rs,pods -l 'app.kubernetes.io/name=network-multitool' ="
 	@echo "======================================================================="
 	@kubectl -n kube-system get deployment,rs,pods -l 'app.kubernetes.io/name=network-multitool'

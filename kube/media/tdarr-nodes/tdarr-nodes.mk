@@ -32,19 +32,19 @@ tdarr-nodes-restart:
 .PHONY: tdarr-nodes-status
 tdarr-nodes-status:
 	@echo "======================================================================================"
-	@echo "= tdarr-nodes Network Resources:                                                            ="
-	@echo "=   kubectl -n media get svc,endpoints,ingress -l app.kubernetes.io/name=tdarr-nodes'        ="
+	@echo "= tdarr-nodes Network Resources:                                                     ="
+	@echo "=   kubectl -n media get svc,endpoints,ingress -l app.kubernetes.io/name=tdarr-nodes' ="
 	@echo "======================================================================================"
 	@kubectl -n media get svc -l 'app.kubernetes.io/name=tdarr-nodes' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n media get endpoints,ingress
-	@echo "\n======================================================================================"
-	@echo "= tdarr-nodes Storage Resources:                                                            ="
-	@echo "=   kubectl -n media get pvc -l 'app.kubernetes.io/name=tdarr-nodes'                         ="
+	@echo -e "\n======================================================================================"
+	@echo "= tdarr-nodes Storage Resources:                                                     ="
+	@echo "=   kubectl -n media get pvc -l 'app.kubernetes.io/name=tdarr-nodes'                 ="
 	@echo "======================================================================================"
 	@kubectl -n media get pvc -l 'app.kubernetes.io/name=tdarr-nodes' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================================"
-	@echo "= tdarr-nodes Deployment Resources:                                                         ="
-	@echo "=   kubectl -n media get deployment,rs,pods -l 'app.kubernetes.io/name=tdarr-nodes'          ="
+	@echo -e "\n======================================================================================"
+	@echo "= tdarr-nodes Deployment Resources:                                                  ="
+	@echo "=   kubectl -n media get deployment,rs,pods -l 'app.kubernetes.io/name=tdarr-nodes'  ="
 	@echo "======================================================================================"
 	@kubectl -n media get statefulset,deployment,rs,pods -l 'app.kubernetes.io/name=tdarr-nodes'

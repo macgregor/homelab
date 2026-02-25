@@ -35,19 +35,19 @@ xteve-restart:
 .PHONY: xteve-status
 xteve-status:
 	@echo "======================================================================================"
-	@echo "= xteve Network Resources:                                                            ="
-	@echo "=   kubectl -n media get svc,endpoints,ingress -l app.kubernetes.io/name=xteve'        ="
+	@echo "= xteve Network Resources:                                                           ="
+	@echo "=   kubectl -n media get svc,endpoints,ingress -l app.kubernetes.io/name=xteve'      ="
 	@echo "======================================================================================"
 	@kubectl -n media get svc -l 'app.kubernetes.io/name=xteve' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n media get endpoints,ingress -l 'app.kubernetes.io/name=xteve'
-	@echo "\n======================================================================================"
-	@echo "= xteve Storage Resources:                                                            ="
-	@echo "=   kubectl -n media get pvc -l 'app.kubernetes.io/name=xteve'                         ="
+	@echo -e "\n======================================================================================"
+	@echo "= xteve Storage Resources:                                                           ="
+	@echo "=   kubectl -n media get pvc -l 'app.kubernetes.io/name=xteve'                       ="
 	@echo "======================================================================================"
 	@kubectl -n media get pvc -l 'app.kubernetes.io/name=xteve' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================================"
-	@echo "= xteve Deployment Resources:                                                         ="
-	@echo "=   kubectl -n media get deployment,rs,pods -l 'app.kubernetes.io/name=xteve'          ="
+	@echo -e "\n======================================================================================"
+	@echo "= xteve Deployment Resources:                                                        ="
+	@echo "=   kubectl -n media get deployment,rs,pods -l 'app.kubernetes.io/name=xteve'        ="
 	@echo "======================================================================================"
 	@kubectl -n media get deployment,rs,pods -l 'app.kubernetes.io/name=xteve'

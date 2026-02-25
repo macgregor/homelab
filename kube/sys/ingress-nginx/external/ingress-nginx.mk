@@ -35,19 +35,19 @@ ingress-external-restart:
 .PHONY: ingress-external-status
 ingress-external-status:
 	@echo "======================================================================================"
-	@echo "= ingress-external Network Resources:                                                            ="
-	@echo "=   kubectl -n ingress-nginx get svc,endpoints,ingress -l app.kubernetes.io/instance=ingress-nginx-external'        ="
+	@echo "= ingress-external Network Resources:                                                ="
+	@echo "=   kubectl -n ingress-nginx get svc,endpoints,ingress -l app.kubernetes.io/instance=ingress-nginx-external' ="
 	@echo "======================================================================================"
 	@kubectl -n ingress-nginx get svc -l 'app.kubernetes.io/instance=ingress-nginx-external' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n ingress-nginx get endpoints,ingress -l 'app.kubernetes.io/instance=ingress-nginx-external'
-	@echo "\n======================================================================================"
-	@echo "= ingress-external Storage Resources:                                                            ="
-	@echo "=   kubectl -n ingress-nginx get pvc -l 'app.kubernetes.io/instance=ingress-nginx-external'                         ="
+	@echo -e "\n======================================================================================"
+	@echo "= ingress-external Storage Resources:                                                ="
+	@echo "=   kubectl -n ingress-nginx get pvc -l 'app.kubernetes.io/instance=ingress-nginx-external' ="
 	@echo "======================================================================================"
 	@kubectl -n ingress-nginx get pvc -l 'app.kubernetes.io/instance=ingress-nginx-external' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================================"
-	@echo "= ingress-external Deployment Resources:                                                         ="
-	@echo "=   kubectl -n ingress-nginx get deployment,rs,pods -l 'app.kubernetes.io/instance=ingress-nginx-external'          ="
+	@echo -e "\n======================================================================================"
+	@echo "= ingress-external Deployment Resources:                                             ="
+	@echo "=   kubectl -n ingress-nginx get deployment,rs,pods -l 'app.kubernetes.io/instance=ingress-nginx-external' ="
 	@echo "======================================================================================"
 	@kubectl -n ingress-nginx get deployment,rs,pods -l 'app.kubernetes.io/instance=ingress-nginx-external'

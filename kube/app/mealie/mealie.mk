@@ -56,19 +56,19 @@ mealie-restart:
 .PHONY: mealie-status
 mealie-status:
 	@echo "======================================================================="
-	@echo "= mealie Network Resources:                                         ="
-	@echo "=   kubectl -n mealie get svc,endpoints,ingress -l app.kubernetes.io/name=mealie'    ="
+	@echo "= mealie Network Resources:                                           ="
+	@echo "=   kubectl -n mealie get svc,endpoints,ingress -l app.kubernetes.io/name=mealie' ="
 	@echo "======================================================================="
 	@kubectl -n mealie get svc -l 'app.kubernetes.io/name=mealie' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n mealie get endpoints,ingress -l 'app.kubernetes.io/name=mealie'
-	@echo "\n======================================================================="
-	@echo "= mealie Storage Resources:                                          ="
-	@echo "=   kubectl -n mealie get pvc -l 'app.kubernetes.io/name=mealie'                      ="
+	@echo -e "\n======================================================================="
+	@echo "= mealie Storage Resources:                                           ="
+	@echo "=   kubectl -n mealie get pvc -l 'app.kubernetes.io/name=mealie'      ="
 	@echo "======================================================================="
 	@kubectl -n mealie get pvc -l 'app.kubernetes.io/name=mealie' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================="
-	@echo "= mealie Deployment Resources:                                       ="
-	@echo "=   kubectl -n mealie get deployment,rs,pods -l 'app.kubernetes.io/name=mealie'       ="
+	@echo -e "\n======================================================================="
+	@echo "= mealie Deployment Resources:                                        ="
+	@echo "=   kubectl -n mealie get deployment,rs,pods -l 'app.kubernetes.io/name=mealie' ="
 	@echo "======================================================================="
 	@kubectl -n mealie get deployment,rs,pods -l 'app.kubernetes.io/name=mealie'

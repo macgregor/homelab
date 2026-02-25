@@ -41,19 +41,19 @@ tailscale-restart:
 .PHONY: tailscale-status
 tailscale-status:
 	@echo "======================================================================================"
-	@echo "= tailscale Network Resources:                                                            ="
-	@echo "=   kubectl -n tailscale get svc,endpoints,ingress -l app.kubernetes.io/name=tailscale'        ="
+	@echo "= tailscale Network Resources:                                                       ="
+	@echo "=   kubectl -n tailscale get svc,endpoints,ingress -l app.kubernetes.io/name=tailscale' ="
 	@echo "======================================================================================"
 	@kubectl -n tailscale get svc -l 'app.kubernetes.io/name=tailscale' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n tailscale get endpoints,ingress -l 'app.kubernetes.io/name=tailscale'
-	@echo "\n======================================================================================"
-	@echo "= tailscale Storage Resources:                                                            ="
-	@echo "=   kubectl -n tailscale get pvc -l 'app.kubernetes.io/name=tailscale'                         ="
+	@echo -e "\n======================================================================================"
+	@echo "= tailscale Storage Resources:                                                       ="
+	@echo "=   kubectl -n tailscale get pvc -l 'app.kubernetes.io/name=tailscale'               ="
 	@echo "======================================================================================"
 	@kubectl -n tailscale get pvc -l 'app.kubernetes.io/name=tailscale' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================================"
-	@echo "= tailscale Deployment Resources:                                                         ="
-	@echo "=   kubectl -n tailscale get deployment,rs,pods -l 'app.kubernetes.io/name=tailscale'          ="
+	@echo -e "\n======================================================================================"
+	@echo "= tailscale Deployment Resources:                                                    ="
+	@echo "=   kubectl -n tailscale get deployment,rs,pods -l 'app.kubernetes.io/name=tailscale' ="
 	@echo "======================================================================================"
 	@kubectl -n tailscale get deployment,rs,pods -l 'app.kubernetes.io/name=tailscale'

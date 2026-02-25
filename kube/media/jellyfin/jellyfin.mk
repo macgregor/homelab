@@ -39,19 +39,19 @@ jellyfin-restart:
 jellyfin-status:
 	@echo "======================================================================="
 	@echo "= jellyfin Network Resources:                                         ="
-	@echo "=   kubectl -n media get svc,endpoints,ingress -l app.kubernetes.io/name=jellyfin'    ="
+	@echo "=   kubectl -n media get svc,endpoints,ingress -l app.kubernetes.io/name=jellyfin' ="
 	@echo "======================================================================="
 	@kubectl -n media get svc -l 'app.kubernetes.io/name=jellyfin' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n media get endpoints,ingress -l 'app.kubernetes.io/name=jellyfin'
-	@echo "\n======================================================================="
-	@echo "= jellyfin Storage Resources:                                          ="
-	@echo "=   kubectl -n media get pvc -l 'app.kubernetes.io/name=jellyfin'                      ="
+	@echo -e "\n======================================================================="
+	@echo "= jellyfin Storage Resources:                                         ="
+	@echo "=   kubectl -n media get pvc -l 'app.kubernetes.io/name=jellyfin'     ="
 	@echo "======================================================================="
 	@kubectl -n media get pvc -l 'app.kubernetes.io/name=jellyfin' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================="
-	@echo "= jellyfin Deployment Resources:                                       ="
-	@echo "=   kubectl -n media get deployment,rs,pods -l 'app.kubernetes.io/name=jellyfin'       ="
+	@echo -e "\n======================================================================="
+	@echo "= jellyfin Deployment Resources:                                      ="
+	@echo "=   kubectl -n media get deployment,rs,pods -l 'app.kubernetes.io/name=jellyfin' ="
 	@echo "======================================================================="
 	@kubectl -n media get deployment,rs,pods -l 'app.kubernetes.io/name=jellyfin'
 

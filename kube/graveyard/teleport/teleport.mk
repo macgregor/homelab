@@ -41,19 +41,19 @@ teleport-restart:
 teleport-status:
 	@echo "======================================================================="
 	@echo "= teleport Network Resources:                                         ="
-	@echo "=   kubectl -n teleport get svc,endpoints,ingress -l 'app=teleport-cluster'    ="
+	@echo "=   kubectl -n teleport get svc,endpoints,ingress -l 'app=teleport-cluster' ="
 	@echo "======================================================================="
 	@kubectl -n teleport get svc -l 'app=teleport-cluster' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n teleport get endpoints,ingress -l 'app=teleport-cluster'
-	@echo "\n======================================================================="
-	@echo "= teleport Storage Resources:                                          ="
-	@echo "=   kubectl -n teleport get pvc -l 'app=teleport-cluster'                      ="
+	@echo -e "\n======================================================================="
+	@echo "= teleport Storage Resources:                                         ="
+	@echo "=   kubectl -n teleport get pvc -l 'app=teleport-cluster'             ="
 	@echo "======================================================================="
 	@kubectl -n teleport get pvc -l 'app=teleport-cluster' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================="
-	@echo "= teleport Deployment Resources:                                       ="
-	@echo "=   kubectl -n teleport get deployment,rs,pods -l 'app=teleport-cluster'       ="
+	@echo -e "\n======================================================================="
+	@echo "= teleport Deployment Resources:                                      ="
+	@echo "=   kubectl -n teleport get deployment,rs,pods -l 'app=teleport-cluster' ="
 	@echo "======================================================================="
 	@kubectl -n teleport get deployment,rs,pods -l 'app=teleport-cluster'
 

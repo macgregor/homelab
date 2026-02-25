@@ -35,19 +35,19 @@ heimdall-restart:
 .PHONY: heimdall-status
 heimdall-status:
 	@echo "======================================================================================"
-	@echo "= heimdall Network Resources:                                                            ="
-	@echo "=   kubectl -n dashboards get svc,endpoints,ingress -l app.kubernetes.io/name=heimdall'        ="
+	@echo "= heimdall Network Resources:                                                        ="
+	@echo "=   kubectl -n dashboards get svc,endpoints,ingress -l app.kubernetes.io/name=heimdall' ="
 	@echo "======================================================================================"
 	@kubectl -n dashboards get svc -l 'app.kubernetes.io/name=heimdall' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n dashboards get endpoints,ingress -l 'app.kubernetes.io/name=heimdall'
-	@echo "\n======================================================================================"
-	@echo "= heimdall Storage Resources:                                                            ="
-	@echo "=   kubectl -n dashboards get pvc -l 'app.kubernetes.io/name=heimdall'                         ="
+	@echo -e "\n======================================================================================"
+	@echo "= heimdall Storage Resources:                                                        ="
+	@echo "=   kubectl -n dashboards get pvc -l 'app.kubernetes.io/name=heimdall'               ="
 	@echo "======================================================================================"
 	@kubectl -n dashboards get pvc -l 'app.kubernetes.io/name=heimdall' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================================"
-	@echo "= heimdall Deployment Resources:                                                         ="
-	@echo "=   kubectl -n dashboards get deployment,rs,pods -l 'app.kubernetes.io/name=heimdall'          ="
+	@echo -e "\n======================================================================================"
+	@echo "= heimdall Deployment Resources:                                                     ="
+	@echo "=   kubectl -n dashboards get deployment,rs,pods -l 'app.kubernetes.io/name=heimdall' ="
 	@echo "======================================================================================"
 	@kubectl -n dashboards get deployment,rs,pods -l 'app.kubernetes.io/name=heimdall'

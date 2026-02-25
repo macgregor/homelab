@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: radarr-missing-search
+  namespace: media
+  labels:
+    app.kubernetes.io/name: radarr
+spec:
+  schedule: "0 1 * * *"
+  timeZone: "America/New_York"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: radarr
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 300
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: radarr
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: missing-search
+            image: curlimages/curl:8.12.1
+            resources:
+              requests:
+                memory: "16Mi"
+              limits:
+                memory: "32Mi"
+            env:
+            - name: RADARR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: radarr-api-key
+                  key: RADARR_API_KEY
+            command:
+            - /bin/sh
+            - -c
+            - |
+              curl -sf -X POST \
+                -H "X-Api-Key: ${RADARR_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d '{"name": "MissingMoviesSearch", "filterKey": "status", "filterValue": "released"}' \
+                http://radarr:7878/api/v3/command

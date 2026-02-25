@@ -49,19 +49,19 @@ foundry-vtt-restart:
 .PHONY: foundry-vtt-status
 foundry-vtt-status:
 	@echo "======================================================================="
-	@echo "= foundry-vtt Network Resources:                                         ="
-	@echo "=   kubectl -n foundry-vtt get svc,endpoints,ingress -l app.kubernetes.io/name=foundry-vtt'    ="
+	@echo "= foundry-vtt Network Resources:                                      ="
+	@echo "=   kubectl -n foundry-vtt get svc,endpoints,ingress -l app.kubernetes.io/name=foundry-vtt' ="
 	@echo "======================================================================="
 	@kubectl -n foundry-vtt get svc -l 'app.kubernetes.io/name=foundry-vtt' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n foundry-vtt get endpoints,ingress
-	@echo "\n======================================================================="
-	@echo "= foundry-vtt Storage Resources:                                          ="
-	@echo "=   kubectl -n foundry-vtt get pvc -l 'app.kubernetes.io/name=foundry-vtt'                      ="
+	@echo -e "\n======================================================================="
+	@echo "= foundry-vtt Storage Resources:                                      ="
+	@echo "=   kubectl -n foundry-vtt get pvc -l 'app.kubernetes.io/name=foundry-vtt' ="
 	@echo "======================================================================="
 	@kubectl -n foundry-vtt get pvc -l 'app.kubernetes.io/name=foundry-vtt' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================="
-	@echo "= foundry-vtt Deployment Resources:                                       ="
-	@echo "=   kubectl -n foundry-vtt get deployment,rs,pods -l 'app.kubernetes.io/name=foundry-vtt'       ="
+	@echo -e "\n======================================================================="
+	@echo "= foundry-vtt Deployment Resources:                                   ="
+	@echo "=   kubectl -n foundry-vtt get deployment,rs,pods -l 'app.kubernetes.io/name=foundry-vtt' ="
 	@echo "======================================================================="
 	@kubectl -n foundry-vtt get deployment,rs,pods -l 'app.kubernetes.io/name=foundry-vtt'

@@ -35,19 +35,19 @@ whoami-restart:
 .PHONY: whoami-status
 whoami-status:
 	@echo "======================================================================="
-	@echo "= whoami Network Resources:                                         ="
-	@echo "=   kubectl -n demo get svc,endpoints,ingress -l app.kubernetes.io/name=whoami'    ="
+	@echo "= whoami Network Resources:                                           ="
+	@echo "=   kubectl -n demo get svc,endpoints,ingress -l app.kubernetes.io/name=whoami' ="
 	@echo "======================================================================="
 	@kubectl -n demo get svc -l 'app.kubernetes.io/name=whoami' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n demo get endpoints,ingress
-	@echo "\n======================================================================="
-	@echo "= whoami Storage Resources:                                          ="
-	@echo "=   kubectl -n demo get pvc -l 'app=whoami'                      ="
+	@echo -e "\n======================================================================="
+	@echo "= whoami Storage Resources:                                           ="
+	@echo "=   kubectl -n demo get pvc -l 'app=whoami'                           ="
 	@echo "======================================================================="
 	@kubectl -n demo-multitool get pvc -l 'app.kubernetes.io/name=whoami' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================="
-	@echo "= whoami Deployment Resources:                                       ="
-	@echo "=   kubectl -n demo get deployment,rs,pods -l 'app.kubernetes.io/name=whoami'       ="
+	@echo -e "\n======================================================================="
+	@echo "= whoami Deployment Resources:                                        ="
+	@echo "=   kubectl -n demo get deployment,rs,pods -l 'app.kubernetes.io/name=whoami' ="
 	@echo "======================================================================="
 	@kubectl -n demo get deployment,rs,pods -l 'app.kubernetes.io/name=whoami'

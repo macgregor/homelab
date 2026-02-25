@@ -27,19 +27,19 @@ oauth2-proxy-restart:
 .PHONY: oauth2-proxy-status
 oauth2-proxy-status:
 	@echo "======================================================================="
-	@echo "= oauth2-proxy Network Resources:                                         ="
-	@echo "=   kubectl -n oauth2-proxy get svc,endpoints,ingress -l app.kubernetes.io/name=oauth2-proxy'    ="
+	@echo "= oauth2-proxy Network Resources:                                     ="
+	@echo "=   kubectl -n oauth2-proxy get svc,endpoints,ingress -l app.kubernetes.io/name=oauth2-proxy' ="
 	@echo "======================================================================="
 	@kubectl -n oauth2-proxy get svc -l 'app.kubernetes.io/name=oauth2-proxy' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n oauth2-proxy get endpoints,ingress -l 'app.kubernetes.io/name=oauth2-proxy'
-	@echo "\n======================================================================="
-	@echo "= oauth2-proxy Storage Resources:                                          ="
-	@echo "=   kubectl -n oauth2-proxy get pvc -l 'app.kubernetes.io/name=oauth2-proxy'                      ="
+	@echo -e "\n======================================================================="
+	@echo "= oauth2-proxy Storage Resources:                                     ="
+	@echo "=   kubectl -n oauth2-proxy get pvc -l 'app.kubernetes.io/name=oauth2-proxy' ="
 	@echo "======================================================================="
 	@kubectl -n oauth2-proxy get pvc -l 'app.kubernetes.io/name=oauth2-proxy' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================="
-	@echo "= oauth2-proxy Deployment Resources:                                       ="
-	@echo "=   kubectl -n oauth2-proxy get deployment,rs,pods -l 'app.kubernetes.io/name=oauth2-proxy'       ="
+	@echo -e "\n======================================================================="
+	@echo "= oauth2-proxy Deployment Resources:                                  ="
+	@echo "=   kubectl -n oauth2-proxy get deployment,rs,pods -l 'app.kubernetes.io/name=oauth2-proxy' ="
 	@echo "======================================================================="
 	@kubectl -n oauth2-proxy get deployment,rs,pods -l 'app.kubernetes.io/name=oauth2-proxy'

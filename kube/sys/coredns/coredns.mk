@@ -34,19 +34,19 @@ coredns-restart:
 .PHONY: coredns-status
 coredns-status:
 	@echo "======================================================================="
-	@echo "= coredns Network Resources:                                         ="
-	@echo "=   kubectl -n kube-system get svc,endpoints,ingress -l app.kubernetes.io/name=coredns'    ="
+	@echo "= coredns Network Resources:                                          ="
+	@echo "=   kubectl -n kube-system get svc,endpoints,ingress -l app.kubernetes.io/name=coredns' ="
 	@echo "======================================================================="
 	@kubectl -n kube-system get svc -l 'app.kubernetes.io/name=coredns' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n kube-system get endpoints,ingress -l 'app.kubernetes.io/name=coredns'
-	@echo "\n======================================================================="
+	@echo -e "\n======================================================================="
 	@echo "= coredns Storage Resources:                                          ="
-	@echo "=   kubectl -n kube-system get pvc -l 'app.kubernetes.io/name=coredns'                      ="
+	@echo "=   kubectl -n kube-system get pvc -l 'app.kubernetes.io/name=coredns' ="
 	@echo "======================================================================="
 	@kubectl -n kube-system get pvc -l 'app.kubernetes.io/name=coredns' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================="
+	@echo -e "\n======================================================================="
 	@echo "= coredns Deployment Resources:                                       ="
-	@echo "=   kubectl -n kube-system get deployment,rs,pods -l 'app.kubernetes.io/name=coredns'       ="
+	@echo "=   kubectl -n kube-system get deployment,rs,pods -l 'app.kubernetes.io/name=coredns' ="
 	@echo "======================================================================="
 	@kubectl -n kube-system get deployment,rs,pods -l 'app.kubernetes.io/name=coredns'

@@ -38,7 +38,7 @@ decluttarr-restart:
 .PHONY: decluttarr-status
 decluttarr-status:
 	@echo "======================================================================================"
-	@echo "= decluttarr Deployment Resources:                                                    ="
-	@echo "=   kubectl -n media get deployment,rs,pods -l 'app.kubernetes.io/name=decluttarr'     ="
+	@echo "= decluttarr Deployment Resources:                                                   ="
+	@echo "=   kubectl -n media get deployment,rs,pods -l 'app.kubernetes.io/name=decluttarr'   ="
 	@echo "======================================================================================"
 	@kubectl -n media get deployment,rs,pods -l 'app.kubernetes.io/name=decluttarr'

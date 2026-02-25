@@ -56,12 +56,12 @@ plex-status:
 	@kubectl -n plex get svc -l 'app=plexserver' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP --show-kind
 	@echo ""
 	@kubectl -n plex get endpoints,ingress
-	@echo "\n======================================================================="
+	@echo -e "\n======================================================================="
 	@echo "= Plex Storage Resources:                                             ="
 	@echo "=   kubectl -n plex get pvc -l 'app=plexserver'                       ="
 	@echo "======================================================================="
 	@kubectl -n plex get pvc -l 'app=plexserver' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================="
+	@echo -e "\n======================================================================="
 	@echo "= Plex Deployment Resources:                                          ="
 	@echo "=   kubectl -n plex get deployment,rs,pods -l 'app=plexserver'        ="
 	@echo "======================================================================="

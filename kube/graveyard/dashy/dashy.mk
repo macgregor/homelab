@@ -37,19 +37,19 @@ dashy-restart:
 .PHONY: dashy-status
 dashy-status:
 	@echo "======================================================================================"
-	@echo "= dashy Network Resources:                                                            ="
-	@echo "=   kubectl -n dashboards get svc,endpoints,ingress -l app.kubernetes.io/name=dashy'        ="
+	@echo "= dashy Network Resources:                                                           ="
+	@echo "=   kubectl -n dashboards get svc,endpoints,ingress -l app.kubernetes.io/name=dashy' ="
 	@echo "======================================================================================"
 	@kubectl -n dashboards get svc -l 'app.kubernetes.io/name=dashy' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n dashboards get endpoints,ingress -l 'app.kubernetes.io/name=dashy'
-	@echo "\n======================================================================================"
-	@echo "= dashy Storage Resources:                                                            ="
-	@echo "=   kubectl -n dashboards get pvc -l 'app.kubernetes.io/name=dashy'                         ="
+	@echo -e "\n======================================================================================"
+	@echo "= dashy Storage Resources:                                                           ="
+	@echo "=   kubectl -n dashboards get pvc -l 'app.kubernetes.io/name=dashy'                  ="
 	@echo "======================================================================================"
 	@kubectl -n dashboards get pvc -l 'app.kubernetes.io/name=dashy' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================================"
-	@echo "= dashy Deployment Resources:                                                         ="
-	@echo "=   kubectl -n dashboards get deployment,rs,pods -l 'app.kubernetes.io/name=dashy'          ="
+	@echo -e "\n======================================================================================"
+	@echo "= dashy Deployment Resources:                                                        ="
+	@echo "=   kubectl -n dashboards get deployment,rs,pods -l 'app.kubernetes.io/name=dashy'   ="
 	@echo "======================================================================================"
 	@kubectl -n dashboards get deployment,rs,pods -l 'app.kubernetes.io/name=dashy'

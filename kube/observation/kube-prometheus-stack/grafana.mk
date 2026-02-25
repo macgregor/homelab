@@ -23,19 +23,19 @@ grafana-restart:
 .PHONY: grafana-status
 grafana-status:
 	@echo "======================================================================================"
-	@echo "= grafana Network Resources:                                                            ="
-	@echo "=   kubectl -n obs get svc,endpoints,ingress -l app.kubernetes.io/name=grafana'        ="
+	@echo "= grafana Network Resources:                                                         ="
+	@echo "=   kubectl -n obs get svc,endpoints,ingress -l app.kubernetes.io/name=grafana'      ="
 	@echo "======================================================================================"
 	@kubectl -n obs get svc -l 'app.kubernetes.io/name=grafana' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n obs get endpoints,ingress -l 'app.kubernetes.io/name=grafana'
-	@echo "\n======================================================================================"
-	@echo "= grafana Storage Resources:                                                            ="
-	@echo "=   kubectl -n obs get pvc -l 'app.kubernetes.io/name=grafana'                         ="
+	@echo -e "\n======================================================================================"
+	@echo "= grafana Storage Resources:                                                         ="
+	@echo "=   kubectl -n obs get pvc -l 'app.kubernetes.io/name=grafana'                       ="
 	@echo "======================================================================================"
 	@kubectl -n obs get pvc -l 'app.kubernetes.io/name=grafana' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================================"
-	@echo "= grafana Deployment Resources:                                                         ="
-	@echo "=   kubectl -n obs get deployment,rs,pods -l 'app.kubernetes.io/name=grafana'          ="
+	@echo -e "\n======================================================================================"
+	@echo "= grafana Deployment Resources:                                                      ="
+	@echo "=   kubectl -n obs get deployment,rs,pods -l 'app.kubernetes.io/name=grafana'        ="
 	@echo "======================================================================================"
 	@kubectl -n obs get deployment,rs,pods -l 'app.kubernetes.io/name=grafana'

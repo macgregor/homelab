@@ -35,18 +35,18 @@ odoo-restart:
 odoo-status:
 	@echo "======================================================================================"
 	@echo "= odoo Network Resources:                                                            ="
-	@echo "=   kubectl -n erp get svc,endpoints,ingress -l app.kubernetes.io/instance=odoo'        ="
+	@echo "=   kubectl -n erp get svc,endpoints,ingress -l app.kubernetes.io/instance=odoo'     ="
 	@echo "======================================================================================"
 	@kubectl -n erp get svc -l 'app.kubernetes.io/instance=odoo' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n erp get endpoints,ingress -l 'app.kubernetes.io/instance=odoo'
-	@echo "\n======================================================================================"
+	@echo -e "\n======================================================================================"
 	@echo "= odoo Storage Resources:                                                            ="
-	@echo "=   kubectl -n erp get pvc -l 'app.kubernetes.io/instance=odoo'                         ="
+	@echo "=   kubectl -n erp get pvc -l 'app.kubernetes.io/instance=odoo'                      ="
 	@echo "======================================================================================"
 	@kubectl -n erp get pvc -l 'app.kubernetes.io/instance=odoo' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================================"
+	@echo -e "\n======================================================================================"
 	@echo "= odoo Deployment Resources:                                                         ="
-	@echo "=   kubectl -n erp get deployment,rs,pods -l 'app.kubernetes.io/instance=odoo'          ="
+	@echo "=   kubectl -n erp get deployment,rs,pods -l 'app.kubernetes.io/instance=odoo'       ="
 	@echo "======================================================================================"
 	@kubectl -n erp get deployment,rs,pods -l 'app.kubernetes.io/instance=odoo'

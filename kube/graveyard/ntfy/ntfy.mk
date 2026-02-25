@@ -43,12 +43,12 @@ ntfy-status:
 	@kubectl -n ntfy get svc -l 'app.kubernetes.io/name=ntfy' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n ntfy get endpoints,ingress -l 'app.kubernetes.io/name=ntfy'
-	@echo "\n======================================================================================"
+	@echo -e "\n======================================================================================"
 	@echo "= ntfy Storage Resources:                                                            ="
 	@echo "=   kubectl -n ntfy get pvc -l 'app.kubernetes.io/name=ntfy'                         ="
 	@echo "======================================================================================"
 	@kubectl -n ntfy get pvc -l 'app.kubernetes.io/name=ntfy' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================================"
+	@echo -e "\n======================================================================================"
 	@echo "= ntfy Deployment Resources:                                                         ="
 	@echo "=   kubectl -n ntfy get deployment,rs,pods -l 'app.kubernetes.io/name=ntfy'          ="
 	@echo "======================================================================================"

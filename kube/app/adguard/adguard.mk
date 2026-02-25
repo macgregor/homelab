@@ -37,19 +37,19 @@ adguard-restart:
 .PHONY: adguard-status
 adguard-status:
 	@echo "======================================================================================"
-	@echo "= adguard Network Resources:                                                            ="
-	@echo "=   kubectl -n adguard get svc,endpoints,ingress -l app.kubernetes.io/name=adguard-home'        ="
+	@echo "= adguard Network Resources:                                                         ="
+	@echo "=   kubectl -n adguard get svc,endpoints,ingress -l app.kubernetes.io/name=adguard-home' ="
 	@echo "======================================================================================"
 	@kubectl -n adguard get svc -l 'app.kubernetes.io/name=adguard-home' -o custom-columns=NAME:.metadata.name,TYPE:.spec.type,CLUSTER-IP:.spec.clusterIP,EXTERNAL-IP:.spec.loadBalancerIP
 	@echo ""
 	@kubectl -n adguard get endpoints,ingress -l 'app.kubernetes.io/name=adguard-home'
-	@echo "\n======================================================================================"
-	@echo "= adguard Storage Resources:                                                            ="
-	@echo "=   kubectl -n adguard get pvc -l 'app.kubernetes.io/name=adguard-home'                         ="
+	@echo -e "\n======================================================================================"
+	@echo "= adguard Storage Resources:                                                         ="
+	@echo "=   kubectl -n adguard get pvc -l 'app.kubernetes.io/name=adguard-home'              ="
 	@echo "======================================================================================"
 	@kubectl -n adguard get pvc -l 'app.kubernetes.io/name=adguard-home' -o custom-columns=NAME:.metadata.name,STATUS:.status.phase,VOLUME:.spec.volumeName
-	@echo "\n======================================================================================"
-	@echo "= adguard Deployment Resources:                                                         ="
-	@echo "=   kubectl -n adguard get deployment,rs,pods -l 'app.kubernetes.io/name=adguard-home'          ="
+	@echo -e "\n======================================================================================"
+	@echo "= adguard Deployment Resources:                                                      ="
+	@echo "=   kubectl -n adguard get deployment,rs,pods -l 'app.kubernetes.io/name=adguard-home' ="
 	@echo "======================================================================================"
 	@kubectl -n adguard get deployment,rs,pods -l 'app.kubernetes.io/name=adguard-home'
