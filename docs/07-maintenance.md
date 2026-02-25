@@ -1,3 +1,16 @@
+---
+name: maintenance
+description: >
+  Load this document when upgrading k3s, rotating certificates, recovering from cluster
+  failures, managing container images, or performing routine maintenance tasks.
+categories: [kubernetes, operations]
+tags: [upgrades, certificates, recovery, troubleshooting, maintenance]
+related_docs:
+  - docs/02-rpis-and-k3s.md
+  - docs/01-infrastructure-provisioning.md
+complexity: intermediate
+---
+
 # k3s Upgrades
 
 1. pick a new version from https://github.com/k3s-io/k3s/releases (probably look for "Latest")

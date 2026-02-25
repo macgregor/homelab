@@ -1,3 +1,16 @@
+---
+name: persistence
+description: >
+  Load this document when adding or modifying persistent volumes, PVCs, NFS mounts,
+  MariaDB datastore configuration, or Synology storage setup.
+categories: [kubernetes, storage, infrastructure]
+tags: [pv, pvc, nfs, synology, mariadb, datastore, storage-patterns]
+related_docs:
+  - docs/00-getting-started.md
+  - docs/02-rpis-and-k3s.md
+complexity: intermediate
+---
+
 # Persistence
 
 This document covers the Synology NAS, MariaDB datastore, and Kubernetes storage patterns used by the cluster. For the hardware overview, see [Getting Started](00-getting-started.md). For k3s configuration that references the datastore, see [RPis and k3s](02-rpis-and-k3s.md).

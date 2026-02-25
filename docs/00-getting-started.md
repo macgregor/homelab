@@ -1,3 +1,13 @@
+---
+name: getting-started
+description: >
+  Load this document when you need hardware specifications, IP addresses, network
+  topology, or an overview of the software stack and project goals.
+categories: [infrastructure, onboarding]
+tags: [hardware, software-stack, project-overview, network-topology]
+complexity: basic
+---
+
 # Getting Started
 
 ## Overview

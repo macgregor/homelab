@@ -1,3 +1,18 @@
+---
+name: infrastructure-provisioning
+description: >
+  Load this document when provisioning or troubleshooting the MikroTik router or
+  Raspberry Pi nodes, setting up initial SSH access, or running Ansible bootstrap
+  and installation playbooks.
+categories: [infrastructure, provisioning, automation]
+tags: [ansible, mikrotik, raspberry-pi, ssh, bootstrap, installation]
+related_docs:
+  - docs/00-getting-started.md
+  - docs/02-rpis-and-k3s.md
+  - docs/appendix/mikrotik-routeros.md
+complexity: intermediate
+---
+
 # Infrastructure Provisioning
 
 This document covers automated provisioning of homelab infrastructure: the MikroTik router and Raspberry Pi cluster nodes. Both are managed via Ansible playbooks that handle the foundational setup needed before Kubernetes deployment.

@@ -1,17 +1,21 @@
-PLACEHOLDER
+---
+name: observability
+description: >
+  Load this document when working with logging, monitoring, or observability
+  infrastructure.
+categories: [kubernetes, observability]
+tags: [logging, monitoring, observability]
+complexity: intermediate
+---
 
+# Observability
 
-* elasticsearch is super heavy
-* using fluentd, loki and grafana as a lightweight alternative
+The homelab relies on Kubernetes' built-in observability features (kubelet logs, pod events, metrics-server) rather than a centralized observability stack. A dedicated stack (ELK, Loki+Grafana) was explored but requires excessive resources on Raspberry Pi nodes.
 
+## Centralized Logging Experiments
 
-# Resources
-* Elastic Cloud Operator: https://artifacthub.io/packages/helm/elastic/eck-operator
-* Install elasticsearch: https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-elasticsearch-specification.html
+**Elasticsearch + Kibana**: Tested as a centralized log aggregation solution but was too resource-intensive to run alongside applications.
 
+**Fluentd/Fluent-bit + Loki + Grafana**: Also evaluated as a lightweight alternative but still required dedicating an entire node to observability infrastructure, which is impractical for the current setup.
 
-curl -kvL --resolve 'kibana.matthew-stratton.me:443:192.168.1.220' https://kibana.matthew-stratton.me/
-
-kubectl -n elastic-system exec -it elasticsearch-es-masters-0 -c elasticsearch -- bash
-elasticsearch-users useradd macgregor -p 'changeme' -r superuser
-elasticsearch-users useradd test -p 'changeme' -r viewer
+Both approaches are abandoned. For now, debugging relies on standard Kubernetes tools (`kubectl logs`, `kubectl describe`, pod events) and direct access to systemd journal on nodes.

@@ -1,3 +1,16 @@
+---
+name: mikrotik-routeros
+description: >
+  Load this document when working with MikroTik router configuration, RouterOS scripting,
+  Ansible automation, firewall rules, DHCP/DNS, or troubleshooting router-level issues.
+categories: [infrastructure, networking]
+tags: [mikrotik, routeros, ansible, firewall, dhcp, dns, scripting, ssh]
+related_docs:
+  - docs/01-infrastructure-provisioning.md
+  - docs/04-networking.md
+complexity: advanced
+---
+
 # MikroTik RouterOS Reference
 
 Reference for AI agents working with MikroTik RouterOS 7.x. Covers SSH interaction, RSC scripting, Ansible automation via `community.routeros`, firewall management, and system administration. Not a tutorial — a concise working reference with links to official docs.

@@ -1,3 +1,17 @@
+---
+name: rpis-and-k3s
+description: >
+  Load this document when working with k3s configuration, cluster topology,
+  control-plane settings, node roles, or understanding the compute layer architecture.
+categories: [kubernetes, infrastructure]
+tags: [k3s, cluster-topology, control-plane, compute, configuration]
+related_docs:
+  - docs/00-getting-started.md
+  - docs/01-infrastructure-provisioning.md
+  - docs/03-persistence.md
+complexity: intermediate
+---
+
 # RPis and k3s
 
 This document covers the Kubernetes cluster topology, k3s configuration, and compute-layer provisioning. For hardware details and project overview, see [Getting Started](00-getting-started.md). For how the MikroTik router and Raspberry Pis are provisioned with Ansible, see [Infrastructure Provisioning](01-infrastructure-provisioning.md).

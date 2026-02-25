@@ -12,10 +12,12 @@ Load these documents based on the task at hand. Do not load speculatively.
 | Document | Load when... |
 |----------|-------------|
 | `docs/00-getting-started.md` | You need hardware specs, IP addresses, or software stack details |
+| `docs/01-infrastructure-provisioning.md` | Setting up or troubleshooting MikroTik router or Raspberry Pi provisioning |
 | `docs/02-rpis-and-k3s.md` | Working with k3s configuration, cluster topology, or node roles |
 | `docs/03-persistence.md` | Adding/modifying PVs, PVCs, NFS mounts, or Synology storage |
 | `docs/04-networking.md` | Working with MetalLB, ingress, DNS, TLS, or Cloudflare configuration |
-| `docs/06-observability.md` | Working with logging (fluent-bit, Loki) or monitoring (Prometheus, Grafana) |
+| `docs/05-security.md` | Implementing authentication, access control, or security hardening |
+| `docs/06-observability.md` | Working with logging, monitoring, or debugging infrastructure |
 | `docs/07-maintenance.md` | Upgrading k3s, rotating certificates, or cluster recovery |
 | `docs/appendix/mikrotik-routeros.md` | Working with MikroTik router config, RouterOS scripting, or firewall rules |
 
@@ -82,3 +84,18 @@ When connecting to any system (RPis, Synology, router, etc.), check `~/.ssh/conf
 - Labels use `app.kubernetes.io/name` consistently
 - Replicas are controlled via `<APP>_REPLICAS` env vars with `?=1` defaults
 - `remove` targets prefix commands with `-` to ignore errors during teardown
+
+## YAML Frontmatter Template
+
+```yaml
+---
+name: document-name  # required: lowercase-with-hyphens, max 64 chars
+description: >  # required: when should AI load this? max 1024 chars
+  Clear statement of when AI should load this document.
+categories: [category1, category2]  # optional: broad classification
+tags: [tag1, tag2]  # optional: specific concepts
+related_docs:  # optional: relative paths from project root
+  - path/to/doc.md
+complexity: basic  # optional: basic|intermediate|advanced
+---
+```
