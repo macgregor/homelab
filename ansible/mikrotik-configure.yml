@@ -49,6 +49,8 @@
           - ':put [:len [/system ntp client servers find address=pool.ntp.org]]'
           - ':put [:len [/certificate find common-name="SSL.com Root Certification Authority ECC"]]'
           - ':put [:len [/ip dns static find comment="split-dns"]]'
+          - ':put [:len [/tool graphing interface find]]'
+          - ':put [:len [/tool graphing resource find]]'
       register: _state
 
     - name: Set state facts
@@ -58,6 +60,8 @@
         _has_ntp_pool: "{{ _state.stdout[2] | int > 0 }}"
         _has_doh_cert: "{{ _state.stdout[3] | int > 0 }}"
         _has_split_dns: "{{ _state.stdout[4] | int > 0 }}"
+        _has_graphing_iface: "{{ _state.stdout[5] | int > 0 }}"
+        _has_graphing_resource: "{{ _state.stdout[6] | int > 0 }}"
 
     # ── System ──────────────────────────────────────────────────────────
 
@@ -174,6 +178,21 @@
       community.routeros.command:
         commands:
           - /ipv6 settings set disable-ipv6=yes
+
+    # ── Graphing ──────────────────────────────────────────────────────
+    # Viewable at http://192.168.1.1/graphs/
+
+    - name: Enable interface traffic graphing
+      community.routeros.command:
+        commands:
+          - /tool graphing interface add interface=all
+      when: not _has_graphing_iface
+
+    - name: Enable resource graphing
+      community.routeros.command:
+        commands:
+          - /tool graphing resource add allow-address=192.168.1.0/24
+      when: not _has_graphing_resource
 
     # ── Auto-update ──────────────────────────────────────────────────
 
