@@ -6,9 +6,13 @@
 #                   Files ending in .j2 are rendered as Jinja2 templates
 #                   before upload; the .j2 extension is stripped from the
 #                   destination filename.
-#   schedulers    - list of dicts with: name, on_event, start_time, interval
+#   schedulers    - (optional) list of dicts with: name, on_event, start_time, interval
 #
 # Required variables in scope: base_user, ssh_pub_key, ansible_host
+
+- name: Check for Jinja2 templates
+  ansible.builtin.set_fact:
+    _has_templates: "{{ upload_files | select('match', '.*\\.j2$') | list | length > 0 }}"
 
 - name: Create temp directory for rendered templates
   ansible.builtin.tempfile:
@@ -16,8 +20,9 @@
     prefix: mikrotik_
   delegate_to: localhost
   register: _upload_tempdir
+  when: _has_templates
 
-- name: Upload scripts to router
+- name: Upload files to router
   block:
     - name: Render .j2 templates
       ansible.builtin.template:
@@ -28,6 +33,7 @@
       loop: "{{ upload_files | select('match', '.*\\.j2$') | list }}"
       loop_control:
         label: "{{ item | basename }}"
+      when: _has_templates
 
     - name: SCP files to router
       ansible.builtin.shell: >-
@@ -39,7 +45,7 @@
         {{ base_user }}@{{ ansible_host }}:/{{ _dest }}
       vars:
         _dest: "{{ item | basename | regex_replace('\\.j2$', '') }}"
-        _src: "{{ (_upload_tempdir.path ~ '/' ~ _dest) if (item | regex_search('\\.j2$')) else item }}"
+        _src: "{{ (_upload_tempdir.path ~ '/' ~ _dest) if (item | regex_search('\\.j2$') and _has_templates) else item }}"
       delegate_to: localhost
       ignore_errors: true
       register: _upload_results
@@ -68,6 +74,7 @@
         path: "{{ _upload_tempdir.path }}"
         state: absent
       delegate_to: localhost
+      when: _has_templates
 
 - name: Create schedulers
   community.routeros.command:
@@ -82,7 +89,7 @@
         interval={{ item.interval }}
   register: _scheduler_results
   ignore_errors: true
-  loop: "{{ schedulers }}"
+  loop: "{{ schedulers | default([]) }}"
   loop_control:
     label: "{{ item.name }}"
 
@@ -94,6 +101,6 @@
       - "To enable scheduler: ssh {{ base_user }}@{{ ansible_host }} '/system device-mode update mode=advanced'"
       - "Then press the reset/mode button on the device within 5 minutes (or power-cycle)"
       - "Once rebooted, re-run this playbook: ansible-playbook mikrotik-configure.yml"
-  loop: "{{ _scheduler_results.results | selectattr('failed') | list }}"
+  loop: "{{ (_scheduler_results.results | default([])) | selectattr('failed') | list }}"
   loop_control:
     label: "{{ item.item.name }}"

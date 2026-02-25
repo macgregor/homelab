@@ -29,47 +29,57 @@
     # Verify bootstrap prerequisites before touching anything destructive.
     # If either check fails, run mikrotik-bootstrap.yml first.
 
-    - name: Verify dhcp-pool exists
+    - name: Verify bootstrap prerequisites
       community.routeros.command:
         commands:
           - ":put [:len [/ip pool find name=dhcp-pool]]"
-      register: pool_check
-      failed_when: pool_check.stdout[0] | int == 0
+          - ":put [:len [/ip dhcp-server find name=dhcp-lan]]"
+      register: _prereqs
+      failed_when: _prereqs.stdout[0] | int == 0 or _prereqs.stdout[1] | int == 0
 
-    - name: Verify dhcp-lan exists
+    # ── Gather current state ─────────────────────────────────────────
+    # Batch state queries into one SSH round-trip. Results are used as
+    # `when:` conditions throughout the playbook to skip no-op tasks.
+
+    - name: Query router state
       community.routeros.command:
         commands:
-          - ":put [:len [/ip dhcp-server find name=dhcp-lan]]"
-      register: lan_check
-      failed_when: lan_check.stdout[0] | int == 0
+          - ':put [:len [/user find name=admin]]'
+          - ':put [:len [/system ntp client servers find address=time.cloudflare.com]]'
+          - ':put [:len [/system ntp client servers find address=pool.ntp.org]]'
+          - ':put [:len [/certificate find common-name="SSL.com Root Certification Authority ECC"]]'
+          - ':put [:len [/ip dns static find comment="split-dns"]]'
+      register: _state
+
+    - name: Set state facts
+      ansible.builtin.set_fact:
+        _has_admin_user: "{{ _state.stdout[0] | int > 0 }}"
+        _has_ntp_cloudflare: "{{ _state.stdout[1] | int > 0 }}"
+        _has_ntp_pool: "{{ _state.stdout[2] | int > 0 }}"
+        _has_doh_cert: "{{ _state.stdout[3] | int > 0 }}"
+        _has_split_dns: "{{ _state.stdout[4] | int > 0 }}"
 
     # ── System ──────────────────────────────────────────────────────────
 
-    - name: Set system identity
+    - name: Configure system settings
       community.routeros.command:
         commands:
           - /system identity set name=edge
-
-    - name: Set timezone
-      community.routeros.command:
-        commands:
           - /system clock set time-zone-name={{ router_timezone }}
-
-    - name: Enable NTP client
-      community.routeros.command:
-        commands:
           - /system ntp client set enabled=yes
-
-    - name: Set NTP servers
-      community.routeros.command:
-        commands:
-          - ":if ([:len [/system ntp client servers find address=time.cloudflare.com]] = 0) do={ /system ntp client servers add address=time.cloudflare.com }"
-          - ":if ([:len [/system ntp client servers find address=pool.ntp.org]] = 0) do={ /system ntp client servers add address=pool.ntp.org }"
-
-    - name: Enable strong SSH crypto
-      community.routeros.command:
-        commands:
           - /ip ssh set strong-crypto=yes
+
+    - name: Add NTP server (Cloudflare)
+      community.routeros.command:
+        commands:
+          - /system ntp client servers add address=time.cloudflare.com
+      when: not _has_ntp_cloudflare
+
+    - name: Add NTP server (pool.ntp.org)
+      community.routeros.command:
+        commands:
+          - /system ntp client servers add address=pool.ntp.org
+      when: not _has_ntp_pool
 
     # ── User cleanup ───────────────────────────────────────────────────
 
@@ -77,26 +87,53 @@
       community.routeros.command:
         commands:
           - /user remove [find name=admin]
-      ignore_errors: true  # May already be removed
+      when: _has_admin_user
 
     # ── DHCP tuning ────────────────────────────────────────────────────
 
-    - name: Set DHCP pool range to .50-.199
+    - name: Configure DHCP settings
       community.routeros.command:
         commands:
           - /ip pool set [find name=dhcp-pool] ranges=192.168.1.50-192.168.1.199
-
-    - name: Set DHCP lease time
-      community.routeros.command:
-        commands:
           - /ip dhcp-server set [find name=dhcp-lan] lease-time=1d
 
     # ── DNS ────────────────────────────────────────────────────────────
+    # DoH cert: RouterOS built-in trust store (builtin-trust-store=all) does not
+    # yet include SSL.com's root CA, which Cloudflare currently uses for DoH.
+    # Once a future RouterOS update adds it, this manual import can be removed
+    # and verify-doh-cert=yes will work against the built-in store alone.
 
-    - name: Set upstream DNS servers
+    - name: Upload DoH root CA certificate
+      ansible.builtin.include_tasks:
+        file: tasks/mikrotik-upload-and-schedule.yml
+      vars:
+        upload_files:
+          - "{{ playbook_dir }}/files/SSLcomRootCertificationAuthorityECC.crt.pem"
+      when: not _has_doh_cert
+
+    - name: Import DoH root CA certificate and clean up
       community.routeros.command:
         commands:
-          - /ip dns set servers={{ router_dns_servers }}
+          - /certificate import file-name=SSLcomRootCertificationAuthorityECC.crt.pem passphrase=""
+          - /file remove SSLcomRootCertificationAuthorityECC.crt.pem
+      when: not _has_doh_cert
+
+    - name: Configure DNS with DoH
+      community.routeros.command:
+        commands:
+          - /ip dns set servers={{ router_dns_servers }} use-doh-server=https://cloudflare-dns.com/dns-query verify-doh-cert=yes
+
+    # Split-horizon DNS: resolve *.domain internally to the ingress VIP,
+    # avoiding hairpin NAT through Cloudflare.
+
+    - name: Add split-horizon DNS for internal services
+      community.routeros.command:
+        commands:
+          - >-
+            /ip dns static add type=A address=192.168.1.220
+            regexp=".*\\.{{ cf_dns_record_name }}"
+            comment="split-dns"
+      when: not _has_split_dns
 
     # ── Static DHCP leases ─────────────────────────────────────────────
 
@@ -130,6 +167,13 @@
           - /tool mac-server ping set enabled=no
           - /ip neighbor discovery-settings set discover-interface-list=LAN
           - /tool bandwidth-server set enabled=no
+
+    # ── IPv6 ──────────────────────────────────────────────────────────
+
+    - name: Disable IPv6
+      community.routeros.command:
+        commands:
+          - /ipv6 settings set disable-ipv6=yes
 
     # ── Auto-update ──────────────────────────────────────────────────
 
@@ -181,10 +225,3 @@
             on_event: "/import file-name=cloudflare-ddns.rsc"
             start_time: startup
             interval: 5m
-    # ── Cleanup ────────────────────────────────────────────────────────
-
-    - name: Remove bootstrap artifacts from router
-      community.routeros.command:
-        commands:
-          - /file remove bootstrap-migrate-subnet.rsc
-      ignore_errors: true

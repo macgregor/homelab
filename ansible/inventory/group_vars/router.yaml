@@ -6,7 +6,7 @@ router_user: macgregor
 
 # MikroTik configuration
 router_timezone: America/New_York
-router_dns_servers: 1.1.1.1
+router_dns_servers: 1.1.1.1,1.0.0.1
 
 # Static DHCP leases (MAC -> IP mapping)
 # Read MAC addresses from .envrc env vars
