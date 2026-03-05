@@ -12,6 +12,7 @@ decluttarr-deploy:
         --from-literal=QBITTORRENT_PASS="${QBITTORRENT_PASS}" \
         -o yaml | kubectl apply -f -
     kubectl apply -f ./media/decluttarr/decluttarr.yml
+    kubectl -n media rollout restart deployment/decluttarr
 
 decluttarr-remove:
     #!/usr/bin/env bash
