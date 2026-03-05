@@ -1,6 +1,8 @@
 PROWLARR_REPLICAS := env_var_or_default("PROWLARR_REPLICAS", "1")
 
 prowlarr-deploy: (_kube-deploy "prowlarr" "./media/prowlarr")
+prowlarr-deploy-secret:
+    @true
 prowlarr-remove: (_kube-remove "prowlarr" "./media/prowlarr")
 prowlarr-debug: (_kube-debug "prowlarr" "media")
 prowlarr-logs: (_kube-logs "prowlarr" "media")

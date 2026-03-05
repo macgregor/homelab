@@ -1,6 +1,8 @@
 TDARR_NODES_REPLICAS := env_var_or_default("TDARR_NODES_REPLICAS", "1")
 
 tdarr-nodes-deploy: (_kube-deploy "tdarr-nodes" "./media/tdarr-nodes")
+tdarr-nodes-deploy-secret:
+    @true
 tdarr-nodes-remove: (_kube-remove "tdarr-nodes" "./media/tdarr-nodes")
 tdarr-nodes-debug: (_kube-debug "tdarr-nodes" "media")
 tdarr-nodes-logs: (_kube-logs "tdarr-nodes" "media")

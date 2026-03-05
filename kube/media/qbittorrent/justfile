@@ -1,17 +1,14 @@
 QBITTORRENT_REPLICAS := env_var_or_default("QBITTORRENT_REPLICAS", "1")
 
-qbittorrent-deploy:
+qbittorrent-deploy: (_kube-deploy "qbittorrent" "./media/qbittorrent")
+
+qbittorrent-deploy-secret:
     #!/usr/bin/env bash
     set -e
-    kubectl apply -f ./media/qbittorrent/namespace.yml
     kubectl create secret generic vpn-credentials \
         -n media --save-config --dry-run=client \
         --from-literal=WIREGUARD_PRIVATE_KEY="${WIREGUARD_PRIVATE_KEY}" \
         -o yaml | kubectl apply -f -
-    kubectl apply -f ./media/qbittorrent/storage.yml
-    kubectl apply -f ./media/qbittorrent/network.yml
-    kubectl apply -f ./media/qbittorrent/qbittorrent.yml
-    kubectl -n media rollout restart deployment/qbittorrent
 
 qbittorrent-remove:
     #!/usr/bin/env bash

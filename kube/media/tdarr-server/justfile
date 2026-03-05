@@ -1,6 +1,8 @@
 TDARR_SERVER_REPLICAS := env_var_or_default("TDARR_SERVER_REPLICAS", "1")
 
 tdarr-server-deploy: (_kube-deploy "tdarr-server" "./media/tdarr-server")
+tdarr-server-deploy-secret:
+    @true
 tdarr-server-remove: (_kube-remove "tdarr-server" "./media/tdarr-server")
 tdarr-server-debug: (_kube-debug "tdarr-server" "media")
 tdarr-server-logs: (_kube-logs "tdarr-server" "media")

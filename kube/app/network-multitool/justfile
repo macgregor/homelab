@@ -1,11 +1,8 @@
 NETWORK_MULTITOOL_REPLICAS := env_var_or_default("NETWORK_MULTITOOL_REPLICAS", "2")
 
-network-multitool-deploy:
-    #!/usr/bin/env bash
-    set -e
-    kubectl apply -f ./app/network-multitool/network.yml
-    kubectl apply -f ./app/network-multitool/network-multitool.yml
-    kubectl -n kube-system rollout restart statefulset/network-multitool
+network-multitool-deploy: (_kube-deploy "network-multitool" "./app/network-multitool")
+network-multitool-deploy-secret:
+    @true
 
 network-multitool-remove:
     #!/usr/bin/env bash

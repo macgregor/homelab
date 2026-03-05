@@ -1,9 +1,10 @@
 DECLUTTARR_REPLICAS := env_var_or_default("DECLUTTARR_REPLICAS", "1")
 
-decluttarr-deploy:
+decluttarr-deploy: (_kube-deploy "decluttarr" "./media/decluttarr")
+
+decluttarr-deploy-secret:
     #!/usr/bin/env bash
     set -e
-    kubectl apply -f ./media/decluttarr/namespace.yml
     kubectl create secret generic decluttarr-api-keys \
         -n media --save-config --dry-run=client \
         --from-literal=RADARR_API_KEY="${RADARR_API_KEY}" \
@@ -11,8 +12,6 @@ decluttarr-deploy:
         --from-literal=QBITTORRENT_USER="${QBITTORRENT_USER}" \
         --from-literal=QBITTORRENT_PASS="${QBITTORRENT_PASS}" \
         -o yaml | kubectl apply -f -
-    kubectl apply -f ./media/decluttarr/decluttarr.yml
-    kubectl -n media rollout restart deployment/decluttarr
 
 decluttarr-remove:
     #!/usr/bin/env bash

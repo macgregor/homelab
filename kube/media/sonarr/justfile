@@ -1,18 +1,14 @@
 SONARR_REPLICAS := env_var_or_default("SONARR_REPLICAS", "1")
 
-sonarr-deploy:
+sonarr-deploy: (_kube-deploy "sonarr" "./media/sonarr")
+
+sonarr-deploy-secret:
     #!/usr/bin/env bash
     set -e
-    kubectl apply -f ./media/sonarr/namespace.yml
-    kubectl apply -f ./media/sonarr/storage.yml
-    kubectl apply -f ./media/sonarr/network.yml
-    kubectl apply -f ./media/sonarr/sonarr.yml
     kubectl create secret generic sonarr-api-key \
         -n media --save-config --dry-run=client \
         --from-literal=SONARR_API_KEY="${SONARR_API_KEY}" \
         -o yaml | kubectl apply -f -
-    kubectl apply -f ./media/sonarr/cronjob.yml
-    kubectl -n media rollout restart deployment/sonarr
 
 sonarr-remove:
     #!/usr/bin/env bash

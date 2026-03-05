@@ -1,9 +1,10 @@
 MEALIE_REPLICAS := env_var_or_default("MEALIE_REPLICAS", "1")
 
-mealie-deploy:
+mealie-deploy: (_kube-deploy "mealie" "./app/mealie")
+
+mealie-deploy-secret:
     #!/usr/bin/env bash
     set -e
-    kubectl apply -f ./app/mealie/namespace.yml
     kubectl create secret generic mealie-env \
         -n mealie --save-config --dry-run=client \
         --from-literal=POSTGRES_PASSWORD="${MEALIE_PG_PASSWORD}" \
@@ -14,10 +15,6 @@ mealie-deploy:
         --from-literal=DEFAULT_EMAIL="${MEALIE_DEFAULT_ADMIN_USER}" \
         --from-literal=DEFAULT_PASSWORD="${MEALIE_DEFAULT_ADMIN_PASSWORD}" \
         -o yaml | kubectl apply -f -
-    kubectl apply -f ./app/mealie/storage.yml
-    kubectl apply -f ./app/mealie/mealie.yml
-    kubectl apply -f ./app/mealie/network.yml
-    kubectl -n mealie rollout restart deployment/mealie
 
 mealie-remove:
     #!/usr/bin/env bash

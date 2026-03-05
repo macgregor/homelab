@@ -1,18 +1,14 @@
 RADARR_REPLICAS := env_var_or_default("RADARR_REPLICAS", "1")
 
-radarr-deploy:
+radarr-deploy: (_kube-deploy "radarr" "./media/radarr")
+
+radarr-deploy-secret:
     #!/usr/bin/env bash
     set -e
-    kubectl apply -f ./media/radarr/namespace.yml
-    kubectl apply -f ./media/radarr/storage.yml
-    kubectl apply -f ./media/radarr/network.yml
-    kubectl apply -f ./media/radarr/radarr.yml
     kubectl create secret generic radarr-api-key \
         -n media --save-config --dry-run=client \
         --from-literal=RADARR_API_KEY="${RADARR_API_KEY}" \
         -o yaml | kubectl apply -f -
-    kubectl apply -f ./media/radarr/cronjob.yml
-    kubectl -n media rollout restart deployment/radarr
 
 radarr-remove:
     #!/usr/bin/env bash

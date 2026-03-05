@@ -41,6 +41,7 @@ _kube-deploy app dir:
     #!/usr/bin/env bash
     set -e
     if [ -f "{{dir}}/namespace.yml" ]; then kubectl apply -f "{{dir}}/namespace.yml"; fi
+    just {{app}}-deploy-secret
     if [ -f "{{dir}}/storage.yml" ]; then kubectl apply -f "{{dir}}/storage.yml"; fi
     if [ -f "{{dir}}/network.yml" ]; then kubectl apply -f "{{dir}}/network.yml"; fi
     kubectl apply -f "{{dir}}/{{app}}.yml"

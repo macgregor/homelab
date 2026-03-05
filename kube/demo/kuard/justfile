@@ -1,6 +1,8 @@
 KUARD_REPLICAS := env_var_or_default("KUARD_REPLICAS", "1")
 
 kuard-deploy: (_kube-deploy "kuard" "./demo/kuard")
+kuard-deploy-secret:
+    @true
 kuard-remove: (_kube-remove "kuard" "./demo/kuard")
 kuard-debug: (_kube-debug "kuard" "demo")
 kuard-logs: (_kube-logs "kuard" "demo")

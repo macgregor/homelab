@@ -1,6 +1,8 @@
 JELLYFIN_REPLICAS := env_var_or_default("JELLYFIN_REPLICAS", "1")
 
 jellyfin-deploy: (_kube-deploy "jellyfin" "./media/jellyfin")
+jellyfin-deploy-secret:
+    @true
 jellyfin-remove: (_kube-remove "jellyfin" "./media/jellyfin")
 jellyfin-debug: (_kube-debug "jellyfin" "media")
 jellyfin-logs: (_kube-logs "jellyfin" "media")

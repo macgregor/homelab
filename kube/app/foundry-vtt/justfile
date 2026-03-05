@@ -1,19 +1,16 @@
 FOUNDRY_VTT_REPLICAS := env_var_or_default("FOUNDRY_VTT_REPLICAS", "1")
 
-foundry-vtt-deploy:
+foundry-vtt-deploy: (_kube-deploy "foundry-vtt" "./app/foundry-vtt")
+
+foundry-vtt-deploy-secret:
     #!/usr/bin/env bash
     set -e
-    kubectl apply -f ./app/foundry-vtt/namespace.yml
-    kubectl apply -f ./app/foundry-vtt/storage.yml
     kubectl create secret generic foundry-vtt-credentials \
         -n foundry-vtt --save-config --dry-run=client \
         --from-literal=adminKey="${FOUNDRY_INSTANCE_ADMIN_PASS}" \
         --from-literal=username="${FOUNDRY_LICENSE_USER}" \
         --from-literal=password="${FOUNDRY_LICENSE_PASS}" \
         -o yaml | kubectl apply -f -
-    kubectl apply -f ./app/foundry-vtt/foundry-vtt.yml
-    kubectl apply -f ./app/foundry-vtt/network.yml
-    kubectl -n foundry-vtt rollout restart deployment/foundry-vtt
 
 foundry-vtt-remove:
     #!/usr/bin/env bash

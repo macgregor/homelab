@@ -1,6 +1,8 @@
 WHOAMI_REPLICAS := env_var_or_default("WHOAMI_REPLICAS", "1")
 
 whoami-deploy: (_kube-deploy "whoami" "./demo/whoami")
+whoami-deploy-secret:
+    @true
 whoami-remove: (_kube-remove "whoami" "./demo/whoami")
 whoami-debug: (_kube-debug "whoami" "demo")
 whoami-logs: (_kube-logs "whoami" "demo")
