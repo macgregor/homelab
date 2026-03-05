@@ -8,8 +8,8 @@
 #   - DNAT rule forwarding Cloudflare traffic on port 443 to the external ingress VIP
 #   - Forward-accept rule placed before the defconf drop-all anchor
 #
-# The address list is rebuilt every run. DNAT and forward rules use check-then-create
-# (only added if missing) to avoid disrupting connection tracking.
+# The address list is rebuilt every run (remove-then-add). DNAT and forward rules use
+# check-then-create (only added if missing) to avoid disrupting connection tracking.
 
 /log info "cloudflare-firewall: starting"
 
@@ -60,13 +60,15 @@
         :error "anchor rule missing"
     }
 
-    # ── Rebuild address list (add-then-remove to avoid empty window) ──
-    :local oldEntries [/ip firewall address-list find list=cloudflare]
+    /log info ("cloudflare-firewall: validation passed (" . $cidrCount . " CIDRs)")
+
+    # ── Rebuild address list (remove-then-add) ──────────────────────────
+    # The empty window is negligible — address-list operations are in-memory
+    # and complete in microseconds. Existing connections are maintained by the
+    # connection tracker and fasttrack regardless.
+    /ip firewall address-list remove [find list=cloudflare]
     :foreach cidr in=$cidrs do={
         /ip firewall address-list add list=cloudflare address=$cidr
-    }
-    :foreach entry in=$oldEntries do={
-        /ip firewall address-list remove $entry
     }
     /log info ("cloudflare-firewall: added " . $cidrCount . " entries to address list")
 
@@ -95,11 +97,7 @@
     /log info "cloudflare-firewall: complete"
 
 } do={
-    # "validation failed" and "anchor rule missing" are logged at their source.
-    # Use :find (substring match) because RouterOS 7.17+ appends source location to $e.
-    :if ([:find $e "validation failed"] != nil || [:find $e "anchor rule missing"] != nil) do={} else={
-        /log error ("cloudflare-firewall: failed: " . $e)
-    }
+    /log error ("cloudflare-firewall: failed: " . $e)
     :onerror cleanupErr in={
         /file remove cloudflare-ips.txt
     } do={}

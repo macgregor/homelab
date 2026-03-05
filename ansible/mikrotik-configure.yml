@@ -51,6 +51,7 @@
           - ':put [:len [/ip dns static find comment="split-dns"]]'
           - ':put [:len [/tool graphing interface find]]'
           - ':put [:len [/tool graphing resource find]]'
+          - ':put [:len [/ip dns static find name="router.lan" address="192.168.88.1"]]'
       register: _state
 
     - name: Set state facts
@@ -62,6 +63,7 @@
         _has_split_dns: "{{ _state.stdout[4] | int > 0 }}"
         _has_graphing_iface: "{{ _state.stdout[5] | int > 0 }}"
         _has_graphing_resource: "{{ _state.stdout[6] | int > 0 }}"
+        _has_stale_router_dns: "{{ _state.stdout[7] | int > 0 }}"
 
     # ── System ──────────────────────────────────────────────────────────
 
@@ -125,7 +127,13 @@
     - name: Configure DNS with DoH
       community.routeros.command:
         commands:
-          - /ip dns set servers={{ router_dns_servers }} use-doh-server=https://cloudflare-dns.com/dns-query verify-doh-cert=yes
+          - /ip dns set servers={{ router_dns_servers }} use-doh-server=https://cloudflare-dns.com/dns-query verify-doh-cert=yes doh-max-server-connections=10 doh-max-concurrent-queries=100 cache-size=4096KiB
+
+    - name: Fix stale router.lan DNS entry from factory default subnet
+      community.routeros.command:
+        commands:
+          - /ip dns static set [find name="router.lan"] address=192.168.1.1
+      when: _has_stale_router_dns
 
     # Split-horizon DNS: resolve *.domain internally to the ingress VIP,
     # avoiding hairpin NAT through Cloudflare.
