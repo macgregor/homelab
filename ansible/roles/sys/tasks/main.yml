@@ -41,6 +41,11 @@
     update_cache: yes
     state: 'present'
 
+- name: Import EPEL 9 GPG key
+  ansible.builtin.rpm_key:
+    key: https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-9
+    state: present
+
 - name: "Install system packages"
   tags: [ slow ]
   dnf:
@@ -90,6 +95,35 @@
     mode: '0755'
   notify: reboot
 
+# Node maintenance
+- name: Deploy node maintenance script
+  ansible.builtin.template:
+    src: node-maintenance.sh
+    dest: /usr/local/bin/node-maintenance.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Stop and disable old dnf-automatic-reboot units
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  loop:
+    - dnf-automatic-reboot.timer
+    - dnf-automatic-reboot.service
+  ignore_errors: true
+
+- name: Remove old dnf-automatic-reboot unit files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/systemd/system/dnf-automatic-reboot.service
+    - /etc/systemd/system/dnf-automatic-reboot.timer
+    - /usr/local/bin/dnf-automatic-reboot.sh
+  notify: reload-systemd
+
 # Systemd
 - name: Deploy systemd unit files
   ansible.builtin.template:
@@ -100,8 +134,8 @@
     mode: "{{ item.mode | default('0644') }}"
   notify: reload-systemd
   loop:
-    - { src: dnf-automatic-reboot.service, dest: /etc/systemd/system/dnf-automatic-reboot.service }
-    - { src: dnf-automatic-reboot.timer, dest: /etc/systemd/system/dnf-automatic-reboot.timer }
+    - { src: node-maintenance.service, dest: /etc/systemd/system/node-maintenance.service }
+    - { src: node-maintenance.timer, dest: /etc/systemd/system/node-maintenance.timer }
 
 # Deploy iSCSI cleanup script to all nodes (before service management)
 - name: Deploy iSCSI cleanup script
@@ -144,7 +178,7 @@
     masked: "{{ item.masked | default('false') }}"
   loop:
     - {name: dnf-automatic-install.timer}
-    - {name: dnf-automatic-reboot.timer}
+    - {name: node-maintenance.timer}
     - {name: systemd-journald.service}
     - {name: iscsid.service, state: "{{ 'stopped' if inventory_hostname in groups['master'] else 'started' }}", enabled: "{{ false if inventory_hostname in groups['master'] else true }}"}
     - {name: iscsid.socket, state: stopped, enabled: "{{ false if inventory_hostname in groups['master'] else true }}", masked: "{{ true if inventory_hostname in groups['master'] else false }}"}

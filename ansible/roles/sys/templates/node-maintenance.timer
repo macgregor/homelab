@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=Node maintenance timer
+
+[Timer]
+OnCalendar={{ '03:00' if inventory_hostname in groups['master'] else '03:30' }}
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

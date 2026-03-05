@@ -1,0 +1,8 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=Node maintenance and conditional reboot
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/node-maintenance.sh
