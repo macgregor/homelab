@@ -12,6 +12,7 @@ sonarr-deploy:
         --from-literal=SONARR_API_KEY="${SONARR_API_KEY}" \
         -o yaml | kubectl apply -f -
     kubectl apply -f ./media/sonarr/cronjob.yml
+    kubectl -n media rollout restart deployment/sonarr
 
 sonarr-remove:
     #!/usr/bin/env bash

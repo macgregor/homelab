@@ -5,6 +5,7 @@ network-multitool-deploy:
     set -e
     kubectl apply -f ./app/network-multitool/network.yml
     kubectl apply -f ./app/network-multitool/network-multitool.yml
+    kubectl -n kube-system rollout restart statefulset/network-multitool
 
 network-multitool-remove:
     #!/usr/bin/env bash

@@ -12,6 +12,7 @@ radarr-deploy:
         --from-literal=RADARR_API_KEY="${RADARR_API_KEY}" \
         -o yaml | kubectl apply -f -
     kubectl apply -f ./media/radarr/cronjob.yml
+    kubectl -n media rollout restart deployment/radarr
 
 radarr-remove:
     #!/usr/bin/env bash

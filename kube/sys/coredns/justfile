@@ -6,6 +6,7 @@ coredns-deploy:
     kubectl apply -f ./sys/coredns/roles.yml
     kubectl apply -f ./sys/coredns/coredns.yml
     kubectl apply -f ./sys/coredns/network.yml
+    kubectl -n kube-system rollout restart deployment/coredns
 
 coredns-remove:
     kubectl delete -f ./sys/coredns/coredns.yml || true

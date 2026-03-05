@@ -45,6 +45,9 @@ _kube-deploy app dir:
     if [ -f "{{dir}}/network.yml" ]; then kubectl apply -f "{{dir}}/network.yml"; fi
     kubectl apply -f "{{dir}}/{{app}}.yml"
     if [ -f "{{dir}}/cronjob.yml" ]; then kubectl apply -f "{{dir}}/cronjob.yml"; fi
+    ns=$(grep -m1 'namespace:' "{{dir}}/{{app}}.yml" | awk '{print $2}')
+    kind=$(grep -m1 'kind: \(Deployment\|StatefulSet\|DaemonSet\)' "{{dir}}/{{app}}.yml" | awk '{print tolower($2)}')
+    kubectl -n "$ns" rollout restart "$kind/{{app}}"
 
 [private]
 _kube-remove app dir:

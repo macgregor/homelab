@@ -17,6 +17,7 @@ mealie-deploy:
     kubectl apply -f ./app/mealie/storage.yml
     kubectl apply -f ./app/mealie/mealie.yml
     kubectl apply -f ./app/mealie/network.yml
+    kubectl -n mealie rollout restart deployment/mealie
 
 mealie-remove:
     #!/usr/bin/env bash

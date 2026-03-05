@@ -11,6 +11,7 @@ qbittorrent-deploy:
     kubectl apply -f ./media/qbittorrent/storage.yml
     kubectl apply -f ./media/qbittorrent/network.yml
     kubectl apply -f ./media/qbittorrent/qbittorrent.yml
+    kubectl -n media rollout restart deployment/qbittorrent
 
 qbittorrent-remove:
     #!/usr/bin/env bash
