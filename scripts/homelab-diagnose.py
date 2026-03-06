@@ -214,7 +214,9 @@ class Collector(ABC):
         except CommandError as e:
             log.warning("Preflight failed: %s", e)
             return self._make_result([], preflight_error=e)
+        log.info("Running checks")
         checks = self._run_checks()
+        log.info("Completed %d checks (%d failed)", len(checks), sum(1 for c in checks if c.error))
         return self._make_result(checks)
 
     def run_check(self, title: str, result: CommandResult) -> Check:
@@ -244,10 +246,10 @@ class SSHCollector(Collector):
 
     def ssh(self, cmd: str, timeout: int = SSH_TIMEOUT, retries: int = 0) -> CommandResult:
         ssh_cmd = ["ssh", "-o", "BatchMode=yes", self.host, cmd]
+        log.info("  ssh %s: %s", self.host, cmd[:60])
         attempt = 0
         while True:
             try:
-                log.debug("SSH %s: %s (attempt %d)", self.host, cmd, attempt + 1)
                 proc = subprocess.run(
                     ssh_cmd,
                     capture_output=True,
@@ -302,10 +304,10 @@ class SSHCollector(Collector):
 class KubectlCollector(Collector):
     def kubectl(self, args: str, timeout: int = KUBECTL_TIMEOUT, retries: int = 0) -> CommandResult:
         cmd_parts = ["kubectl"] + args.split()
+        log.info("  kubectl %s", args[:60])
         attempt = 0
         while True:
             try:
-                log.debug("kubectl: %s (attempt %d)", args, attempt + 1)
                 proc = subprocess.run(
                     cmd_parts,
                     capture_output=True,
