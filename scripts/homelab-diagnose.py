@@ -265,7 +265,6 @@ class SSHCollector(Collector):
     def ssh(self, cmd: str, timeout: int = SSH_TIMEOUT, retries: int = 0) -> CommandResult:
         ssh_cmd = [
             "ssh", "-o", "BatchMode=yes",
-            "-o", "GSSAPIAuthentication=no",
             "-o", f"ControlPath={self._socket_path}",
             self.host, cmd,
         ]
@@ -317,7 +316,6 @@ class SSHCollector(Collector):
             proc = subprocess.run(
                 [
                     "ssh", "-o", "BatchMode=yes",
-                    "-o", "GSSAPIAuthentication=no",
                     "-o", f"ControlPath={self._socket_path}",
                     "-o", "ControlMaster=yes",
                     "-o", "ControlPersist=60",

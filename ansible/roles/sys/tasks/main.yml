@@ -73,6 +73,15 @@
     - "/home/{{ ansible_user }}/.config"
     - "/home/{{ ansible_user }}/.config/neofetch"
 
+- name: Disable GSSAPI authentication in sshd
+  ansible.builtin.copy:
+    src: 50-disable-gssapi.conf
+    dest: /etc/ssh/sshd_config.d/50-disable-gssapi.conf
+    owner: root
+    group: root
+    mode: '0600'
+  notify: restart-sshd
+
 - name: Deploy config files, scripts, etc
   ansible.builtin.template:
     src: "{{ item.src }}"
