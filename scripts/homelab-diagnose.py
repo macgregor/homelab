@@ -162,7 +162,7 @@ class DiagnosticReport:
                 lines.append(f"### {check.title}")
                 lines.append("")
                 if check.error is not None:
-                    lines.append(f"**Error:** {type(check.error).__name__}")
+                    lines.append(f"**Error:** {check.error}")
                     lines.append("")
                 cmd_display = check.result.command
                 if check.result.host:
@@ -415,9 +415,9 @@ class NodeCollector(SSHCollector):
             self.run_check("k3s Service Status", self.ssh("systemctl is-active k3s")),
             self.run_check("k3s Version", self.ssh("k3s --version")),
             self.run_check("k3s Recent Errors", self.ssh("journalctl -u k3s -p err --since '1 hour ago' --no-pager -n 20")),
-            self.run_check("NFS Mounts", self.ssh("mount | grep nfs")),
+            self.run_check("NFS Mounts", self.ssh("mount | grep nfs || echo 'No NFS mounts'")),
             self.run_check("iSCSI Sessions", self.ssh("iscsiadm -m session 2>/dev/null || echo 'No active sessions'")),
-            self.run_check("iSCSI Mounts", self.ssh("mount | grep iscsi")),
+            self.run_check("iSCSI Mounts", self.ssh("mount | grep iscsi || echo 'No iSCSI mounts'")),
         ]
 
 
