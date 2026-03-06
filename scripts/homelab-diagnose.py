@@ -426,7 +426,7 @@ class SynologyCollector(SSHCollector):
             self.run_check("NFS Server Stats", self.ssh("nfsstat -s")),
             self.run_check("iSCSI Targets", self.ssh("ls /sys/kernel/config/target/iscsi/ | grep iqn")),
             self.run_check("Network", self.ssh("sudo /usr/syno/sbin/synonet --show")),
-            self.run_check("MariaDB Process", self.ssh("pgrep -a mariadbd || echo 'MariaDB NOT running'")),
+            self.run_check("MariaDB Process", self.ssh("ps aux | grep '[m]ariadbd' || echo 'MariaDB NOT running'")),
             self.run_check("Docker Containers", self.ssh("sudo /var/packages/ContainerManager/target/usr/bin/docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'")),
             self.run_check("Installed Packages", self.ssh("/usr/syno/bin/synopkg list")),
             self.run_check("Recent Kernel Errors", self.ssh("dmesg | grep -i -E 'error|fail|warn' | tail -20 || echo 'No errors found'")),
