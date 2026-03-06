@@ -126,3 +126,23 @@ ingress-logs:
 
 kube-tunnel:
     ssh -fNT -L 6443:k3-m1:6443 root@router-public-ip
+
+diagnose:
+    python3 ../scripts/homelab-diagnose.py
+
+diagnose-app app:
+    python3 ../scripts/homelab-diagnose.py app {{app}}
+
+diagnose-node node='':
+    #!/usr/bin/env bash
+    if [ -n "{{node}}" ]; then
+        python3 ../scripts/homelab-diagnose.py node {{node}}
+    else
+        python3 ../scripts/homelab-diagnose.py node
+    fi
+
+diagnose-kube:
+    python3 ../scripts/homelab-diagnose.py kube
+
+diagnose-router:
+    python3 ../scripts/homelab-diagnose.py router
