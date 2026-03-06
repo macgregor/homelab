@@ -411,6 +411,8 @@ class NodeCollector(SSHCollector):
             self.run_check("Uptime", self.ssh("uptime")),
             self.run_check("Memory", self.ssh("free -h")),
             self.run_check("Disk", self.ssh("df -h /")),
+            self.run_check("SD Card I/O", self.ssh("iostat -xd mmcblk0 1 1")),
+            self.run_check("SD Card Health", self.ssh("dmesg | grep -i -E 'mmcblk.*error|mmcblk.*fail|mmcblk.*read-only|I/O error|ext4.*error' || echo 'No errors found'")),
             self.run_check("CPU Temperature", self.ssh("awk '{printf \"%.1f°C\\n\", $1/1000}' /sys/class/thermal/thermal_zone0/temp")),
             self.run_check("k3s Service Status", self.ssh("systemctl is-active k3s")),
             self.run_check("k3s Version", self.ssh("k3s --version")),
