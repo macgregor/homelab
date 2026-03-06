@@ -59,6 +59,7 @@
       - "tar"
       - "unzip"
       - "bind-utils"
+      - "dosfstools"
     update_cache: no
     state: 'present'
 
@@ -97,6 +98,20 @@
     - { src: 60-sd-scheduler.rules, dest: /etc/udev/rules.d/60-sd-scheduler.rules }
 
 # Raspberry Pi
+- name: Get /boot partition source from fstab
+  ansible.builtin.shell: "awk '$2 == \"/boot\" {print $1}' /etc/fstab"
+  register: boot_src
+  changed_when: false
+
+- name: Enable fsck on boot for /boot partition
+  ansible.posix.mount:
+    path: /boot
+    src: "{{ boot_src.stdout }}"
+    fstype: vfat
+    opts: defaults,noatime
+    passno: "2"
+    state: present
+
 - name: Deploy Boot Config
   tags: [ sys-reboot ]
   ansible.builtin.template:
