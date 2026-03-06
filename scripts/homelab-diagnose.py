@@ -416,8 +416,11 @@ class NodeCollector(SSHCollector):
             self.run_check("k3s Version", self.ssh("k3s --version")),
             self.run_check("k3s Recent Errors", self.ssh("journalctl -u k3s -p err --since '1 hour ago' --no-pager -n 20")),
             self.run_check("NFS Mounts", self.ssh("mount | grep nfs || echo 'No NFS mounts'")),
+            self.run_check("NFS I/O Stats", self.ssh("nfsiostat 2>/dev/null || echo 'nfsiostat not available'")),
             self.run_check("iSCSI Sessions", self.ssh("iscsiadm -m session 2>/dev/null || echo 'No active sessions'")),
             self.run_check("iSCSI Mounts", self.ssh("mount | grep iscsi || echo 'No iSCSI mounts'")),
+            self.run_check("iSCSI I/O Stats", self.ssh("devs=$(lsscsi -t 2>/dev/null | awk '/iqn/ {print $NF}'); if [ -n \"$devs\" ]; then iostat -xd $devs 1 1; else echo 'No iSCSI devices'; fi")),
+            self.run_check("DNS Resolution", self.ssh("dig +short +time=2 +tries=1 google.com @192.168.1.222")),
         ]
 
 
@@ -460,8 +463,24 @@ class KubeCollector(KubectlCollector):
                 "EXPIRY:.status.notAfter,"
                 "RENEWAL:.status.renewalTime"
             )),
+            self.run_check("Resource Limits", self.kubectl(
+                "get deploy,sts -A -o custom-columns="
+                "NAMESPACE:.metadata.namespace,"
+                "NAME:.metadata.name,"
+                "CPU_REQ:.spec.template.spec.containers[0].resources.requests.cpu,"
+                "CPU_LIM:.spec.template.spec.containers[0].resources.limits.cpu,"
+                "MEM_REQ:.spec.template.spec.containers[0].resources.requests.memory,"
+                "MEM_LIM:.spec.template.spec.containers[0].resources.limits.memory"
+            )),
             self.run_check("Resource Usage", self.kubectl("top nodes")),
             self.run_check("Pod Resource Usage", self.kubectl("top pods -A --sort-by=memory")),
+            self.run_check("Container Images", self.kubectl(
+                "get pods -A -o custom-columns="
+                "NAMESPACE:.metadata.namespace,"
+                "POD:.metadata.name,"
+                "IMAGE:.spec.containers[0].image"
+                " --sort-by=.metadata.namespace"
+            )),
         ]
 
     def _make_result(self, checks: list[Check], preflight_error: CommandError | None = None) -> CollectorResult:

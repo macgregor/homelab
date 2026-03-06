@@ -58,6 +58,7 @@
       - "sysstat"
       - "tar"
       - "unzip"
+      - "bind-utils"
     update_cache: no
     state: 'present'
 
