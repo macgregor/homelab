@@ -17,7 +17,8 @@ from datetime import datetime, timezone
 # --- Constants ---
 
 KNOWN_NODES = ["k3-m1", "k3-n1"]
-KNOWN_HOSTS = ["router", "k3-m1", "k3-n1"]
+SYNOLOGY_HOST = "synology"
+KNOWN_HOSTS = ["router", "synology", "k3-m1", "k3-n1"]
 ROUTER_HOST = "router"
 SSH_TIMEOUT = 30
 KUBECTL_TIMEOUT = 30
@@ -403,6 +404,35 @@ class RouterCollector(SSHCollector):
         ]
 
 
+class SynologyCollector(SSHCollector):
+    def __init__(self):
+        super().__init__(SYNOLOGY_HOST)
+
+    def _run_checks(self) -> list[Check]:
+        return [
+            self.run_check("DSM Version", self.ssh("cat /etc.defaults/VERSION")),
+            self.run_check("Uptime", self.ssh("uptime")),
+            self.run_check("Memory", self.ssh("free -h")),
+            self.run_check("Volume Usage", self.ssh("df -h | grep -E '/volume[0-9]'")),
+            self.run_check("Storage Pool Status", self.ssh("sudo /usr/syno/sbin/synospace --enum")),
+            self.run_check("RAID Status", self.ssh("sudo /usr/syno/sbin/synoraidtool --method=get-raid-status")),
+            self.run_check("Disk Info", self.ssh("sudo /usr/syno/bin/synodisk --enum -t internal")),
+            self.run_check("NVMe Cache Info", self.ssh("sudo /usr/syno/bin/synodisk --enum -t cache")),
+            self.run_check("Disk SMART (sata1)", self.ssh("sudo smartctl -H -A -d sat /dev/sata1")),
+            self.run_check("Disk SMART (sata2)", self.ssh("sudo smartctl -H -A -d sat /dev/sata2")),
+            self.run_check("Disk I/O", self.ssh("iostat -xd sata1 sata2 1 1")),
+            self.run_check("Shares", self.ssh("sudo /usr/syno/sbin/synoshare --enum ALL")),
+            self.run_check("NFS Exports", self.ssh("showmount -e localhost")),
+            self.run_check("NFS Server Stats", self.ssh("nfsstat -s")),
+            self.run_check("iSCSI Targets", self.ssh("ls /sys/kernel/config/target/iscsi/ | grep iqn")),
+            self.run_check("Network", self.ssh("sudo /usr/syno/sbin/synonet --show")),
+            self.run_check("MariaDB Process", self.ssh("pgrep -a mariadbd || echo 'MariaDB NOT running'")),
+            self.run_check("Docker Containers", self.ssh("sudo /var/packages/ContainerManager/target/usr/bin/docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'")),
+            self.run_check("Installed Packages", self.ssh("/usr/syno/bin/synopkg list")),
+            self.run_check("Recent Kernel Errors", self.ssh("dmesg | grep -i -E 'error|fail|warn' | tail -20 || echo 'No errors found'")),
+        ]
+
+
 class NodeCollector(SSHCollector):
     def __init__(self, host: str):
         super().__init__(host)
@@ -550,6 +580,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("kube", help="Cluster-wide Kubernetes state")
     subparsers.add_parser("router", help="MikroTik router diagnostics")
+    subparsers.add_parser("synology", help="Synology NAS diagnostics")
 
     return parser
 
@@ -569,11 +600,14 @@ def main() -> None:
 
     if mode == "full":
         collectors.append(RouterCollector())
+        collectors.append(SynologyCollector())
         for node in KNOWN_NODES:
             collectors.append(NodeCollector(node))
         collectors.append(KubeCollector())
     elif mode == "router":
         collectors.append(RouterCollector())
+    elif mode == "synology":
+        collectors.append(SynologyCollector())
     elif mode == "node":
         nodes = [args.name] if args.name else KNOWN_NODES
         for node in nodes:

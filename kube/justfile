@@ -146,3 +146,6 @@ diagnose-kube:
 
 diagnose-router:
     python3 ../scripts/homelab-diagnose.py router
+
+diagnose-synology:
+    python3 ../scripts/homelab-diagnose.py synology
