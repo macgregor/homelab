@@ -28,6 +28,23 @@ Load these documents based on the task at hand. Do not load speculatively.
 
 All Kubernetes commands run from `kube/` directory. The `KUBECONFIG` env var is set via `.envrc` (direnv).
 
+### Diagnostics
+
+When investigating any issue -- performance problems, unreachable services, pod failures, DNS issues, storage problems -- start by running the diagnostic tool. It gathers system state across the router, cluster nodes, and Kubernetes in a single report (~10 seconds).
+
+```bash
+just diagnose                    # Full system report (router + nodes + k8s)
+just diagnose-app jellyfin       # App-specific deep dive (logs, events, resources)
+just diagnose-node               # Both nodes only
+just diagnose-node k3-m1         # Single node
+just diagnose-kube               # Kubernetes state only
+just diagnose-router             # Router only
+```
+
+The report covers: node health (CPU, memory, disk, temperature, SD card I/O), k3s service status, NFS/iSCSI mounts and I/O stats, network routes, DNS resolution (external + internal split-DNS), router interfaces/DHCP/DNS config, pod health and restart counts, resource usage vs limits, certificate expiry, and warning events. Output is Markdown by default; use `--output json` for programmatic consumption.
+
+The tool is at `scripts/homelab-diagnose.py` (stdlib only, no dependencies). It uses SSH multiplexing for performance and relies on `~/.ssh/config` aliases.
+
 ### Debugging
 
 ```bash
