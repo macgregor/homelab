@@ -373,11 +373,13 @@ class NodeCollector(SSHCollector):
             self.run_check("Uptime", self.ssh("uptime")),
             self.run_check("Memory", self.ssh("free -h")),
             self.run_check("Disk", self.ssh("df -h /")),
-            self.run_check("CPU Temperature", self.ssh("cat /sys/class/thermal/thermal_zone0/temp")),
+            self.run_check("CPU Temperature", self.ssh("awk '{printf \"%.1f°C\\n\", $1/1000}' /sys/class/thermal/thermal_zone0/temp")),
             self.run_check("k3s Service Status", self.ssh("systemctl is-active k3s")),
             self.run_check("k3s Version", self.ssh("k3s --version")),
             self.run_check("k3s Recent Errors", self.ssh("journalctl -u k3s -p err --since '1 hour ago' --no-pager -n 20")),
             self.run_check("NFS Mounts", self.ssh("mount | grep nfs")),
+            self.run_check("iSCSI Sessions", self.ssh("iscsiadm -m session 2>/dev/null || echo 'No active sessions'")),
+            self.run_check("iSCSI Mounts", self.ssh("mount | grep iscsi")),
         ]
 
 
@@ -389,19 +391,40 @@ class KubeCollector(KubectlCollector):
             raise CommandError(f"kubectl not reachable: {result.stderr}")
 
     def _run_checks(self) -> list[Check]:
-        checks = [
+        return [
             self.run_check("Nodes", self.kubectl("get nodes -o wide")),
+            self.run_check("Node Conditions", self.kubectl(
+                "get nodes -o custom-columns="
+                "NAME:.metadata.name,"
+                "READY:.status.conditions[?(@.type==\"Ready\")].status,"
+                "DISK_PRESSURE:.status.conditions[?(@.type==\"DiskPressure\")].status,"
+                "MEM_PRESSURE:.status.conditions[?(@.type==\"MemoryPressure\")].status,"
+                "PID_PRESSURE:.status.conditions[?(@.type==\"PIDPressure\")].status"
+            )),
             self.run_check("All Pods", self.kubectl("get pods -A -o wide")),
-            self.run_check("Unhealthy Pods", self.kubectl("get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded")),
+            self.run_check("Pod Health", self.kubectl(
+                "get pods -A -o custom-columns="
+                "NAMESPACE:.metadata.namespace,"
+                "NAME:.metadata.name,"
+                "READY:.status.conditions[?(@.type==\"ContainersReady\")].status,"
+                "PHASE:.status.phase,"
+                "RESTARTS:.status.containerStatuses[0].restartCount"
+            )),
             self.run_check("Warning Events", self.kubectl("get events -A --field-selector type=Warning --sort-by=.lastTimestamp")),
             self.run_check("Persistent Volumes", self.kubectl("get pv,pvc -A")),
             self.run_check("LoadBalancer Services", self.kubectl("get svc -A --field-selector spec.type=LoadBalancer")),
             self.run_check("Ingress", self.kubectl("get ingress -A")),
-            self.run_check("Certificates", self.kubectl("get certificates -A")),
+            self.run_check("Certificates", self.kubectl(
+                "get certificates -A -o custom-columns="
+                "NAMESPACE:.metadata.namespace,"
+                "NAME:.metadata.name,"
+                "READY:.status.conditions[?(@.type==\"Ready\")].status,"
+                "EXPIRY:.status.notAfter,"
+                "RENEWAL:.status.renewalTime"
+            )),
             self.run_check("Resource Usage", self.kubectl("top nodes")),
             self.run_check("Pod Resource Usage", self.kubectl("top pods -A --sort-by=memory")),
         ]
-        return checks
 
     def _make_result(self, checks: list[Check], preflight_error: CommandError | None = None) -> CollectorResult:
         return CollectorResult(checks=checks, preflight_error=preflight_error)
