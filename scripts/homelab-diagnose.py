@@ -4,6 +4,7 @@
 import argparse
 import json
 import logging
+import os
 import re
 import subprocess
 import sys
@@ -243,9 +244,30 @@ class Collector(ABC):
 class SSHCollector(Collector):
     def __init__(self, host: str):
         self.host = host
+        self._socket_path = f"/tmp/homelab-diagnose-{host}-{os.getpid()}"
+
+    def collect(self) -> CollectorResult:
+        try:
+            return super().collect()
+        finally:
+            self._close_master()
+
+    def _close_master(self) -> None:
+        try:
+            subprocess.run(
+                ["ssh", "-o", f"ControlPath={self._socket_path}", "-O", "exit", self.host],
+                capture_output=True, timeout=5,
+            )
+            log.debug("Closed SSH master for %s", self.host)
+        except Exception:
+            pass
 
     def ssh(self, cmd: str, timeout: int = SSH_TIMEOUT, retries: int = 0) -> CommandResult:
-        ssh_cmd = ["ssh", "-o", "BatchMode=yes", self.host, cmd]
+        ssh_cmd = [
+            "ssh", "-o", "BatchMode=yes",
+            "-o", f"ControlPath={self._socket_path}",
+            self.host, cmd,
+        ]
         log.info("  ssh %s: %s", self.host, cmd[:60])
         attempt = 0
         while True:
@@ -289,10 +311,24 @@ class SSHCollector(Collector):
                 )
 
     def _preflight(self) -> None:
-        log.info("Checking SSH connectivity to %s", self.host)
-        result = self.ssh("echo ok", timeout=10)
-        if result.exit_code != 0:
-            raise HostUnreachableError(f"Cannot reach {self.host}: {result.stderr}")
+        log.info("Checking SSH connectivity to %s (opening multiplexed connection)", self.host)
+        try:
+            proc = subprocess.run(
+                [
+                    "ssh", "-o", "BatchMode=yes",
+                    "-o", f"ControlPath={self._socket_path}",
+                    "-o", "ControlMaster=yes",
+                    "-o", "ControlPersist=60",
+                    self.host, "echo ok",
+                ],
+                capture_output=True, text=True, timeout=10,
+            )
+            if proc.returncode != 0:
+                raise HostUnreachableError(f"Cannot reach {self.host}: {proc.stderr}")
+        except subprocess.TimeoutExpired:
+            raise HostUnreachableError(f"SSH connection to {self.host} timed out")
+        except FileNotFoundError:
+            raise HostUnreachableError("ssh binary not found")
 
     def _make_result(self, checks: list[Check], preflight_error: CommandError | None = None) -> SSHCollectorResult:
         return SSHCollectorResult(checks=checks, preflight_error=preflight_error, host=self.host)
