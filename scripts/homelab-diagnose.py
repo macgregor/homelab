@@ -398,6 +398,7 @@ class RouterCollector(SSHCollector):
             self.run_check("Interfaces", self.ssh("/interface print terse")),
             self.run_check("DHCP Leases", self.ssh("/ip dhcp-server lease print")),
             self.run_check("DNS Configuration", self.ssh("/ip dns print")),
+            self.run_check("DNS Static Entries", self.ssh("/ip dns static print")),
             self.run_check("Recent Errors", self.ssh('/log print where topics~"error" or topics~"critical"')),
         ]
 
@@ -422,7 +423,10 @@ class NodeCollector(SSHCollector):
             self.run_check("iSCSI Sessions", self.ssh("iscsiadm -m session 2>/dev/null || echo 'No active sessions'")),
             self.run_check("iSCSI Mounts", self.ssh("mount | grep iscsi || echo 'No iSCSI mounts'")),
             self.run_check("iSCSI I/O Stats", self.ssh("devs=$(lsscsi -t 2>/dev/null | awk '/iqn/ {print $NF}'); if [ -n \"$devs\" ]; then iostat -xd $devs 1 1; else echo 'No iSCSI devices'; fi")),
-            self.run_check("DNS Resolution", self.ssh("dig +short +time=2 +tries=1 google.com @192.168.1.222")),
+            self.run_check("Network Routes", self.ssh("ip route")),
+            self.run_check("DNS Config", self.ssh("cat /etc/resolv.conf")),
+            self.run_check("DNS External", self.ssh("dig +short +time=2 +tries=1 google.com @192.168.1.1")),
+            self.run_check("DNS Internal", self.ssh("dig +short +time=2 +tries=1 jellyfin.matthew-stratton.me @192.168.1.1")),
         ]
 
 
