@@ -1,4 +1,7 @@
 # https://artifacthub.io/packages/helm/cert-manager/cert-manager
+crds:
+  enabled: true
+  keep: true
 tolerations:
 - key: "CriticalAddonsOnly"
   operator: "Equal"
@@ -47,6 +50,3 @@ cainjector:
             operator: In
             values:
             - 'true'
-prometheus:
-  servicemonitor:
-    enabled: true
