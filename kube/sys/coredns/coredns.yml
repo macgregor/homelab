@@ -91,7 +91,7 @@ spec:
         args:
         - -conf
         - /etc/coredns/Corefile
-        image: coredns/coredns:1.10.1
+        image: coredns/coredns:1.14.2
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 53
