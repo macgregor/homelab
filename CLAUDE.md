@@ -21,6 +21,7 @@ Load these documents based on the task at hand. Do not load speculatively.
 | `docs/07-maintenance.md` | Upgrading k3s, rotating certificates, or cluster recovery |
 | `docs/appendix/mikrotik-routeros.md` | Working with MikroTik router config, RouterOS scripting, or firewall rules |
 | `docs/appendix/media-services.md` | Working with Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Gluetun, Tdarr, Seerr, or Decluttarr |
+| `docs/appendix/grafana-dashboards.md` | Creating, editing, or troubleshooting Grafana dashboards, dashboard JSON, PromQL/MetricsQL queries, or panel configuration |
 
 **`docs/plans/`** — Files here are speculative or historical planning documents (gitignored, ephemeral). Never load them unless the user explicitly asks. They contain outdated or hypothetical information that will contradict the actual state of the project. Never reference or link to them from long-lived documentation.
 
@@ -30,7 +31,7 @@ All Kubernetes commands run from `kube/` directory. The `KUBECONFIG` env var is 
 
 ### Diagnostics
 
-When investigating any issue -- performance problems, unreachable services, pod failures, DNS issues, storage problems -- start by running the diagnostic tool. It gathers system state across the router, cluster nodes, and Kubernetes in a single report (~10 seconds).
+The diagnostic script (`scripts/homelab-diagnose.py`) gathers system state via SSH and kubectl directly -- it does **not** use the observability stack (VictoriaMetrics/Grafana). This makes it useful when Kubernetes or network infrastructure is unreliable, but for routine investigation prefer the observability tooling (Grafana dashboards, VictoriaMetrics queries) which provides historical data and trends. Use the diagnostic script when you need a quick snapshot of current state or when the observability stack itself is down.
 
 ```bash
 just diagnose                    # Full system report (router + nodes + k8s)
