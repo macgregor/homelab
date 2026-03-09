@@ -1,0 +1,144 @@
+replicaCount: 1
+tplVersion: 2
+
+env:
+  - name: HOSTNAME
+    value: "telegraf-snmp"
+
+resources:
+  requests:
+    memory: 30Mi
+    cpu: 25m
+  limits:
+    memory: 100Mi
+
+tolerations:
+- key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      preference:
+        matchExpressions:
+        - key: node-role.kubernetes.io/control-plane
+          operator: In
+          values:
+          - 'true'
+
+service:
+  enabled: false
+
+rbac:
+  create: false
+
+config:
+  agent:
+    interval: "60s"
+    round_interval: true
+    metric_batch_size: 1000
+    metric_buffer_limit: 10000
+    collection_jitter: "0s"
+    flush_interval: "60s"
+    flush_jitter: "5s"
+    hostname: "telegraf-snmp"
+    omit_hostname: false
+  processors: []
+  outputs:
+    - influxdb_v2:
+        urls:
+          - "http://victoriametrics-server.obs.svc:8428"
+        token: "none"
+        organization: "none"
+        bucket: "none"
+  inputs:
+    - snmp:
+        name: "snmp_mikrotik"
+        agents:
+          - "udp://192.168.1.1:161"
+        version: 2
+        community: {{ requiredEnv "SNMP_COMMUNITY" | quote }}
+        agent_host_tag: "source"
+        field:
+          - oid: ".1.3.6.1.2.1.1.3.0"
+            name: "uptime"
+          - oid: ".1.3.6.1.2.1.25.3.3.1.2.1"
+            name: "cpu_load"
+          - oid: ".1.3.6.1.2.1.25.2.3.1.6.65536"
+            name: "memory_used"
+          - oid: ".1.3.6.1.2.1.25.2.3.1.5.65536"
+            name: "memory_total"
+        table:
+          - oid: "1.3.6.1.2.1.2.2"
+            name: "snmp_mikrotik_interface"
+            inherit_tags:
+              - "source"
+            field:
+              - oid: "1.3.6.1.2.1.2.2.1.2"
+                name: "name"
+                is_tag: true
+              - oid: "1.3.6.1.2.1.2.2.1.10"
+                name: "bytes_recv"
+              - oid: "1.3.6.1.2.1.2.2.1.16"
+                name: "bytes_sent"
+              - oid: "1.3.6.1.2.1.2.2.1.8"
+                name: "oper_status"
+    - snmp:
+        name: "snmp_synology"
+        agents:
+          - "udp://192.168.1.200:161"
+        version: 2
+        community: {{ requiredEnv "SNMP_COMMUNITY" | quote }}
+        agent_host_tag: "source"
+        field:
+          - oid: ".1.3.6.1.2.1.1.3.0"
+            name: "uptime"
+          - oid: ".1.3.6.1.4.1.6574.1.2.0"
+            name: "system_temperature"
+          - oid: ".1.3.6.1.4.1.2021.10.1.3.1"
+            name: "load_1m"
+          - oid: ".1.3.6.1.4.1.2021.10.1.3.2"
+            name: "load_5m"
+          - oid: ".1.3.6.1.4.1.2021.10.1.3.3"
+            name: "load_15m"
+          - oid: ".1.3.6.1.4.1.2021.4.5.0"
+            name: "memory_total_kb"
+          - oid: ".1.3.6.1.4.1.2021.4.11.0"
+            name: "memory_free_kb"
+        table:
+          - name: "snmp_synology_disk"
+            inherit_tags:
+              - "source"
+            field:
+              - oid: "1.3.6.1.4.1.6574.2.1.1.2"
+                name: "disk_id"
+                is_tag: true
+              - oid: "1.3.6.1.4.1.6574.2.1.1.5"
+                name: "disk_status"
+              - oid: "1.3.6.1.4.1.6574.2.1.1.6"
+                name: "disk_temperature"
+          - name: "snmp_synology_raid"
+            inherit_tags:
+              - "source"
+            field:
+              - oid: "1.3.6.1.4.1.6574.3.1.1.2"
+                name: "raid_name"
+                is_tag: true
+              - oid: "1.3.6.1.4.1.6574.3.1.1.3"
+                name: "raid_status"
+          - name: "snmp_synology_storage"
+            inherit_tags:
+              - "source"
+            field:
+              - oid: "1.3.6.1.2.1.25.2.3.1.3"
+                name: "storage_descr"
+                is_tag: true
+              - oid: "1.3.6.1.2.1.25.2.3.1.4"
+                name: "allocation_units"
+              - oid: "1.3.6.1.2.1.25.2.3.1.5"
+                name: "storage_size"
+              - oid: "1.3.6.1.2.1.25.2.3.1.6"
+                name: "storage_used"

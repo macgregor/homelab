@@ -87,15 +87,16 @@ import 'sys/metallb/justfile'
 import 'sys/ingress-nginx/internal/justfile'
 import 'sys/ingress-nginx/external/justfile'
 
-import 'observation/loki/justfile'
-import 'observation/fluent-bit/justfile'
-import 'observation/kube-prometheus-stack/justfile'
+import 'observation/victoriametrics/justfile'
+import 'observation/telegraf/justfile'
+import 'observation/telegraf-snmp/justfile'
+import 'observation/grafana/justfile'
 
 # --- Aggregate targets ---
 
-deploy-sys: coredns-deploy democratic-csi-deploy cert-manager-deploy metallb-deploy ingress-internal-deploy ingress-external-deploy oauth2-proxy-deploy loki-deploy fluent-bit-deploy kube-prometheus-stack-deploy
+deploy-sys: coredns-deploy democratic-csi-deploy cert-manager-deploy metallb-deploy ingress-internal-deploy ingress-external-deploy oauth2-proxy-deploy victoriametrics-deploy telegraf-deploy telegraf-snmp-deploy grafana-deploy
 
-remove-sys: coredns-remove democratic-csi-remove cert-manager-remove metallb-remove ingress-internal-remove ingress-external-remove oauth2-proxy-remove loki-remove fluent-bit-remove kube-prometheus-stack-remove
+remove-sys: coredns-remove democratic-csi-remove cert-manager-remove metallb-remove ingress-internal-remove ingress-external-remove oauth2-proxy-remove grafana-remove telegraf-snmp-remove telegraf-remove victoriametrics-remove
 
 deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy synology-dsm-deploy qbittorrent-deploy mealie-deploy seerr-deploy decluttarr-deploy
 

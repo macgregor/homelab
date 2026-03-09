@@ -14,6 +14,39 @@ coredns-deploy-secret:
 coredns-remove:
     kubectl delete -f ./sys/coredns/coredns.yml || true
 
+coredns-sync-hosts:
+    #!/usr/bin/env bash
+    set -e
+    FILE="./sys/coredns/coredns.yml"
+    # Build ingress host lines grouped by LB IP, with aliases
+    declare -A LB_ALIAS=( ["192.168.1.220"]="ext-lb" ["192.168.1.221"]="int-lb" )
+    declare -A HOSTS_BY_IP
+    while IFS=$'\t' read -r ip hosts; do
+        hosts=$(echo "$hosts" | xargs)
+        [ -z "$ip" ] || [ -z "$hosts" ] && continue
+        HOSTS_BY_IP[$ip]="${HOSTS_BY_IP[$ip]:+${HOSTS_BY_IP[$ip]} }$hosts"
+    done < <(kubectl get ingress -A -o jsonpath='{range .items[*]}{.status.loadBalancer.ingress[0].ip}{"\t"}{range .spec.rules[*]}{.host}{" "}{end}{"\n"}{end}')
+    NEW_BLOCK=""
+    for ip in $(echo "${!HOSTS_BY_IP[@]}" | tr ' ' '\n' | sort); do
+        alias="${LB_ALIAS[$ip]:-}"
+        hosts=$(echo "${HOSTS_BY_IP[$ip]}" | tr ' ' '\n' | sort | tr '\n' ' ' | xargs)
+        NEW_BLOCK="${NEW_BLOCK}    ${ip}${alias:+ $alias} ${hosts}\n"
+    done
+    # Replace the block between markers in the file
+    sed -i "/# ingress-hosts-start/,/# ingress-hosts-end/{
+        /# ingress-hosts-start/{
+            a\\    # ingress-hosts-start (managed by \`just coredns-sync-hosts\`)
+            r /dev/stdin
+        }
+        /# ingress-hosts-end/!d
+    }" "$FILE" <<< "$(echo -e "$NEW_BLOCK" | head -c -1)"
+    # Remove the duplicate marker line left by sed
+    sed -i '0,/# ingress-hosts-start/{//!b};/# ingress-hosts-start/{n;/# ingress-hosts-start/d}' "$FILE"
+    echo "Updated $FILE with ingress hosts:"
+    sed -n '/# ingress-hosts-start/,/# ingress-hosts-end/p' "$FILE"
+    echo ""
+    echo "Run 'just coredns-deploy' to apply changes to the cluster."
+
 coredns-debug: (_kube-debug "coredns" "kube-system")
 coredns-logs: (_kube-logs "coredns" "kube-system")
 coredns-stop: (_kube-stop "kube-system" "deployment/coredns")

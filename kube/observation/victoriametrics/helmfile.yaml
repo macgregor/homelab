@@ -1,0 +1,11 @@
+repositories:
+- name: vm
+  url: https://victoriametrics.github.io/helm-charts/
+helmDefaults:
+  createNamespace: true
+releases:
+- name: victoriametrics
+  chart: vm/victoria-metrics-single
+  namespace: obs
+  values:
+  - ./helm-values.yml

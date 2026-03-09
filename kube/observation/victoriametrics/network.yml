@@ -1,0 +1,27 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: victoriametrics
+  namespace: obs
+  labels:
+    app.kubernetes.io/name: victoriametrics
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+spec:
+  ingressClassName: nginx-internal
+  tls:
+  - hosts:
+    - victoriametrics.matthew-stratton.me
+    secretName: victoriametrics-tls
+  rules:
+  - host: victoriametrics.matthew-stratton.me
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: victoriametrics-server
+            port:
+              number: 8428

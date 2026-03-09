@@ -1,0 +1,45 @@
+adminPassword: {{ requiredEnv "GRAFANA_ADMIN_PASS" | quote }}
+
+grafana.ini:
+  auth.anonymous:
+    enabled: true
+    org_role: Viewer
+
+resources:
+  requests:
+    memory: 100Mi
+    cpu: 50m
+  limits:
+    memory: 200Mi
+
+tolerations:
+- key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+
+affinity:
+  nodeAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 1
+      preference:
+        matchExpressions:
+        - key: node-role.kubernetes.io/control-plane
+          operator: In
+          values:
+          - 'true'
+
+persistence:
+  enabled: true
+  storageClassName: synology-nfs-app-data-retain
+  size: 1Gi
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: VictoriaMetrics
+      type: prometheus
+      url: http://victoriametrics-server.obs.svc:8428
+      access: proxy
+      isDefault: true

@@ -1,0 +1,9 @@
+telegraf-snmp-deploy:
+    helmfile --file ./observation/telegraf-snmp/helmfile.yaml apply
+
+telegraf-snmp-remove:
+    helmfile --file ./observation/telegraf-snmp/helmfile.yaml destroy || true
+
+telegraf-snmp-restart: (_kube-restart "obs" "deployment/telegraf-snmp")
+telegraf-snmp-logs: (_kube-logs "telegraf-snmp" "obs" "app.kubernetes.io/name=telegraf,app.kubernetes.io/instance=telegraf-snmp")
+telegraf-snmp-status: (_kube-status "telegraf-snmp" "obs" "app.kubernetes.io/name=telegraf,app.kubernetes.io/instance=telegraf-snmp")

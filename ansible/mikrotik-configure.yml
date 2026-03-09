@@ -52,6 +52,7 @@
           - ':put [:len [/tool graphing interface find]]'
           - ':put [:len [/tool graphing resource find]]'
           - ':put [:len [/ip dns static find name="router.lan" address="192.168.88.1"]]'
+          - ':put [/snmp get enabled]'
       register: _state
 
     - name: Set state facts
@@ -64,6 +65,7 @@
         _has_graphing_iface: "{{ _state.stdout[5] | int > 0 }}"
         _has_graphing_resource: "{{ _state.stdout[6] | int > 0 }}"
         _has_stale_router_dns: "{{ _state.stdout[7] | int > 0 }}"
+        _snmp_enabled: "{{ _state.stdout[8] == 'true' }}"
 
     # ── System ──────────────────────────────────────────────────────────
 
@@ -201,6 +203,15 @@
         commands:
           - /tool graphing resource add allow-address=192.168.1.0/24
       when: not _has_graphing_resource
+
+    # ── SNMP ─────────────────────────────────────────────────────────
+
+    - name: Enable SNMP with community string
+      community.routeros.command:
+        commands:
+          - /snmp community set [find default=yes] name={{ snmp_community }} addresses=192.168.1.0/24
+          - /snmp set enabled=yes
+      when: not _snmp_enabled
 
     # ── Auto-update ──────────────────────────────────────────────────
 

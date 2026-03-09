@@ -1,0 +1,31 @@
+server:
+  retentionPeriod: 30d
+  extraArgs:
+    memory.allowedBytes: "200MB"
+    search.maxUniqueTimeseries: "5000"
+  persistentVolume:
+    storageClass: synology-nfs-app-data-retain
+    size: 10Gi
+  resources:
+    requests:
+      memory: 150Mi
+      cpu: 100m
+    limits:
+      memory: 300Mi
+  tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        preference:
+          matchExpressions:
+          - key: node-role.kubernetes.io/control-plane
+            operator: In
+            values:
+            - 'true'
+
+fullnameOverride: victoriametrics

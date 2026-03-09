@@ -1,0 +1,16 @@
+victoriametrics-deploy:
+    #!/usr/bin/env bash
+    set -e
+    helmfile --file ./observation/victoriametrics/helmfile.yaml apply
+    kubectl apply -f ./observation/victoriametrics/network.yml
+
+victoriametrics-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./observation/victoriametrics/network.yml || true
+    helmfile --file ./observation/victoriametrics/helmfile.yaml destroy || true
+
+victoriametrics-stop: (_kube-stop "obs" "statefulset/victoriametrics-server")
+victoriametrics-start: (_kube-start "obs" "statefulset/victoriametrics-server" "1")
+victoriametrics-restart: (_kube-restart "obs" "statefulset/victoriametrics-server")
+victoriametrics-status: (_kube-status "victoriametrics" "obs" "app=server,app.kubernetes.io/instance=victoriametrics")
+victoriametrics-logs: (_kube-logs "victoriametrics" "obs" "app=server,app.kubernetes.io/instance=victoriametrics")

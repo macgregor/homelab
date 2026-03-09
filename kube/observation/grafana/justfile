@@ -1,0 +1,14 @@
+grafana-deploy:
+    #!/usr/bin/env bash
+    set -e
+    helmfile --file ./observation/grafana/helmfile.yaml apply
+    kubectl apply -f ./observation/grafana/network.yml
+
+grafana-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./observation/grafana/network.yml || true
+    helmfile --file ./observation/grafana/helmfile.yaml destroy || true
+
+grafana-restart: (_kube-restart "obs" "deployment/grafana")
+grafana-logs: (_kube-logs "grafana" "obs" "app.kubernetes.io/name=grafana")
+grafana-status: (_kube-status "grafana" "obs" "app.kubernetes.io/name=grafana")

@@ -1,0 +1,55 @@
+resources:
+  requests:
+    memory: 50Mi
+    cpu: 50m
+  limits:
+    memory: 150Mi
+
+tolerations:
+- key: "CriticalAddonsOnly"
+  operator: "Equal"
+  value: "true"
+  effect: "NoSchedule"
+
+config:
+  agent:
+    interval: "30s"
+    round_interval: true
+    metric_batch_size: 1000
+    metric_buffer_limit: 10000
+    collection_jitter: "0s"
+    flush_interval: "30s"
+    flush_jitter: "5s"
+    hostname: "$HOSTNAME"
+    omit_hostname: false
+  inputs:
+    - cpu:
+        percpu: false
+        totalcpu: true
+        collect_cpu_time: false
+        report_active: false
+    - mem: {}
+    - disk:
+        ignore_fs:
+          - tmpfs
+          - devtmpfs
+          - devfs
+          - iso9660
+          - overlay
+          - aufs
+          - squashfs
+    - diskio: {}
+    - net: {}
+    - system: {}
+    - processes: {}
+    - kubernetes:
+        url: "https://$HOSTIP:10250"
+        bearer_token: "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        insecure_skip_verify: true
+  outputs:
+    - influxdb_v2:
+        urls:
+          - "http://victoriametrics-server.obs.svc:8428"
+        token: "none"
+        organization: "none"
+        bucket: "none"

@@ -1,0 +1,9 @@
+telegraf-deploy:
+    helmfile --file ./observation/telegraf/helmfile.yaml apply
+
+telegraf-remove:
+    helmfile --file ./observation/telegraf/helmfile.yaml destroy || true
+
+telegraf-restart: (_kube-restart "obs" "daemonset/telegraf-telegraf-ds")
+telegraf-logs: (_kube-logs "telegraf" "obs" "app.kubernetes.io/name=telegraf-ds")
+telegraf-status: (_kube-status "telegraf" "obs" "app.kubernetes.io/name=telegraf-ds")
