@@ -85,13 +85,9 @@ k3s's built-in CoreDNS is disabled. A custom CoreDNS deployment provides both in
 
 CoreDNS is exposed to the LAN at `192.168.1.223` via two LoadBalancer services (one UDP, one TCP, sharing the same IP via MetalLB's `allow-shared-ip` annotation). LAN clients (or the router's DHCP settings) can point to this IP for DNS.
 
-The Corefile forwards unknown queries to AdGuard Home (`192.168.1.222`) first, then Cloudflare (`1.1.1.1`) as a fallback. A static hosts file maps infrastructure hostnames and `*.matthew-stratton.me` domains to their MetalLB IPs, so LAN clients resolve internal services without hairpin NAT.
+The Corefile forwards unknown queries to Cloudflare (`1.1.1.1`). A static hosts file maps infrastructure hostnames and `*.matthew-stratton.me` domains to their MetalLB IPs, so LAN clients resolve internal services without hairpin NAT.
 
 Configuration lives in `kube/sys/coredns/coredns.yml`.
-
-### AdGuard Home (Ad-blocking DNS)
-
-AdGuard Home runs at `192.168.1.222` and sits between CoreDNS and the upstream resolver. It filters ads and trackers for all DNS queries originating from the LAN. Configuration is managed via the AdGuard web UI at `adguard.matthew-stratton.me`.
 
 ### Local Client DNS (Split DNS)
 
@@ -201,5 +197,5 @@ Reference: [Synology DSM 7 with LetsEncrypt and DNS Challenge](https://dr-b.io/p
 - [Getting Started](00-getting-started.md) -- Hardware details, software stack overview
 - [RPis and k3s](02-rpis-and-k3s.md) -- k3s configuration, disabled components (Traefik, ServiceLB, CoreDNS)
 - [Persistence](03-persistence.md) -- Synology NAS storage configuration
-- [Security](05-security.md) -- Authentication with oauth2-proxy
+- [Security](05-security.md) -- Authentication and access control
 - [Observability](06-observability.md) -- Logging and monitoring

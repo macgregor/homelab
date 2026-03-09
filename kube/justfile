@@ -66,13 +66,10 @@ import 'media/radarr/justfile'
 import 'media/seerr/justfile'
 import 'media/qbittorrent/justfile'
 import 'media/jellyfin/justfile'
-import 'media/tdarr-server/justfile'
-import 'media/tdarr-nodes/justfile'
 import 'media/decluttarr/justfile'
 
 import 'app/foundry-vtt/justfile'
 import 'app/mealie/justfile'
-import 'app/adguard/justfile'
 import 'app/network-multitool/justfile'
 import 'app/synology-dsm/justfile'
 
@@ -80,7 +77,6 @@ import 'demo/whoami/justfile'
 import 'demo/kuard/justfile'
 
 import 'sys/coredns/justfile'
-import 'sys/oauth2-proxy/justfile'
 import 'sys/cert-manager/justfile'
 import 'sys/democratic-csi/justfile'
 import 'sys/metallb/justfile'
@@ -95,9 +91,9 @@ import 'observation/grafana/justfile'
 
 # --- Aggregate targets ---
 
-deploy-sys: coredns-deploy democratic-csi-deploy cert-manager-deploy metallb-deploy ingress-internal-deploy ingress-external-deploy oauth2-proxy-deploy victoriametrics-deploy telegraf-deploy telegraf-snmp-deploy kube-state-metrics-deploy grafana-deploy
+deploy-sys: coredns-deploy democratic-csi-deploy cert-manager-deploy metallb-deploy ingress-internal-deploy ingress-external-deploy victoriametrics-deploy telegraf-deploy telegraf-snmp-deploy kube-state-metrics-deploy grafana-deploy
 
-remove-sys: coredns-remove democratic-csi-remove cert-manager-remove metallb-remove ingress-internal-remove ingress-external-remove oauth2-proxy-remove grafana-remove kube-state-metrics-remove telegraf-snmp-remove telegraf-remove victoriametrics-remove
+remove-sys: coredns-remove democratic-csi-remove cert-manager-remove metallb-remove ingress-internal-remove ingress-external-remove grafana-remove kube-state-metrics-remove telegraf-snmp-remove telegraf-remove victoriametrics-remove
 
 deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy synology-dsm-deploy qbittorrent-deploy mealie-deploy seerr-deploy decluttarr-deploy
 

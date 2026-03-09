@@ -60,8 +60,7 @@ The Synology DS720+ provides reliable, expandable network storage using [Synolog
 | Load Balancer | MetalLB (L2 mode) | Assigns IPs from a local pool (192.168.1.220-239) |
 | Ingress | ingress-nginx (x2) | Dual controllers: `nginx-internal` (LAN) and `nginx-external` (internet-facing) |
 | TLS | cert-manager | LetsEncrypt certificates via Cloudflare DNS-01 challenge |
-| Auth | oauth2-proxy | GitHub-backed authentication for protected services |
-| Observability | fluent-bit, Loki, kube-prometheus-stack | Log aggregation and metrics with Grafana dashboards |
+| Observability | VictoriaMetrics, Telegraf, Grafana | Metrics collection and dashboards |
 | Deployment | just + kubectl / Helmfile | just-driven deploys (not GitOps); Helmfile for complex upstream charts |
 
 ## Repository Layout
