@@ -7,5 +7,6 @@ releases:
 - name: democratic-csi-nfs-synology-app-data
   namespace: democratic-csi
   chart: democratic-csi/democratic-csi
+  version: 0.15.1
   values:
   - ./democratic-csi-nfs-synology-app-data.helm-values.yml

@@ -2,13 +2,15 @@
 csiDriver:
   # should be globally unique for a given cluster
   name: org.democratic-csi.nfs-client.synology-app-data
-
+  attachRequired: false
 
 controller:
   strategy: node
+  externalAttacher:
+    enabled: false
   externalResizer:
     enabled: false
-  external-snapshotter:
+  externalSnapshotter:
     enabled: false
 
 node:
