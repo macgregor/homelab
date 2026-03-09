@@ -19,10 +19,6 @@ controller:
 
   name: controller-internal
 
-  podAnnotations:
-    fluentbit.io/parser_stdout: "k8s-nginx-ingress-stdout"
-    fluentbit.io/parser_stderr: "k8s-ingress-nginx-stderr"
-
   hostname: nginx-internal-lb
   ingressClass: nginx-internal
   electionID: nginx-internal-leader

@@ -23,10 +23,6 @@ controller:
 
   name: controller-external
 
-  podAnnotations:
-    fluentbit.io/parser_stdout: "k8s-nginx-ingress-stdout"
-    fluentbit.io/parser_stderr: "k8s-ingress-nginx-stderr"
-
   hostname: nginx-external-lb
   ingressClass: nginx-external
   electionID: nginx-external-leader

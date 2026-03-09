@@ -6,6 +6,7 @@ helmDefaults:
 releases:
 - name: ingress-nginx-external
   chart: ingress-nginx/ingress-nginx
+  version: 4.15.0
   namespace: ingress-nginx
   values:
   - ./helm-values.yml
