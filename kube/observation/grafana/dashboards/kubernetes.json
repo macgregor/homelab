@@ -10,18 +10,8 @@
     }
   ],
   "__requires": [
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "10.0.0"
-    }
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" },
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" }
   ],
   "id": null,
   "uid": "kubernetes",
@@ -31,10 +21,7 @@
   "timezone": "browser",
   "editable": false,
   "graphTooltip": 1,
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
+  "time": { "from": "now-6h", "to": "now" },
   "refresh": "1m",
   "schemaVersion": 39,
   "version": 1,
@@ -44,11 +31,7 @@
         "name": "DS_VICTORIAMETRICS",
         "type": "datasource",
         "query": "prometheus",
-        "current": {
-          "selected": true,
-          "text": "VictoriaMetrics",
-          "value": "VictoriaMetrics"
-        },
+        "current": { "selected": true, "text": "VictoriaMetrics", "value": "VictoriaMetrics" },
         "hide": 0,
         "label": "Datasource"
       },
@@ -61,11 +44,7 @@
         "includeAll": true,
         "multi": true,
         "allValue": ".*",
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
+        "current": { "selected": true, "text": "All", "value": "$__all" },
         "hide": 0,
         "label": "Namespace"
       }
@@ -73,402 +52,561 @@
   },
   "panels": [
     {
-      "title": "Cluster",
+      "title": "Nodes",
       "type": "row",
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
     },
     {
-      "title": "Nodes",
-      "type": "stat",
+      "id": 100,
+      "title": "k3-m1",
+      "type": "grafana-polystat-panel",
       "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 1 },
       "targets": [
-        {
-          "expr": "count(kube_node_info)",
-          "legendFormat": "Total Nodes",
-          "refId": "A"
-        }
-      ]
+        { "refId": "A", "expr": "100 - cpu_usage_idle{cpu=\"cpu-total\", host=\"k3-m1\"}", "legendFormat": "CPU", "instant": true },
+        { "refId": "B", "expr": "mem_used_percent{host=\"k3-m1\"}", "legendFormat": "Memory", "instant": true },
+        { "refId": "C", "expr": "sum(kube_pod_info{node=\"k3-m1\"})", "legendFormat": "Pods", "instant": true }
+      ],
+      "options": {
+        "autoSizeColumns": true, "autoSizeRows": true, "autoSizePolygons": true,
+        "ellipseCharacters": 18, "ellipseEnabled": true,
+        "globalAutoScaleFonts": true,
+        "globalClickthrough": "", "globalClickthroughNewTabEnabled": true, "globalClickthroughSanitizedEnabled": true,
+        "globalClickthroughCustomTargetEnabled": false, "globalClickthroughCustomTarget": "",
+        "globalDecimals": 0, "globalDisplayMode": "all", "globalDisplayTextTriggeredEmpty": "OK",
+        "globalFillColor": "#0a55a1", "globalGradientsEnabled": true,
+        "globalLabelFontSize": 11, "globalValueFontSize": 18, "globalCompositeValueFontSize": 18,
+        "globalOperator": "last",
+        "globalPolygonBorderSize": 2, "globalPolygonBorderColor": "rgba(0,0,0,0.2)", "globalPolygonSize": "",
+        "globalRegexPattern": "", "globalShape": "hexagon_pointed_top",
+        "globalShowValueEnabled": true,
+        "globalShowTimestampEnabled": false, "globalShowTimestampFormat": "", "globalShowTimestampFontSize": 12,
+        "globalShowTimestampPosition": "below_value", "globalShowTimestampYOffset": 0,
+        "globalShowTooltipColumnHeadersEnabled": true,
+        "globalTextFontAutoColor": "#FFFFFF", "globalTextFontAutoColorEnabled": true, "globalTextFontColor": "#FFFFFF",
+        "globalTextFontFamily": "Inter",
+        "globalThresholdsConfig": [
+          { "color": "#299c46", "state": 0, "value": 0 },
+          { "color": "#ed8128", "state": 1, "value": 70 },
+          { "color": "#f53636", "state": 2, "value": 90 }
+        ],
+        "globalTooltipsEnabled": true, "globalTooltipsShowTimestampEnabled": true, "globalTooltipsShowValueEnabled": true,
+        "globalTooltipsFontFamily": "Inter", "globalUnitFormat": "percent",
+        "layoutDisplayLimit": 100, "layoutNumColumns": 2, "layoutNumRows": 0,
+        "panelHeight": 0, "panelWidth": 0, "panelId": 0, "radius": null,
+        "sortByField": "name", "sortByDirection": 1,
+        "overrideConfig": {
+          "overrides": [
+            {
+              "label": "CPU", "metricName": "/^CPU/", "alias": "",
+              "thresholds": [
+                { "color": "#299c46", "state": 0, "value": 0 },
+                { "color": "#ed8128", "state": 1, "value": 70 },
+                { "color": "#f53636", "state": 2, "value": 90 }
+              ],
+              "colors": ["#299c46", "#ed8128", "#f53636"],
+              "unitFormat": "percent", "decimals": 0, "scaledDecimals": 0, "enabled": true,
+              "operatorName": "last", "prefix": "", "suffix": "",
+              "clickThrough": "", "clickThroughSanitize": true, "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false, "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false, "showTimestampFormat": "", "showTimestampYOffset": 0, "order": 0
+            },
+            {
+              "label": "Memory", "metricName": "/^Memory/", "alias": "",
+              "thresholds": [
+                { "color": "#299c46", "state": 0, "value": 0 },
+                { "color": "#ed8128", "state": 1, "value": 70 },
+                { "color": "#f53636", "state": 2, "value": 90 }
+              ],
+              "colors": ["#299c46", "#ed8128", "#f53636"],
+              "unitFormat": "percent", "decimals": 0, "scaledDecimals": 0, "enabled": true,
+              "operatorName": "last", "prefix": "", "suffix": "",
+              "clickThrough": "", "clickThroughSanitize": true, "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false, "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false, "showTimestampFormat": "", "showTimestampYOffset": 0, "order": 1
+            },
+            {
+              "label": "Pods", "metricName": "/^Pods/", "alias": "",
+              "thresholds": [{ "color": "#299c46", "state": 0, "value": 0 }],
+              "colors": ["#299c46"],
+              "unitFormat": "short", "decimals": 0, "scaledDecimals": 0, "enabled": true,
+              "operatorName": "last", "prefix": "", "suffix": "",
+              "clickThrough": "", "clickThroughSanitize": true, "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false, "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false, "showTimestampFormat": "", "showTimestampYOffset": 0, "order": 2
+            }
+          ]
+        },
+        "compositeGlobalAliasingEnabled": false,
+        "compositeConfig": { "animationSpeed": "2000", "composites": [], "enabled": false },
+        "tooltipPrimarySortDirection": 0, "tooltipPrimarySortByField": "name",
+        "tooltipSecondarySortDirection": 0, "tooltipSecondarySortByField": "value",
+        "tooltipDisplayMode": "all", "tooltipDisplayTextTriggeredEmpty": "OK"
+      },
+      "fieldConfig": { "defaults": {}, "overrides": [] }
     },
     {
-      "title": "Nodes Ready",
-      "type": "stat",
+      "id": 101,
+      "title": "k3-n1",
+      "type": "grafana-polystat-panel",
       "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 1 },
       "targets": [
-        {
-          "expr": "sum(kube_node_status_condition{condition=\"Ready\",status=\"true\"})",
-          "legendFormat": "Ready",
-          "refId": "A"
-        }
-      ]
+        { "refId": "A", "expr": "100 - cpu_usage_idle{cpu=\"cpu-total\", host=\"k3-n1\"}", "legendFormat": "CPU", "instant": true },
+        { "refId": "B", "expr": "mem_used_percent{host=\"k3-n1\"}", "legendFormat": "Memory", "instant": true },
+        { "refId": "C", "expr": "sum(kube_pod_info{node=\"k3-n1\"})", "legendFormat": "Pods", "instant": true }
+      ],
+      "options": {
+        "autoSizeColumns": true, "autoSizeRows": true, "autoSizePolygons": true,
+        "ellipseCharacters": 18, "ellipseEnabled": true,
+        "globalAutoScaleFonts": true,
+        "globalClickthrough": "", "globalClickthroughNewTabEnabled": true, "globalClickthroughSanitizedEnabled": true,
+        "globalClickthroughCustomTargetEnabled": false, "globalClickthroughCustomTarget": "",
+        "globalDecimals": 0, "globalDisplayMode": "all", "globalDisplayTextTriggeredEmpty": "OK",
+        "globalFillColor": "#0a55a1", "globalGradientsEnabled": true,
+        "globalLabelFontSize": 11, "globalValueFontSize": 18, "globalCompositeValueFontSize": 18,
+        "globalOperator": "last",
+        "globalPolygonBorderSize": 2, "globalPolygonBorderColor": "rgba(0,0,0,0.2)", "globalPolygonSize": "",
+        "globalRegexPattern": "", "globalShape": "hexagon_pointed_top",
+        "globalShowValueEnabled": true,
+        "globalShowTimestampEnabled": false, "globalShowTimestampFormat": "", "globalShowTimestampFontSize": 12,
+        "globalShowTimestampPosition": "below_value", "globalShowTimestampYOffset": 0,
+        "globalShowTooltipColumnHeadersEnabled": true,
+        "globalTextFontAutoColor": "#FFFFFF", "globalTextFontAutoColorEnabled": true, "globalTextFontColor": "#FFFFFF",
+        "globalTextFontFamily": "Inter",
+        "globalThresholdsConfig": [
+          { "color": "#299c46", "state": 0, "value": 0 },
+          { "color": "#ed8128", "state": 1, "value": 70 },
+          { "color": "#f53636", "state": 2, "value": 90 }
+        ],
+        "globalTooltipsEnabled": true, "globalTooltipsShowTimestampEnabled": true, "globalTooltipsShowValueEnabled": true,
+        "globalTooltipsFontFamily": "Inter", "globalUnitFormat": "percent",
+        "layoutDisplayLimit": 100, "layoutNumColumns": 2, "layoutNumRows": 0,
+        "panelHeight": 0, "panelWidth": 0, "panelId": 0, "radius": null,
+        "sortByField": "name", "sortByDirection": 1,
+        "overrideConfig": {
+          "overrides": [
+            {
+              "label": "CPU", "metricName": "/^CPU/", "alias": "",
+              "thresholds": [
+                { "color": "#299c46", "state": 0, "value": 0 },
+                { "color": "#ed8128", "state": 1, "value": 70 },
+                { "color": "#f53636", "state": 2, "value": 90 }
+              ],
+              "colors": ["#299c46", "#ed8128", "#f53636"],
+              "unitFormat": "percent", "decimals": 0, "scaledDecimals": 0, "enabled": true,
+              "operatorName": "last", "prefix": "", "suffix": "",
+              "clickThrough": "", "clickThroughSanitize": true, "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false, "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false, "showTimestampFormat": "", "showTimestampYOffset": 0, "order": 0
+            },
+            {
+              "label": "Memory", "metricName": "/^Memory/", "alias": "",
+              "thresholds": [
+                { "color": "#299c46", "state": 0, "value": 0 },
+                { "color": "#ed8128", "state": 1, "value": 70 },
+                { "color": "#f53636", "state": 2, "value": 90 }
+              ],
+              "colors": ["#299c46", "#ed8128", "#f53636"],
+              "unitFormat": "percent", "decimals": 0, "scaledDecimals": 0, "enabled": true,
+              "operatorName": "last", "prefix": "", "suffix": "",
+              "clickThrough": "", "clickThroughSanitize": true, "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false, "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false, "showTimestampFormat": "", "showTimestampYOffset": 0, "order": 1
+            },
+            {
+              "label": "Pods", "metricName": "/^Pods/", "alias": "",
+              "thresholds": [{ "color": "#299c46", "state": 0, "value": 0 }],
+              "colors": ["#299c46"],
+              "unitFormat": "short", "decimals": 0, "scaledDecimals": 0, "enabled": true,
+              "operatorName": "last", "prefix": "", "suffix": "",
+              "clickThrough": "", "clickThroughSanitize": true, "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false, "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false, "showTimestampFormat": "", "showTimestampYOffset": 0, "order": 2
+            }
+          ]
+        },
+        "compositeGlobalAliasingEnabled": false,
+        "compositeConfig": { "animationSpeed": "2000", "composites": [], "enabled": false },
+        "tooltipPrimarySortDirection": 0, "tooltipPrimarySortByField": "name",
+        "tooltipSecondarySortDirection": 0, "tooltipSecondarySortByField": "value",
+        "tooltipDisplayMode": "all", "tooltipDisplayTextTriggeredEmpty": "OK"
+      },
+      "fieldConfig": { "defaults": {}, "overrides": [] }
     },
     {
-      "title": "Total Pods",
+      "id": 102,
+      "title": "Cluster",
       "type": "stat",
       "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 1 },
+      "targets": [
+        { "refId": "A", "expr": "count(kube_node_info)", "legendFormat": "Nodes", "instant": true },
+        { "refId": "B", "expr": "sum(kube_node_status_condition{condition=\"Ready\",status=\"true\"})", "legendFormat": "Ready", "instant": true },
+        { "refId": "C", "expr": "sum(kube_pod_status_phase{phase=\"Running\"})", "legendFormat": "Running Pods", "instant": true },
+        { "refId": "D", "expr": "count(kube_deployment_spec_replicas)", "legendFormat": "Deployments", "instant": true }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "none", "colorMode": "background", "textMode": "value_and_name",
+        "justifyMode": "center", "orientation": "auto"
+      },
       "fieldConfig": {
         "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
-          }
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
         },
         "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "expr": "sum(kube_pod_status_phase{namespace=~\"$namespace\",phase=\"Running\"})",
-          "legendFormat": "Running",
-          "refId": "A"
-        }
-      ]
+      }
+    },
+
+    {
+      "title": "Resource Usage",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 }
     },
     {
-      "title": "Pod Phases",
+      "id": 130,
+      "title": "Memory by Container",
       "type": "piechart",
       "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
-      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 1 },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "green", "value": null }
-            ]
-          },
-          "color": { "mode": "fixed" }
-        },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Running" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Succeeded" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Pending" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Failed" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Unknown" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }]
-          }
-        ]
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "pieType": "donut",
-        "legend": {
-          "displayMode": "list",
-          "placement": "right",
-          "values": ["value"]
-        }
-      },
+      "gridPos": { "h": 12, "w": 12, "x": 0, "y": 8 },
       "targets": [
         {
-          "expr": "sum by (phase) (kube_pod_status_phase{namespace=~\"$namespace\"})",
-          "legendFormat": "{{ phase }}",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "title": "Pods",
-      "type": "row",
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
-    },
-    {
-      "title": "Unhealthy Pods",
-      "type": "table",
-      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 6 },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto"
-          }
-        },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Time" },
-            "properties": [{ "id": "custom.hidden", "value": true }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Value" },
-            "properties": [{ "id": "custom.hidden", "value": true }]
-          }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "sortBy": [{ "displayName": "reason", "desc": false }]
-      },
-      "targets": [
-        {
-          "expr": "kube_pod_container_status_waiting_reason{namespace=~\"$namespace\"} > 0",
-          "legendFormat": "",
           "refId": "A",
-          "format": "table",
+          "expr": "sort_desc(\n  sum by (workload, namespace) (\n    label_replace(\n      label_replace(\n        label_replace(\n          label_replace(\n            kubernetes_pod_container_memory_working_set_bytes{namespace=~\"$namespace\"},\n            \"workload\", \"$1\", \"pod_name\", \"(.+)\"\n          ),\n          \"workload\", \"$1\", \"pod_name\", \"(.+)-[0-9]+$\"\n        ),\n        \"workload\", \"$1\", \"pod_name\", \"(.+)-[a-z0-9]{5}$\"\n      ),\n      \"workload\", \"$1\", \"pod_name\", \"(.+)-[0-9a-f]{6,10}-[a-z0-9]{5}$\"\n    )\n  )\n)",
+          "legendFormat": "{{ namespace }}/{{ workload }}",
           "instant": true
         }
-      ]
-    },
-    {
-      "title": "Restarts",
-      "type": "row",
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 12 }
-    },
-    {
-      "title": "Top Restarting Containers",
-      "type": "table",
-      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 13 },
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
+        "tooltip": { "mode": "single" },
+        "pieType": "donut",
+        "displayLabels": []
+      },
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "align": "auto"
-          },
+          "unit": "bytes",
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 131,
+      "title": "CPU by Container",
+      "type": "piechart",
+      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
+      "gridPos": { "h": 12, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sort_desc(\n  sum by (workload, namespace) (\n    label_replace(\n      label_replace(\n        label_replace(\n          label_replace(\n            kubernetes_pod_container_cpu_usage_nanocores{namespace=~\"$namespace\"},\n            \"workload\", \"$1\", \"pod_name\", \"(.+)\"\n          ),\n          \"workload\", \"$1\", \"pod_name\", \"(.+)-[0-9]+$\"\n        ),\n        \"workload\", \"$1\", \"pod_name\", \"(.+)-[a-z0-9]{5}$\"\n      ),\n      \"workload\", \"$1\", \"pod_name\", \"(.+)-[0-9a-f]{6,10}-[a-z0-9]{5}$\"\n    )\n  ) / 1e6\n)",
+          "legendFormat": "{{ namespace }}/{{ workload }}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
+        "tooltip": { "mode": "single" },
+        "pieType": "donut",
+        "displayLabels": []
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "mmcpu",
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      }
+    },
+
+    {
+      "title": "Workload Health",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 }
+    },
+    {
+      "id": 132,
+      "title": "Container Restarts",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 21 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(\n  max_over_time(kube_pod_container_status_restarts_total{namespace=~\"$namespace\"}[$__range])\n  - min_over_time(kube_pod_container_status_restarts_total{namespace=~\"$namespace\"}[$__range])\n) or vector(0)",
+          "legendFormat": "Restarts",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "none", "colorMode": "background", "textMode": "value_and_name",
+        "justifyMode": "center", "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
           "thresholds": {
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 5 },
-              { "color": "red", "value": 20 }
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
             ]
           }
         },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Time" },
-            "properties": [{ "id": "custom.hidden", "value": true }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Value" },
-            "properties": [
-              { "id": "displayName", "value": "Restarts" },
-              { "id": "custom.cellOptions", "value": { "type": "color-background" } }
+        "overrides": []
+      }
+    },
+    {
+      "id": 140,
+      "title": "Failed Jobs",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 21 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(kube_job_status_failed{namespace=~\"$namespace\"}) or vector(0)",
+          "legendFormat": "Failed Jobs",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "none", "colorMode": "background", "textMode": "value_and_name",
+        "justifyMode": "center", "orientation": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
             ]
           }
-        ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 143,
+      "title": "Unavailable Deployments",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 21 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "count(\n  kube_deployment_spec_replicas{namespace=~\"$namespace\"} > 0\n  unless\n  kube_deployment_status_replicas_available{namespace=~\"$namespace\"} > 0\n) or vector(0)",
+          "legendFormat": "Unavailable",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "none", "colorMode": "background", "textMode": "value_and_name",
+        "justifyMode": "center", "orientation": "auto"
       },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 133,
+      "title": "Pod Phases",
+      "type": "piechart",
+      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 21 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (phase) (kube_pod_status_phase{namespace=~\"$namespace\"})",
+          "legendFormat": "{{ phase }}",
+          "instant": true
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "legend": { "displayMode": "list", "placement": "right" },
+        "tooltip": { "mode": "multi" },
+        "pieType": "donut"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Running" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] },
+          { "matcher": { "id": "byName", "options": "Succeeded" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "blue" } }] },
+          { "matcher": { "id": "byName", "options": "Pending" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }] },
+          { "matcher": { "id": "byName", "options": "Failed" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+          { "matcher": { "id": "byName", "options": "Unknown" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "orange" } }] }
+        ]
+      }
+    },
+    {
+      "id": 141,
+      "title": "Restarting Containers",
+      "description": "Containers that restarted during the selected time range",
+      "type": "table",
+      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 25 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sort_desc(\n  sum by (container, namespace, pod) (\n    max_over_time(kube_pod_container_status_restarts_total{namespace=~\"$namespace\"}[$__range])\n    - min_over_time(kube_pod_container_status_restarts_total{namespace=~\"$namespace\"}[$__range])\n  ) > 0\n)",
+          "legendFormat": "",
+          "instant": true,
+          "format": "table"
+        }
+      ],
       "options": {
         "showHeader": true,
         "sortBy": [{ "displayName": "Restarts", "desc": true }]
       },
-      "targets": [
-        {
-          "expr": "topk(10, kube_pod_container_status_restarts_total{namespace=~\"$namespace\"} > 0)",
-          "legendFormat": "",
-          "refId": "A",
-          "format": "table",
-          "instant": true
-        }
-      ]
-    },
-    {
-      "title": "Resources",
-      "type": "row",
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 }
-    },
-    {
-      "title": "CPU Requests vs Limits by Namespace",
-      "type": "timeseries",
-      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "spanNulls": false
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "tooltip": { "mode": "multi", "sort": "desc" },
-        "legend": { "displayMode": "list", "placement": "bottom" }
-      },
-      "targets": [
-        {
-          "expr": "sum by (namespace) (kube_pod_container_resource_requests{resource=\"cpu\",namespace=~\"$namespace\"})",
-          "legendFormat": "{{ namespace }} requests",
-          "refId": "A"
-        },
-        {
-          "expr": "sum by (namespace) (kube_pod_container_resource_limits{resource=\"cpu\",namespace=~\"$namespace\"})",
-          "legendFormat": "{{ namespace }} limits",
-          "refId": "B"
-        }
-      ]
-    },
-    {
-      "title": "Memory Requests vs Limits by Namespace",
-      "type": "timeseries",
-      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "custom": {
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "spanNulls": false
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "tooltip": { "mode": "multi", "sort": "desc" },
-        "legend": { "displayMode": "list", "placement": "bottom" }
-      },
-      "targets": [
-        {
-          "expr": "sum by (namespace) (kube_pod_container_resource_requests{resource=\"memory\",namespace=~\"$namespace\"})",
-          "legendFormat": "{{ namespace }} requests",
-          "refId": "A"
-        },
-        {
-          "expr": "sum by (namespace) (kube_pod_container_resource_limits{resource=\"memory\",namespace=~\"$namespace\"})",
-          "legendFormat": "{{ namespace }} limits",
-          "refId": "B"
-        }
-      ]
-    },
-    {
-      "title": "Deployments",
-      "type": "row",
-      "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 28 }
-    },
-    {
-      "title": "Deployment Availability",
-      "type": "table",
-      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 29 },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto"
-          }
-        },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Time" },
-            "properties": [{ "id": "custom.hidden", "value": true }]
-          }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "sortBy": [{ "displayName": "namespace", "desc": false }]
-      },
       "transformations": [
-        {
-          "id": "joinByField",
-          "options": { "byField": "deployment", "mode": "outer" }
-        },
         {
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Time": true,
-              "Time 1": true,
-              "Time 2": true
+              "Time": true, "__name__": true, "job": true, "instance": true, "uid": true
             },
             "renameByName": {
-              "Value #A": "Available",
-              "Value #B": "Desired"
-            }
+              "namespace": "Namespace", "pod": "Pod", "container": "Container", "Value": "Restarts"
+            },
+            "indexByName": { "namespace": 0, "pod": 1, "container": 2, "Value": 3 }
           }
         }
       ],
+      "fieldConfig": {
+        "defaults": { "noValue": "No restarts" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Restarts" },
+            "properties": [
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "yellow", "value": null }, { "color": "red", "value": 5 }] } },
+              { "id": "custom.displayMode", "value": "color-background-solid" }
+            ]
+          }
+        ]
+      }
+    },
+
+    {
+      "title": "Resource Trends",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 },
+      "panels": [
+    {
+      "id": 170,
+      "title": "Memory by Namespace",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
+      "gridPos": { "h": 10, "w": 8, "x": 0, "y": 30 },
       "targets": [
         {
-          "expr": "kube_deployment_status_replicas_available{namespace=~\"$namespace\"}",
-          "legendFormat": "",
           "refId": "A",
-          "format": "table",
-          "instant": true
+          "expr": "sum by (namespace) (kubernetes_pod_container_memory_working_set_bytes{namespace=~\"$namespace\"})",
+          "legendFormat": "{{ namespace }}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "drawStyle": "line", "lineInterpolation": "smooth",
+            "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never",
+            "stacking": { "mode": "none" }
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 171,
+      "title": "CPU by Namespace",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
+      "gridPos": { "h": 10, "w": 8, "x": 8, "y": 30 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (namespace) (kubernetes_pod_container_cpu_usage_nanocores{namespace=~\"$namespace\"}) / 1e6",
+          "legendFormat": "{{ namespace }}"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "mmcpu",
+          "custom": {
+            "drawStyle": "line", "lineInterpolation": "smooth",
+            "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never",
+            "stacking": { "mode": "none" }
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 172,
+      "title": "Network I/O by Namespace",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${DS_VICTORIAMETRICS}" },
+      "gridPos": { "h": 10, "w": 8, "x": 16, "y": 30 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (namespace) (rate(kubernetes_pod_network_rx_bytes{namespace=~\"$namespace\"}[5m]))",
+          "legendFormat": "{{ namespace }} rx"
         },
         {
-          "expr": "kube_deployment_spec_replicas{namespace=~\"$namespace\"}",
-          "legendFormat": "",
           "refId": "B",
-          "format": "table",
-          "instant": true
+          "expr": "-sum by (namespace) (rate(kubernetes_pod_network_tx_bytes{namespace=~\"$namespace\"}[5m]))",
+          "legendFormat": "{{ namespace }} tx"
         }
+      ],
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "drawStyle": "line", "lineInterpolation": "smooth",
+            "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never",
+            "stacking": { "mode": "none" },
+            "axisCenteredZero": true
+          }
+        },
+        "overrides": []
+      }
+    }
       ]
     }
   ]
