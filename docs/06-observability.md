@@ -4,7 +4,7 @@ description: >
   Load this document when working with logging, monitoring, or observability
   infrastructure.
 categories: [kubernetes, observability]
-tags: [logging, monitoring, metrics, grafana, victoriametrics, telegraf, snmp]
+tags: [logging, monitoring, metrics, grafana, victoriametrics, telegraf, snmp, kube-state-metrics, dashboards]
 complexity: intermediate
 ---
 
@@ -32,14 +32,16 @@ The homelab runs a VictoriaMetrics + Telegraf + Grafana stack for metrics collec
     │  VictoriaMetrics    │◄────│  Telegraf DS      │ (DaemonSet, one per node)
     │  victoriametrics    │     │  telegraf         │
     │  (TSDB)             │     │  influxdb_v2      │
-    └──────────┬──────────┘     └──────────────────┘
-               │                  collects: cpu, mem, disk,
-               │                  diskio, net, system,
-    ┌──────────▼──────────┐       processes, kubernetes
-    │  Grafana            │
-    │  grafana            │
-    │  (Dashboards)       │
-    └─────────────────────┘
+    │                     │◄────┤                   │
+    │  also scrapes:      │     └──────────────────┘
+    │  kube-state-metrics │       collects: cpu, mem, disk,
+    └──────────┬──────────┘       diskio, net, system,
+               │                  processes, kubernetes
+    ┌──────────▼──────────┐
+    │  Grafana            │  ┌──────────────────────┐
+    │  grafana            │  │  kube-state-metrics   │
+    │  (Dashboards)       │  │  (k8s object state)   │
+    └─────────────────────┘  └──────────────────────┘
 ```
 
 ## Components
@@ -72,6 +74,13 @@ Polls MikroTik router and Synology NAS via SNMPv2c from a single pod inside the 
 
 **SNMP community string:** Injected via `SNMP_COMMUNITY` env var through `.gotmpl` template
 
+### kube-state-metrics (`kube/observation/kube-state-metrics/`)
+
+Exposes Kubernetes object state as Prometheus metrics: pod phase, restart counts, resource requests/limits, deployment status, node conditions. Scraped by VictoriaMetrics on a 30-second interval.
+
+- **Port:** 8080 (Prometheus scrape target)
+- **In-cluster URL:** `http://kube-state-metrics.obs.svc:8080`
+
 ### Grafana (`kube/observation/grafana/`)
 
 Dashboards and visualization. Auto-provisioned with VictoriaMetrics as a Prometheus-type datasource.
@@ -79,6 +88,12 @@ Dashboards and visualization. Auto-provisioned with VictoriaMetrics as a Prometh
 - **UI:** `https://grafana.matthew-stratton.me` (internal ingress)
 - **Admin password:** `GRAFANA_ADMIN_PASS` env var
 - **Storage:** 1Gi on `synology-nfs-app-data-retain`
+- **Dashboards:** Provisioned from ConfigMap (`grafana-dashboards`), source JSON in `kube/observation/grafana/dashboards/`
+
+Two dashboards are provisioned in the "Homelab" folder:
+
+- **Homelab Overview** -- Infrastructure health: uptime, CPU, memory, storage, temperature, network traffic, and device health status across router, NAS, and cluster nodes.
+- **Kubernetes** -- Workload state: node readiness, pod phases, container restarts, resource requests vs limits, and deployment availability. Uses kube-state-metrics data with a namespace filter variable.
 
 ## SNMP Prerequisites
 
@@ -96,12 +111,14 @@ Both use the same community string from the `SNMP_COMMUNITY` env var in `.envrc`
 just victoriametrics-deploy
 just telegraf-deploy
 just telegraf-snmp-deploy
+just kube-state-metrics-deploy
 just grafana-deploy
 
 # Check status
 just victoriametrics-status
 just telegraf-status
 just telegraf-snmp-status
+just kube-state-metrics-status
 just grafana-status
 ```
 
@@ -110,7 +127,8 @@ just grafana-status
 Query VictoriaMetrics directly or through Grafana:
 
 - **Node metrics:** `cpu_usage_idle`, `mem_used_percent`, `disk_used_percent`
-- **Kubernetes metrics:** `kubernetes_pod_container_resource_requests_cpu_cores`
+- **Kubernetes metrics (Telegraf):** `kubernetes_pod_container_resource_requests_cpu_cores`
+- **Kubernetes metrics (kube-state-metrics):** `kube_node_info`, `kube_pod_status_phase`, `kube_deployment_spec_replicas`
 - **MikroTik SNMP:** `snmp_mikrotik_cpu_load`, `snmp_mikrotik_interface_bytes_recv`
 - **Synology SNMP:** `snmp_synology_system_temperature`, `snmp_synology_disk_disk_temperature`
 

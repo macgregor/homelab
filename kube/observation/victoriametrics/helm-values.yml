@@ -28,4 +28,14 @@ server:
             values:
             - 'true'
 
+  scrape:
+    enabled: true
+    config:
+      scrape_configs:
+      - job_name: kube-state-metrics
+        static_configs:
+        - targets:
+          - kube-state-metrics.obs.svc:8080
+        scrape_interval: 30s
+
 fullnameOverride: victoriametrics

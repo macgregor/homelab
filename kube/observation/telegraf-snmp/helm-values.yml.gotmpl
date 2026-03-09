@@ -71,6 +71,8 @@ config:
             name: "memory_used"
           - oid: ".1.3.6.1.2.1.25.2.3.1.5.65536"
             name: "memory_total"
+          - oid: ".1.3.6.1.4.1.14988.1.1.3.100.1.3.17"
+            name: "cpu_temperature"
         table:
           - oid: "1.3.6.1.2.1.2.2"
             name: "snmp_mikrotik_interface"
@@ -105,9 +107,13 @@ config:
           - oid: ".1.3.6.1.4.1.2021.10.1.3.3"
             name: "load_15m"
           - oid: ".1.3.6.1.4.1.2021.4.5.0"
-            name: "memory_total_kb"
-          - oid: ".1.3.6.1.4.1.2021.4.11.0"
-            name: "memory_free_kb"
+            name: "memory_total_real_kb"
+          - oid: ".1.3.6.1.4.1.2021.4.6.0"
+            name: "memory_avail_real_kb"
+          - oid: ".1.3.6.1.4.1.2021.4.14.0"
+            name: "memory_buffered_kb"
+          - oid: ".1.3.6.1.4.1.2021.4.15.0"
+            name: "memory_cached_kb"
         table:
           - name: "snmp_synology_disk"
             inherit_tags:
@@ -142,3 +148,15 @@ config:
                 name: "storage_size"
               - oid: "1.3.6.1.2.1.25.2.3.1.6"
                 name: "storage_used"
+          - oid: "1.3.6.1.2.1.2.2"
+            name: "snmp_synology_interface"
+            inherit_tags:
+              - "source"
+            field:
+              - oid: "1.3.6.1.2.1.2.2.1.2"
+                name: "name"
+                is_tag: true
+              - oid: "1.3.6.1.2.1.2.2.1.10"
+                name: "bytes_recv"
+              - oid: "1.3.6.1.2.1.2.2.1.16"
+                name: "bytes_sent"

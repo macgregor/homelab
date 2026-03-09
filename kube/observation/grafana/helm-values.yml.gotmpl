@@ -1,3 +1,6 @@
+plugins:
+  - grafana-polystat-panel
+
 adminPassword: {{ requiredEnv "GRAFANA_ADMIN_PASS" | quote }}
 
 grafana.ini:
@@ -43,3 +46,19 @@ datasources:
       url: http://victoriametrics-server.obs.svc:8428
       access: proxy
       isDefault: true
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+    - name: homelab
+      orgId: 1
+      folder: Homelab
+      type: file
+      disableDeletion: true
+      editable: false
+      options:
+        path: /var/lib/grafana/dashboards/homelab
+
+dashboardsConfigMaps:
+  homelab: grafana-dashboards

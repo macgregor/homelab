@@ -42,6 +42,7 @@ config:
     - net: {}
     - system: {}
     - processes: {}
+    - temp: {}
     - kubernetes:
         url: "https://$HOSTIP:10250"
         bearer_token: "/var/run/secrets/kubernetes.io/serviceaccount/token"

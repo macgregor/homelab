@@ -1,6 +1,9 @@
 grafana-deploy:
     #!/usr/bin/env bash
     set -e
+    kubectl create configmap grafana-dashboards \
+      --from-file=./observation/grafana/dashboards/ \
+      -n obs --dry-run=client -o yaml | kubectl apply -f -
     helmfile --file ./observation/grafana/helmfile.yaml apply
     kubectl apply -f ./observation/grafana/network.yml
 
@@ -8,6 +11,7 @@ grafana-remove:
     #!/usr/bin/env bash
     kubectl delete -f ./observation/grafana/network.yml || true
     helmfile --file ./observation/grafana/helmfile.yaml destroy || true
+    kubectl -n obs delete configmap grafana-dashboards || true
 
 grafana-restart: (_kube-restart "obs" "deployment/grafana")
 grafana-logs: (_kube-logs "grafana" "obs" "app.kubernetes.io/name=grafana")

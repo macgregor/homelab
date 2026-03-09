@@ -1,0 +1,1859 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_VICTORIAMETRICS",
+      "label": "VictoriaMetrics",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "datasource",
+      "id": "prometheus",
+      "name": "Prometheus",
+      "version": "1.0.0"
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.0.0"
+    }
+  ],
+  "id": null,
+  "uid": "homelab-overview",
+  "title": "Homelab Overview",
+  "description": "Infrastructure overview: router, NAS, and cluster nodes",
+  "tags": [
+    "homelab"
+  ],
+  "timezone": "browser",
+  "editable": false,
+  "graphTooltip": 1,
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "version": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "DS_VICTORIAMETRICS",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {
+          "selected": true,
+          "text": "VictoriaMetrics",
+          "value": "VictoriaMetrics"
+        },
+        "hide": 0,
+        "label": "Datasource"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "title": "System Overview",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 60,
+      "title": "Router",
+      "type": "grafana-polystat-panel",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "snmp_mikrotik_cpu_load",
+          "legendFormat": "CPU",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "100 * snmp_mikrotik_memory_used / snmp_mikrotik_memory_total",
+          "legendFormat": "Memory",
+          "instant": true
+        },
+        {
+          "refId": "C",
+          "expr": "snmp_mikrotik_cpu_temperature",
+          "legendFormat": "Temp",
+          "instant": true
+        },
+        {
+          "refId": "D",
+          "expr": "snmp_mikrotik_uptime / 100",
+          "legendFormat": "Uptime",
+          "instant": true
+        }
+      ],
+      "options": {
+        "autoSizeColumns": true,
+        "autoSizeRows": true,
+        "autoSizePolygons": true,
+        "ellipseCharacters": 12,
+        "ellipseEnabled": true,
+        "globalAutoScaleFonts": true,
+        "globalClickthrough": "",
+        "globalClickthroughNewTabEnabled": true,
+        "globalClickthroughSanitizedEnabled": true,
+        "globalClickthroughCustomTargetEnabled": false,
+        "globalClickthroughCustomTarget": "",
+        "globalDecimals": 1,
+        "globalDisplayMode": "all",
+        "globalDisplayTextTriggeredEmpty": "OK",
+        "globalFillColor": "#0a55a1",
+        "globalGradientsEnabled": true,
+        "globalLabelFontSize": 12,
+        "globalValueFontSize": 20,
+        "globalCompositeValueFontSize": 20,
+        "globalOperator": "last",
+        "globalPolygonBorderSize": 2,
+        "globalPolygonBorderColor": "rgba(0,0,0,0.2)",
+        "globalPolygonSize": "",
+        "globalRegexPattern": "",
+        "globalShape": "hexagon_pointed_top",
+        "globalShowValueEnabled": true,
+        "globalShowTimestampEnabled": false,
+        "globalShowTimestampFormat": "",
+        "globalShowTimestampFontSize": 12,
+        "globalShowTimestampPosition": "below_value",
+        "globalShowTimestampYOffset": 0,
+        "globalShowTooltipColumnHeadersEnabled": true,
+        "globalTextFontAutoColor": "#FFFFFF",
+        "globalTextFontAutoColorEnabled": true,
+        "globalTextFontColor": "#FFFFFF",
+        "globalTextFontFamily": "Inter",
+        "globalThresholdsConfig": [
+          {
+            "color": "#299c46",
+            "state": 0,
+            "value": 0
+          },
+          {
+            "color": "#ed8128",
+            "state": 1,
+            "value": 70
+          },
+          {
+            "color": "#f53636",
+            "state": 2,
+            "value": 90
+          }
+        ],
+        "globalTooltipsEnabled": true,
+        "globalTooltipsShowTimestampEnabled": true,
+        "globalTooltipsShowValueEnabled": true,
+        "globalTooltipsFontFamily": "Inter",
+        "globalUnitFormat": "short",
+        "layoutDisplayLimit": 100,
+        "layoutNumColumns": 2,
+        "layoutNumRows": 0,
+        "panelHeight": 0,
+        "panelWidth": 0,
+        "panelId": 60,
+        "radius": null,
+        "sortByField": "name",
+        "sortByDirection": 1,
+        "overrideConfig": {
+          "overrides": [
+            {
+              "label": "CPU",
+              "metricName": "/^CPU$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                },
+                {
+                  "color": "#ed8128",
+                  "state": 1,
+                  "value": 70
+                },
+                {
+                  "color": "#f53636",
+                  "state": 2,
+                  "value": 90
+                }
+              ],
+              "colors": [
+                "#299c46",
+                "#ed8128",
+                "#f53636"
+              ],
+              "unitFormat": "percent",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 0
+            },
+            {
+              "label": "Memory",
+              "metricName": "/^Memory$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                },
+                {
+                  "color": "#ed8128",
+                  "state": 1,
+                  "value": 70
+                },
+                {
+                  "color": "#f53636",
+                  "state": 2,
+                  "value": 90
+                }
+              ],
+              "colors": [
+                "#299c46",
+                "#ed8128",
+                "#f53636"
+              ],
+              "unitFormat": "percent",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 1
+            },
+            {
+              "label": "Temp",
+              "metricName": "/^Temp$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                },
+                {
+                  "color": "#ed8128",
+                  "state": 1,
+                  "value": 55
+                },
+                {
+                  "color": "#f53636",
+                  "state": 2,
+                  "value": 70
+                }
+              ],
+              "colors": [
+                "#299c46",
+                "#ed8128",
+                "#f53636"
+              ],
+              "unitFormat": "celsius",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 2
+            },
+            {
+              "label": "Uptime",
+              "metricName": "/^Uptime$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                }
+              ],
+              "colors": [
+                "#299c46"
+              ],
+              "unitFormat": "dtdurations",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 3
+            }
+          ]
+        },
+        "compositeGlobalAliasingEnabled": false,
+        "compositeConfig": {
+          "animationSpeed": "2000",
+          "composites": [],
+          "enabled": false
+        },
+        "tooltipPrimarySortDirection": 0,
+        "tooltipPrimarySortByField": "name",
+        "tooltipSecondarySortDirection": 0,
+        "tooltipSecondarySortByField": "value",
+        "tooltipDisplayMode": "all",
+        "tooltipDisplayTextTriggeredEmpty": "OK"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 61,
+      "title": "NAS",
+      "type": "grafana-polystat-panel",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "snmp_synology_load_1m / 4 * 100",
+          "legendFormat": "CPU",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "100 * (snmp_synology_memory_total_real_kb - snmp_synology_memory_avail_real_kb - snmp_synology_memory_buffered_kb - snmp_synology_memory_cached_kb) / snmp_synology_memory_total_real_kb",
+          "legendFormat": "Memory",
+          "instant": true
+        },
+        {
+          "refId": "C",
+          "expr": "snmp_synology_system_temperature",
+          "legendFormat": "Temp",
+          "instant": true
+        },
+        {
+          "refId": "D",
+          "expr": "snmp_synology_uptime / 100",
+          "legendFormat": "Uptime",
+          "instant": true
+        }
+      ],
+      "options": {
+        "autoSizeColumns": true,
+        "autoSizeRows": true,
+        "autoSizePolygons": true,
+        "ellipseCharacters": 12,
+        "ellipseEnabled": true,
+        "globalAutoScaleFonts": true,
+        "globalClickthrough": "",
+        "globalClickthroughNewTabEnabled": true,
+        "globalClickthroughSanitizedEnabled": true,
+        "globalClickthroughCustomTargetEnabled": false,
+        "globalClickthroughCustomTarget": "",
+        "globalDecimals": 1,
+        "globalDisplayMode": "all",
+        "globalDisplayTextTriggeredEmpty": "OK",
+        "globalFillColor": "#0a55a1",
+        "globalGradientsEnabled": true,
+        "globalLabelFontSize": 12,
+        "globalValueFontSize": 20,
+        "globalCompositeValueFontSize": 20,
+        "globalOperator": "last",
+        "globalPolygonBorderSize": 2,
+        "globalPolygonBorderColor": "rgba(0,0,0,0.2)",
+        "globalPolygonSize": "",
+        "globalRegexPattern": "",
+        "globalShape": "hexagon_pointed_top",
+        "globalShowValueEnabled": true,
+        "globalShowTimestampEnabled": false,
+        "globalShowTimestampFormat": "",
+        "globalShowTimestampFontSize": 12,
+        "globalShowTimestampPosition": "below_value",
+        "globalShowTimestampYOffset": 0,
+        "globalShowTooltipColumnHeadersEnabled": true,
+        "globalTextFontAutoColor": "#FFFFFF",
+        "globalTextFontAutoColorEnabled": true,
+        "globalTextFontColor": "#FFFFFF",
+        "globalTextFontFamily": "Inter",
+        "globalThresholdsConfig": [
+          {
+            "color": "#299c46",
+            "state": 0,
+            "value": 0
+          },
+          {
+            "color": "#ed8128",
+            "state": 1,
+            "value": 70
+          },
+          {
+            "color": "#f53636",
+            "state": 2,
+            "value": 90
+          }
+        ],
+        "globalTooltipsEnabled": true,
+        "globalTooltipsShowTimestampEnabled": true,
+        "globalTooltipsShowValueEnabled": true,
+        "globalTooltipsFontFamily": "Inter",
+        "globalUnitFormat": "short",
+        "layoutDisplayLimit": 100,
+        "layoutNumColumns": 2,
+        "layoutNumRows": 0,
+        "panelHeight": 0,
+        "panelWidth": 0,
+        "panelId": 61,
+        "radius": null,
+        "sortByField": "name",
+        "sortByDirection": 1,
+        "overrideConfig": {
+          "overrides": [
+            {
+              "label": "CPU",
+              "metricName": "/^CPU$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                },
+                {
+                  "color": "#ed8128",
+                  "state": 1,
+                  "value": 70
+                },
+                {
+                  "color": "#f53636",
+                  "state": 2,
+                  "value": 90
+                }
+              ],
+              "colors": [
+                "#299c46",
+                "#ed8128",
+                "#f53636"
+              ],
+              "unitFormat": "percent",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 0
+            },
+            {
+              "label": "Memory",
+              "metricName": "/^Memory$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                },
+                {
+                  "color": "#ed8128",
+                  "state": 1,
+                  "value": 70
+                },
+                {
+                  "color": "#f53636",
+                  "state": 2,
+                  "value": 90
+                }
+              ],
+              "colors": [
+                "#299c46",
+                "#ed8128",
+                "#f53636"
+              ],
+              "unitFormat": "percent",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 1
+            },
+            {
+              "label": "Temp",
+              "metricName": "/^Temp$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                },
+                {
+                  "color": "#ed8128",
+                  "state": 1,
+                  "value": 55
+                },
+                {
+                  "color": "#f53636",
+                  "state": 2,
+                  "value": 70
+                }
+              ],
+              "colors": [
+                "#299c46",
+                "#ed8128",
+                "#f53636"
+              ],
+              "unitFormat": "celsius",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 2
+            },
+            {
+              "label": "Uptime",
+              "metricName": "/^Uptime$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                }
+              ],
+              "colors": [
+                "#299c46"
+              ],
+              "unitFormat": "dtdurations",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 3
+            }
+          ]
+        },
+        "compositeGlobalAliasingEnabled": false,
+        "compositeConfig": {
+          "animationSpeed": "2000",
+          "composites": [],
+          "enabled": false
+        },
+        "tooltipPrimarySortDirection": 0,
+        "tooltipPrimarySortByField": "name",
+        "tooltipSecondarySortDirection": 0,
+        "tooltipSecondarySortByField": "value",
+        "tooltipDisplayMode": "all",
+        "tooltipDisplayTextTriggeredEmpty": "OK"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 62,
+      "title": "k3-m1",
+      "type": "grafana-polystat-panel",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 - cpu_usage_idle{cpu=\"cpu-total\", host=\"k3-m1\"}",
+          "legendFormat": "CPU",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "mem_used_percent{host=\"k3-m1\"}",
+          "legendFormat": "Memory",
+          "instant": true
+        },
+        {
+          "refId": "C",
+          "expr": "temp_temp{sensor=\"cpu_thermal\", host=\"k3-m1\"}",
+          "legendFormat": "Temp",
+          "instant": true
+        },
+        {
+          "refId": "D",
+          "expr": "system_uptime{host=\"k3-m1\"}",
+          "legendFormat": "Uptime",
+          "instant": true
+        }
+      ],
+      "options": {
+        "autoSizeColumns": true,
+        "autoSizeRows": true,
+        "autoSizePolygons": true,
+        "ellipseCharacters": 12,
+        "ellipseEnabled": true,
+        "globalAutoScaleFonts": true,
+        "globalClickthrough": "",
+        "globalClickthroughNewTabEnabled": true,
+        "globalClickthroughSanitizedEnabled": true,
+        "globalClickthroughCustomTargetEnabled": false,
+        "globalClickthroughCustomTarget": "",
+        "globalDecimals": 1,
+        "globalDisplayMode": "all",
+        "globalDisplayTextTriggeredEmpty": "OK",
+        "globalFillColor": "#0a55a1",
+        "globalGradientsEnabled": true,
+        "globalLabelFontSize": 12,
+        "globalValueFontSize": 20,
+        "globalCompositeValueFontSize": 20,
+        "globalOperator": "last",
+        "globalPolygonBorderSize": 2,
+        "globalPolygonBorderColor": "rgba(0,0,0,0.2)",
+        "globalPolygonSize": "",
+        "globalRegexPattern": "",
+        "globalShape": "hexagon_pointed_top",
+        "globalShowValueEnabled": true,
+        "globalShowTimestampEnabled": false,
+        "globalShowTimestampFormat": "",
+        "globalShowTimestampFontSize": 12,
+        "globalShowTimestampPosition": "below_value",
+        "globalShowTimestampYOffset": 0,
+        "globalShowTooltipColumnHeadersEnabled": true,
+        "globalTextFontAutoColor": "#FFFFFF",
+        "globalTextFontAutoColorEnabled": true,
+        "globalTextFontColor": "#FFFFFF",
+        "globalTextFontFamily": "Inter",
+        "globalThresholdsConfig": [
+          {
+            "color": "#299c46",
+            "state": 0,
+            "value": 0
+          },
+          {
+            "color": "#ed8128",
+            "state": 1,
+            "value": 70
+          },
+          {
+            "color": "#f53636",
+            "state": 2,
+            "value": 90
+          }
+        ],
+        "globalTooltipsEnabled": true,
+        "globalTooltipsShowTimestampEnabled": true,
+        "globalTooltipsShowValueEnabled": true,
+        "globalTooltipsFontFamily": "Inter",
+        "globalUnitFormat": "short",
+        "layoutDisplayLimit": 100,
+        "layoutNumColumns": 2,
+        "layoutNumRows": 0,
+        "panelHeight": 0,
+        "panelWidth": 0,
+        "panelId": 62,
+        "radius": null,
+        "sortByField": "name",
+        "sortByDirection": 1,
+        "overrideConfig": {
+          "overrides": [
+            {
+              "label": "CPU",
+              "metricName": "/^CPU$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                },
+                {
+                  "color": "#ed8128",
+                  "state": 1,
+                  "value": 70
+                },
+                {
+                  "color": "#f53636",
+                  "state": 2,
+                  "value": 90
+                }
+              ],
+              "colors": [
+                "#299c46",
+                "#ed8128",
+                "#f53636"
+              ],
+              "unitFormat": "percent",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 0
+            },
+            {
+              "label": "Memory",
+              "metricName": "/^Memory$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                },
+                {
+                  "color": "#ed8128",
+                  "state": 1,
+                  "value": 70
+                },
+                {
+                  "color": "#f53636",
+                  "state": 2,
+                  "value": 90
+                }
+              ],
+              "colors": [
+                "#299c46",
+                "#ed8128",
+                "#f53636"
+              ],
+              "unitFormat": "percent",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 1
+            },
+            {
+              "label": "Temp",
+              "metricName": "/^Temp$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                },
+                {
+                  "color": "#ed8128",
+                  "state": 1,
+                  "value": 55
+                },
+                {
+                  "color": "#f53636",
+                  "state": 2,
+                  "value": 70
+                }
+              ],
+              "colors": [
+                "#299c46",
+                "#ed8128",
+                "#f53636"
+              ],
+              "unitFormat": "celsius",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 2
+            },
+            {
+              "label": "Uptime",
+              "metricName": "/^Uptime$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                }
+              ],
+              "colors": [
+                "#299c46"
+              ],
+              "unitFormat": "dtdurations",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 3
+            }
+          ]
+        },
+        "compositeGlobalAliasingEnabled": false,
+        "compositeConfig": {
+          "animationSpeed": "2000",
+          "composites": [],
+          "enabled": false
+        },
+        "tooltipPrimarySortDirection": 0,
+        "tooltipPrimarySortByField": "name",
+        "tooltipSecondarySortDirection": 0,
+        "tooltipSecondarySortByField": "value",
+        "tooltipDisplayMode": "all",
+        "tooltipDisplayTextTriggeredEmpty": "OK"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 63,
+      "title": "k3-n1",
+      "type": "grafana-polystat-panel",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 - cpu_usage_idle{cpu=\"cpu-total\", host=\"k3-n1\"}",
+          "legendFormat": "CPU",
+          "instant": true
+        },
+        {
+          "refId": "B",
+          "expr": "mem_used_percent{host=\"k3-n1\"}",
+          "legendFormat": "Memory",
+          "instant": true
+        },
+        {
+          "refId": "C",
+          "expr": "temp_temp{sensor=\"cpu_thermal\", host=\"k3-n1\"}",
+          "legendFormat": "Temp",
+          "instant": true
+        },
+        {
+          "refId": "D",
+          "expr": "system_uptime{host=\"k3-n1\"}",
+          "legendFormat": "Uptime",
+          "instant": true
+        }
+      ],
+      "options": {
+        "autoSizeColumns": true,
+        "autoSizeRows": true,
+        "autoSizePolygons": true,
+        "ellipseCharacters": 12,
+        "ellipseEnabled": true,
+        "globalAutoScaleFonts": true,
+        "globalClickthrough": "",
+        "globalClickthroughNewTabEnabled": true,
+        "globalClickthroughSanitizedEnabled": true,
+        "globalClickthroughCustomTargetEnabled": false,
+        "globalClickthroughCustomTarget": "",
+        "globalDecimals": 1,
+        "globalDisplayMode": "all",
+        "globalDisplayTextTriggeredEmpty": "OK",
+        "globalFillColor": "#0a55a1",
+        "globalGradientsEnabled": true,
+        "globalLabelFontSize": 12,
+        "globalValueFontSize": 20,
+        "globalCompositeValueFontSize": 20,
+        "globalOperator": "last",
+        "globalPolygonBorderSize": 2,
+        "globalPolygonBorderColor": "rgba(0,0,0,0.2)",
+        "globalPolygonSize": "",
+        "globalRegexPattern": "",
+        "globalShape": "hexagon_pointed_top",
+        "globalShowValueEnabled": true,
+        "globalShowTimestampEnabled": false,
+        "globalShowTimestampFormat": "",
+        "globalShowTimestampFontSize": 12,
+        "globalShowTimestampPosition": "below_value",
+        "globalShowTimestampYOffset": 0,
+        "globalShowTooltipColumnHeadersEnabled": true,
+        "globalTextFontAutoColor": "#FFFFFF",
+        "globalTextFontAutoColorEnabled": true,
+        "globalTextFontColor": "#FFFFFF",
+        "globalTextFontFamily": "Inter",
+        "globalThresholdsConfig": [
+          {
+            "color": "#299c46",
+            "state": 0,
+            "value": 0
+          },
+          {
+            "color": "#ed8128",
+            "state": 1,
+            "value": 70
+          },
+          {
+            "color": "#f53636",
+            "state": 2,
+            "value": 90
+          }
+        ],
+        "globalTooltipsEnabled": true,
+        "globalTooltipsShowTimestampEnabled": true,
+        "globalTooltipsShowValueEnabled": true,
+        "globalTooltipsFontFamily": "Inter",
+        "globalUnitFormat": "short",
+        "layoutDisplayLimit": 100,
+        "layoutNumColumns": 2,
+        "layoutNumRows": 0,
+        "panelHeight": 0,
+        "panelWidth": 0,
+        "panelId": 63,
+        "radius": null,
+        "sortByField": "name",
+        "sortByDirection": 1,
+        "overrideConfig": {
+          "overrides": [
+            {
+              "label": "CPU",
+              "metricName": "/^CPU$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                },
+                {
+                  "color": "#ed8128",
+                  "state": 1,
+                  "value": 70
+                },
+                {
+                  "color": "#f53636",
+                  "state": 2,
+                  "value": 90
+                }
+              ],
+              "colors": [
+                "#299c46",
+                "#ed8128",
+                "#f53636"
+              ],
+              "unitFormat": "percent",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 0
+            },
+            {
+              "label": "Memory",
+              "metricName": "/^Memory$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                },
+                {
+                  "color": "#ed8128",
+                  "state": 1,
+                  "value": 70
+                },
+                {
+                  "color": "#f53636",
+                  "state": 2,
+                  "value": 90
+                }
+              ],
+              "colors": [
+                "#299c46",
+                "#ed8128",
+                "#f53636"
+              ],
+              "unitFormat": "percent",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 1
+            },
+            {
+              "label": "Temp",
+              "metricName": "/^Temp$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                },
+                {
+                  "color": "#ed8128",
+                  "state": 1,
+                  "value": 55
+                },
+                {
+                  "color": "#f53636",
+                  "state": 2,
+                  "value": 70
+                }
+              ],
+              "colors": [
+                "#299c46",
+                "#ed8128",
+                "#f53636"
+              ],
+              "unitFormat": "celsius",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 2
+            },
+            {
+              "label": "Uptime",
+              "metricName": "/^Uptime$/",
+              "alias": "",
+              "thresholds": [
+                {
+                  "color": "#299c46",
+                  "state": 0,
+                  "value": 0
+                }
+              ],
+              "colors": [
+                "#299c46"
+              ],
+              "unitFormat": "dtdurations",
+              "decimals": 0,
+              "scaledDecimals": 0,
+              "enabled": true,
+              "operatorName": "last",
+              "prefix": "",
+              "suffix": "",
+              "clickThrough": "",
+              "clickThroughSanitize": true,
+              "clickThroughOpenNewTab": true,
+              "clickThroughCustomTargetEnabled": false,
+              "clickThroughCustomTarget": "",
+              "showTimestampEnabled": false,
+              "showTimestampFormat": "",
+              "showTimestampYOffset": 0,
+              "order": 3
+            }
+          ]
+        },
+        "compositeGlobalAliasingEnabled": false,
+        "compositeConfig": {
+          "animationSpeed": "2000",
+          "composites": [],
+          "enabled": false
+        },
+        "tooltipPrimarySortDirection": 0,
+        "tooltipPrimarySortByField": "name",
+        "tooltipSecondarySortDirection": 0,
+        "tooltipSecondarySortByField": "value",
+        "tooltipDisplayMode": "all",
+        "tooltipDisplayTextTriggeredEmpty": "OK"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "title": "Trends",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      }
+    },
+    {
+      "title": "CPU Usage Over Time",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "spanNulls": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "snmp_mikrotik_cpu_load",
+          "legendFormat": "Router",
+          "refId": "A"
+        },
+        {
+          "expr": "snmp_synology_load_1m / 4 * 100",
+          "legendFormat": "NAS",
+          "refId": "B"
+        },
+        {
+          "expr": "100 - cpu_usage_idle{cpu=\"cpu-total\"}",
+          "legendFormat": "{{ host }}",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "title": "Memory Usage Over Time",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "spanNulls": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "100 * snmp_mikrotik_memory_used / snmp_mikrotik_memory_total",
+          "legendFormat": "Router",
+          "refId": "A"
+        },
+        {
+          "expr": "100 * (snmp_synology_memory_total_real_kb - snmp_synology_memory_avail_real_kb - snmp_synology_memory_buffered_kb - snmp_synology_memory_cached_kb) / snmp_synology_memory_total_real_kb",
+          "legendFormat": "NAS",
+          "refId": "B"
+        },
+        {
+          "expr": "mem_used_percent",
+          "legendFormat": "{{ host }}",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "title": "Temperature Over Time",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "min": 0,
+          "max": 90,
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "spanNulls": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 55
+              },
+              {
+                "color": "red",
+                "value": 70
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "snmp_mikrotik_cpu_temperature",
+          "legendFormat": "Router",
+          "refId": "A"
+        },
+        {
+          "expr": "temp_temp{sensor=\"cpu_thermal\"}",
+          "legendFormat": "{{ host }}",
+          "refId": "B"
+        },
+        {
+          "expr": "snmp_synology_system_temperature",
+          "legendFormat": "NAS System",
+          "refId": "C"
+        },
+        {
+          "expr": "snmp_synology_disk_disk_temperature",
+          "legendFormat": "NAS {{ disk_id }}",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "title": "Storage",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      }
+    },
+    {
+      "title": "NAS Storage",
+      "type": "gauge",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/volume1"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Media & Backup"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/volume2"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kubernetes NFS"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/volume4"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Homes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "/volume5"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Docker"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "expr": "100 * snmp_synology_storage_storage_used{storage_descr=~\"/volume[0-9]+\"} / snmp_synology_storage_storage_size{storage_descr=~\"/volume[0-9]+\"}",
+          "legendFormat": "{{ storage_descr }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Node Disk Usage",
+      "type": "gauge",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "targets": [
+        {
+          "expr": "disk_used_percent{path=\"/\"}",
+          "legendFormat": "{{ host }}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Network",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      }
+    },
+    {
+      "id": 70,
+      "title": "Router",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 25
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 15,
+            "spanNulls": false,
+            "scaleDistribution": {
+              "type": "log",
+              "log": 2
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(snmp_mikrotik_interface_bytes_recv{name=\"ether1\"}[5m])",
+          "legendFormat": "In"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(snmp_mikrotik_interface_bytes_sent{name=\"ether1\"}[5m])",
+          "legendFormat": "Out"
+        }
+      ]
+    },
+    {
+      "id": 71,
+      "title": "NAS",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 6,
+        "y": 25
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 15,
+            "spanNulls": false,
+            "scaleDistribution": {
+              "type": "log",
+              "log": 2
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(snmp_synology_interface_bytes_recv{name=\"eth0\"}[5m])",
+          "legendFormat": "In"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(snmp_synology_interface_bytes_sent{name=\"eth0\"}[5m])",
+          "legendFormat": "Out"
+        }
+      ]
+    },
+    {
+      "id": 72,
+      "title": "k3-m1",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 25
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 15,
+            "spanNulls": false,
+            "scaleDistribution": {
+              "type": "log",
+              "log": 2
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(net_bytes_recv{interface=\"eth0\", host=\"k3-m1\"}[5m])",
+          "legendFormat": "In"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(net_bytes_sent{interface=\"eth0\", host=\"k3-m1\"}[5m])",
+          "legendFormat": "Out"
+        }
+      ]
+    },
+    {
+      "id": 73,
+      "title": "k3-n1",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_VICTORIAMETRICS}"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 25
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 15,
+            "spanNulls": false,
+            "scaleDistribution": {
+              "type": "log",
+              "log": 2
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(net_bytes_recv{interface=\"eth0\", host=\"k3-n1\"}[5m])",
+          "legendFormat": "In"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(net_bytes_sent{interface=\"eth0\", host=\"k3-n1\"}[5m])",
+          "legendFormat": "Out"
+        }
+      ]
+    }
+  ]
+}

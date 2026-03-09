@@ -1,0 +1,9 @@
+kube-state-metrics-deploy:
+    helmfile --file ./observation/kube-state-metrics/helmfile.yaml apply
+
+kube-state-metrics-remove:
+    helmfile --file ./observation/kube-state-metrics/helmfile.yaml destroy || true
+
+kube-state-metrics-restart: (_kube-restart "obs" "deployment/kube-state-metrics")
+kube-state-metrics-logs: (_kube-logs "kube-state-metrics" "obs" "app.kubernetes.io/name=kube-state-metrics")
+kube-state-metrics-status: (_kube-status "kube-state-metrics" "obs" "app.kubernetes.io/name=kube-state-metrics")
