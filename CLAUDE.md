@@ -22,6 +22,7 @@ Load these documents based on the task at hand. Do not load speculatively.
 | `docs/appendix/mikrotik-routeros.md` | Working with MikroTik router config, RouterOS scripting, or firewall rules |
 | `docs/appendix/media-services.md` | Working with Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Gluetun, Tdarr, Seerr, or Decluttarr |
 | `docs/appendix/grafana-dashboards.md` | Creating, editing, or troubleshooting Grafana dashboards, dashboard JSON, PromQL/MetricsQL queries, or panel configuration |
+| `docs/appendix/telegraf.md` | Working with Telegraf configuration, plugin tuning, metric filtering, containerized deployment, or debugging collection issues |
 
 **`docs/plans/`** — Files here are speculative or historical planning documents (gitignored, ephemeral). Never load them unless the user explicitly asks. They contain outdated or hypothetical information that will contradict the actual state of the project. Never reference or link to them from long-lived documentation.
 
