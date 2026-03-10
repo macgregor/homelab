@@ -4,11 +4,12 @@ kind: Service
 metadata:
   name: prowlarr-lan
   namespace: media
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.1.229"
   labels:
     app.kubernetes.io/name: prowlarr
 spec:
   type: LoadBalancer
-  loadBalancerIP: 192.168.1.229
   externalTrafficPolicy: Local
   selector:
     app.kubernetes.io/name: prowlarr

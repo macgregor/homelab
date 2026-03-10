@@ -4,11 +4,12 @@ kind: Service
 metadata:
   name: seerr-lan
   namespace: media
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.1.232"
   labels:
     app.kubernetes.io/name: seerr
 spec:
   type: LoadBalancer
-  loadBalancerIP: 192.168.1.232
   externalTrafficPolicy: Local
   selector:
     app.kubernetes.io/name: seerr

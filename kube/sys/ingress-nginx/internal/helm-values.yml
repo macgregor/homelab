@@ -29,7 +29,8 @@ controller:
     controllerValue: "k8s.io/ingress-nginx-internal"
 
   service:
-    loadBalancerIP: 192.168.1.221
+    annotations:
+      metallb.io/loadBalancerIPs: "192.168.1.221"
     external:
       enabled: true
       loadBalancerSourceRanges:
@@ -38,8 +39,3 @@ controller:
       - 10.43.0.0/16
       externalTrafficPolicy: Local
 
-  metrics:
-    enabled: false
-    serviceMonitor:
-      enabled: false
-      namespace: obs

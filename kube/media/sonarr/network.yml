@@ -4,11 +4,12 @@ kind: Service
 metadata:
   name: sonarr-lan
   namespace: media
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.1.231"
   labels:
     app.kubernetes.io/name: sonarr
 spec:
   type: LoadBalancer
-  loadBalancerIP: 192.168.1.231
   externalTrafficPolicy: Local
   selector:
     app.kubernetes.io/name: sonarr

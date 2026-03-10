@@ -4,11 +4,12 @@ kind: Service
 metadata:
   name: foundry-vtt-lan
   namespace: foundry-vtt
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.1.227"
   labels:
     app.kubernetes.io/name: foundry-vtt
 spec:
   type: LoadBalancer
-  loadBalancerIP: 192.168.1.227
   externalTrafficPolicy: Local
   selector:
     app.kubernetes.io/name: foundry-vtt
