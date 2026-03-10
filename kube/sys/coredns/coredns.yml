@@ -51,9 +51,9 @@ data:
     192.168.1.210 k3-m1
     192.168.1.211 k3-n1
     192.168.1.223 ns dns.matthew-stratton.me
-    # ingress-hosts-start (managed by `just coredns-sync-hosts`)
-    192.168.1.220 ext-lb cook.matthew-stratton.me dnd.matthew-stratton.me jellyfin.matthew-stratton.me seerr.matthew-stratton.me sso.matthew-stratton.me synology.matthew-stratton.me
-    192.168.1.221 int-lb grafana.matthew-stratton.me prowlarr.matthew-stratton.me qbittorrent.matthew-stratton.me radarr.matthew-stratton.me sonarr.matthew-stratton.me victoriametrics.matthew-stratton.me
+    # ingress-hosts-start (managed by homelab-sync-dns.sh)
+    192.168.1.220 ext-lb cook.matthew-stratton.me dnd.matthew-stratton.me jellyfin.matthew-stratton.me seerr.matthew-stratton.me synology.matthew-stratton.me
+    192.168.1.221 int-lb debug.matthew-stratton.me grafana.matthew-stratton.me prowlarr.matthew-stratton.me qbittorrent.matthew-stratton.me radarr.matthew-stratton.me sonarr.matthew-stratton.me victoriametrics.matthew-stratton.me
     # ingress-hosts-end
 ---
 apiVersion: apps/v1

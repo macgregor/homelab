@@ -9,6 +9,7 @@
 # - router_timezone: System timezone
 # - router_dns_servers: Upstream DNS servers
 # - router_static_leases: MAC-to-IP mapping (reads MAC addresses from .envrc)
+# - router_dns_hosts: Split-horizon DNS entries (managed by homelab-sync-dns.sh)
 #
 # Usage:
 #   cd ansible
@@ -137,17 +138,27 @@
           - /ip dns static set [find name="router.lan"] address=192.168.1.1
       when: _has_stale_router_dns
 
-    # Split-horizon DNS: resolve *.domain internally to the ingress VIP,
-    # avoiding hairpin NAT through Cloudflare.
+    # Split-horizon DNS: per-host static entries avoid hairpin NAT through
+    # Cloudflare. The router_dns_hosts list is managed by homelab-sync-dns.sh.
 
-    - name: Add split-horizon DNS for internal services
+    - name: Remove existing split-horizon DNS entries
+      community.routeros.command:
+        commands:
+          - /ip dns static remove [find comment="split-dns"]
+      when: _has_split_dns
+
+    - name: Add split-horizon DNS entries
       community.routeros.command:
         commands:
           - >-
-            /ip dns static add type=A address=192.168.1.220
-            regexp=".*\\.{{ cf_dns_record_name }}"
+            /ip dns static add type=A
+            name={{ item.name }}
+            address={{ item.address }}
+            ttl=1d
             comment="split-dns"
-      when: not _has_split_dns
+      loop: "{{ router_dns_hosts }}"
+      loop_control:
+        label: "{{ item.name }} ({{ item.address }})"
 
     # ── Static DHCP leases ─────────────────────────────────────────────
 

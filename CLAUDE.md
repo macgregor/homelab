@@ -96,6 +96,10 @@ For how secrets flow into Ansible provisioning, see `docs/01-infrastructure-prov
 
 When connecting to any system (RPis, Synology, router, etc.), check `~/.ssh/config` for pre-configured hosts and authentication methods. Don't guess connection parameters—the config file defines the correct user, identity file, and other settings for each host. Use the configured host alias when possible (e.g., `ssh k3-m1` instead of `ssh macgregor@192.168.1.210`).
 
+## Split-Horizon DNS
+
+When adding, removing, or changing Ingress resources (including `ingressClassName`), run `./scripts/homelab-sync-dns.sh` to regenerate the CoreDNS hosts block and router static DNS entries. Then deploy both: `cd kube && just coredns-deploy` and `cd ansible && ansible-playbook mikrotik-configure.yml`.
+
 ## Conventions
 
 - Just recipes follow `<app>-<action>` naming (e.g., `jellyfin-deploy`, `metallb-status`)

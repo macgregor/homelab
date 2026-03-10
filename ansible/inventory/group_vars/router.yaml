@@ -23,3 +23,18 @@ cf_zone_id: "{{ lookup('env', 'CF_ZONE_ID') | mandatory('CF_ZONE_ID is not set �
 cf_dns_record_id: "{{ lookup('env', 'CF_DNS_RECORD_ID') | mandatory('CF_DNS_RECORD_ID is not set — source .envrc') }}"
 cf_dns_record_name: "{{ lookup('env', 'CF_DNS_RECORD_NAME') | mandatory('CF_DNS_RECORD_NAME is not set — source .envrc') }}"
 cf_mikrotik_ddns_token: "{{ lookup('env', 'CF_MIKROTIK_DDNS_TOKEN') | mandatory('CF_MIKROTIK_DDNS_TOKEN is not set — source .envrc') }}"
+
+# Split-horizon DNS: per-host entries managed by homelab-sync-dns.sh
+router_dns_hosts:
+  - { name: "cook.matthew-stratton.me", address: "192.168.1.220" }
+  - { name: "dnd.matthew-stratton.me", address: "192.168.1.220" }
+  - { name: "jellyfin.matthew-stratton.me", address: "192.168.1.220" }
+  - { name: "seerr.matthew-stratton.me", address: "192.168.1.220" }
+  - { name: "synology.matthew-stratton.me", address: "192.168.1.220" }
+  - { name: "debug.matthew-stratton.me", address: "192.168.1.221" }
+  - { name: "grafana.matthew-stratton.me", address: "192.168.1.221" }
+  - { name: "prowlarr.matthew-stratton.me", address: "192.168.1.221" }
+  - { name: "qbittorrent.matthew-stratton.me", address: "192.168.1.221" }
+  - { name: "radarr.matthew-stratton.me", address: "192.168.1.221" }
+  - { name: "sonarr.matthew-stratton.me", address: "192.168.1.221" }
+  - { name: "victoriametrics.matthew-stratton.me", address: "192.168.1.221" }
