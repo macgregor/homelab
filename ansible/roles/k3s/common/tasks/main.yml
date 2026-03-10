@@ -30,6 +30,8 @@
     # k3s and containerd consume inotify watches heavily; defaults are too low
     - {name: fs.inotify.max_user_watches, value: "524288"}
     - {name: fs.inotify.max_user_instances, value: "1024"}
+    # NFS: allow more concurrent RPCs per TCP connection (default 2 is a bottleneck)
+    - {name: sunrpc.tcp_slot_table_entries, value: "64"}
 
 - name: Create .kube directory
   file:

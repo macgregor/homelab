@@ -1,0 +1,3 @@
+# {{ ansible_managed }}
+# Tune iSCSI block devices: no seek optimization, higher read-ahead for network storage
+ACTION=="add|change", SUBSYSTEM=="block", KERNEL=="sd[a-z]", DEVPATH=="*/session*/target*", ATTR{queue/rotational}="0", ATTR{queue/read_ahead_kb}="1024", ATTR{queue/scheduler}="none"

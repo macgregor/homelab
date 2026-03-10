@@ -38,8 +38,7 @@ storageClasses:
     fsType: nfs
   mountOptions:
   - noatime
-  - nolock
-  - nfsvers=3
+  - nfsvers=4.1
 - name: synology-nfs-app-data-delete
   defaultClass: false
   reclaimPolicy: Delete
@@ -49,8 +48,7 @@ storageClasses:
     fsType: nfs
   mountOptions:
   - noatime
-  - nolock
-  - nfsvers=3
+  - nfsvers=4.1
 
 driver:
   config:
