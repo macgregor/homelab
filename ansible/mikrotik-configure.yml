@@ -238,6 +238,42 @@
           - /snmp set enabled=yes
       when: not _snmp_enabled
 
+    # ── Syslog forwarding ──────────────────────────────────────────
+    # Forward security-relevant logs to VictoriaLogs via UDP syslog.
+    # The VictoriaLogs syslog LB is at 192.168.1.228:5140.
+
+    - name: Query syslog state
+      community.routeros.command:
+        commands:
+          - ':put [:len [/system logging action find name=victorialogs]]'
+      register: _syslog_state
+
+    - name: Set syslog state facts
+      ansible.builtin.set_fact:
+        _has_syslog_action: "{{ _syslog_state.stdout[0] | int > 0 }}"
+
+    - name: Create syslog remote action for VictoriaLogs
+      community.routeros.command:
+        commands:
+          - /system logging action add name=victorialogs target=remote remote=192.168.1.228 remote-port=5140 src-address=192.168.1.1
+      when: not _has_syslog_action
+
+    - name: Configure syslog logging rules
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/system logging find topics={{ item }} action=victorialogs]] = 0) do={
+            /system logging add topics={{ item }} action=victorialogs
+            }
+      loop:
+        - firewall
+        - system
+        - critical
+        - error
+        - warning
+      loop_control:
+        label: "{{ item }}"
+
     # ── Auto-update ──────────────────────────────────────────────────
 
     - name: Enable firmware auto-upgrade on reboot

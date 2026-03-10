@@ -4,13 +4,13 @@ description: >
   Load this document when working with logging, monitoring, or observability
   infrastructure.
 categories: [kubernetes, observability]
-tags: [logging, monitoring, metrics, grafana, victoriametrics, telegraf, snmp, kube-state-metrics, dashboards]
+tags: [logging, monitoring, metrics, grafana, victoriametrics, victorialogs, telegraf, vector, snmp, kube-state-metrics, dashboards, syslog]
 complexity: intermediate
 ---
 
 # Observability
 
-The homelab runs a VictoriaMetrics + Telegraf + Grafana stack for metrics collection and visualization. All components run in the `obs` namespace. Configuration lives in `kube/observation/`.
+The homelab runs a VictoriaMetrics + Telegraf + Grafana stack for metrics and a VictoriaLogs + Vector stack for targeted log collection. All components run in the `obs` namespace. Configuration lives in `kube/observation/`.
 
 ## Architecture
 
@@ -22,6 +22,9 @@ graph TD
     DS[Telegraf DaemonSet<br/>one per node]
     KSM[kube-state-metrics]
     VM[VictoriaMetrics<br/>TSDB]
+    VL[VictoriaLogs<br/>Log store]
+    Vec[Vector DaemonSet<br/>one per node]
+    Ingress[ingress-nginx-external]
     G[Grafana<br/>Dashboards]
 
     Router -->|SNMPv2c| SNMP
@@ -30,6 +33,11 @@ graph TD
     DS -->|push: InfluxDB protocol| VM
     VM -->|scrape: Prometheus protocol| KSM
     VM --> G
+
+    Router -->|UDP syslog :5140| VL
+    Ingress -->|container logs| Vec
+    Vec -->|push: Elasticsearch protocol| VL
+    VL --> G
 ```
 
 VictoriaMetrics receives metrics from three sources:
@@ -40,7 +48,7 @@ VictoriaMetrics receives metrics from three sources:
 
 **VictoriaMetrics** is a single-node time-series database. It receives pushed metrics from Telegraf (InfluxDB protocol) and scrapes kube-state-metrics (Prometheus protocol).
 
-**Grafana** queries VictoriaMetrics as a Prometheus-type datasource. Dashboard JSON files live in `kube/observation/grafana/dashboards/`:
+**Grafana** queries VictoriaMetrics as a Prometheus-type datasource and VictoriaLogs via the `victoriametrics-logs-datasource` plugin. Dashboard JSON files live in `kube/observation/grafana/dashboards/`:
 
 - **Homelab Overview** -- Infrastructure health across router, NAS, and cluster nodes (e.g. CPU, memory, temperatures, network traffic).
 - **Kubernetes** -- Workload state (e.g. pod phases, container restarts, resource usage vs limits). Filterable by namespace.
@@ -72,6 +80,19 @@ Enable SNMPv2c on both targets before deploying Telegraf SNMP:
 - **Synology:** Enabled manually via DSM Control Panel > Terminal & SNMP. Verify: `snmpwalk -v2c -c $SNMP_COMMUNITY 192.168.1.200 sysDescr`.
 
 Both use the same community string from the `SNMP_COMMUNITY` env var in `.envrc`.
+
+## Log Ingestion
+
+**VictoriaLogs** is a single-node log database from the same ecosystem as VictoriaMetrics. It collects targeted logs (not all container output) for security monitoring and debugging. Configuration lives in `kube/observation/victorialogs/`.
+
+- **Vector DaemonSet** -- Bundled as a dependency of the VictoriaLogs Helm chart. Collects Kubernetes container logs using Vector's `kubernetes_logs` source and pushes to VictoriaLogs via the Elasticsearch bulk API. Which pods are collected and how logs are tagged is configured in the `vector:` section of `helm-values.yml`.
+- **MikroTik syslog** -- The router forwards log topics via UDP syslog directly to VictoriaLogs' built-in syslog receiver (exposed via a MetalLB LoadBalancer). Configured in `ansible/mikrotik-configure.yml`.
+
+Logs can be queried via Grafana (Explore > VictoriaLogs datasource) or the [LogsQL](https://docs.victoriametrics.com/victorialogs/logsql/) HTTP API. To see what's currently collected, query the active streams:
+
+```bash
+curl -s 'http://victorialogs.obs.svc:9428/select/logsql/streams?query=*'
+```
 
 ## Ad-hoc Queries
 

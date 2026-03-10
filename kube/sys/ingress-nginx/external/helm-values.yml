@@ -18,6 +18,11 @@ controller:
     use-proxy-protocol: "true"
     enable-modsecurity: "true"
     enable-owasp-modsecurity-crs: "true"
+    modsecurity-snippet: |
+      SecAuditLogType Serial
+      SecAuditLog /dev/stdout
+      SecAuditLogFormat JSON
+      SecAuditEngine RelevantOnly
     use-gzip: "true"
     block-user-agents: "~*bot,~*crawler,~*spider,~*scraper,~*archiver,~*wget,~*curl,~*httpie,~*python-requests,~*Go-http-client,~*java,~*libwww,~*lwp-trivial,~*HTTrack,~*clshttp,~*cmsworldmap,~*comodo,~*diavol,~*dotbot,~*feedfinder,~*flicky,~*ia_archiver,~*kmccrew,~*nutch,~*planetwork,~*purebot,~*pycurl,~*nikto,~*semrush,~*ahrefs,~*mj12bot,~*petalbot,~*yandex,~*bingbot,~*gptbot,~*chatgpt,~*claudebot,~*anthropic,~*bytespider,~*amazonbot"
     limit-req-status-code: "429"

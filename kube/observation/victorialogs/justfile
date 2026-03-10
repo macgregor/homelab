@@ -1,0 +1,16 @@
+victorialogs-deploy:
+    #!/usr/bin/env bash
+    set -e
+    helmfile --file ./observation/victorialogs/helmfile.yaml apply
+    kubectl apply -f ./observation/victorialogs/network.yml
+
+victorialogs-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./observation/victorialogs/network.yml || true
+    helmfile --file ./observation/victorialogs/helmfile.yaml destroy || true
+
+victorialogs-stop: (_kube-stop "obs" "statefulset/victorialogs")
+victorialogs-start: (_kube-start "obs" "statefulset/victorialogs" "1")
+victorialogs-restart: (_kube-restart "obs" "statefulset/victorialogs")
+victorialogs-status: (_kube-status "victorialogs" "obs" "app.kubernetes.io/name=victoria-logs-single,app.kubernetes.io/instance=victorialogs")
+victorialogs-logs: (_kube-logs "victorialogs" "obs" "app.kubernetes.io/name=victoria-logs-single,app.kubernetes.io/instance=victorialogs")

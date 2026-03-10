@@ -87,13 +87,14 @@ import 'observation/victoriametrics/justfile'
 import 'observation/telegraf/justfile'
 import 'observation/telegraf-snmp/justfile'
 import 'observation/kube-state-metrics/justfile'
+import 'observation/victorialogs/justfile'
 import 'observation/grafana/justfile'
 
 # --- Aggregate targets ---
 
-deploy-sys: coredns-deploy democratic-csi-deploy cert-manager-deploy metallb-deploy ingress-internal-deploy ingress-external-deploy victoriametrics-deploy telegraf-deploy telegraf-snmp-deploy kube-state-metrics-deploy grafana-deploy
+deploy-sys: coredns-deploy democratic-csi-deploy cert-manager-deploy metallb-deploy ingress-internal-deploy ingress-external-deploy victoriametrics-deploy victorialogs-deploy telegraf-deploy telegraf-snmp-deploy kube-state-metrics-deploy grafana-deploy
 
-remove-sys: coredns-remove democratic-csi-remove cert-manager-remove metallb-remove ingress-internal-remove ingress-external-remove grafana-remove kube-state-metrics-remove telegraf-snmp-remove telegraf-remove victoriametrics-remove
+remove-sys: coredns-remove democratic-csi-remove cert-manager-remove metallb-remove ingress-internal-remove ingress-external-remove grafana-remove kube-state-metrics-remove telegraf-snmp-remove telegraf-remove victorialogs-remove victoriametrics-remove
 
 deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy synology-dsm-deploy qbittorrent-deploy mealie-deploy seerr-deploy decluttarr-deploy
 

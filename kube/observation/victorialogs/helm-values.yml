@@ -1,0 +1,88 @@
+server:
+  fullnameOverride: victorialogs
+  retentionPeriod: 7d
+  extraArgs:
+    syslog.listenAddr.udp: :5140
+    memory.allowedBytes: "100MB"
+  resources:
+    requests:
+      memory: 75Mi
+      cpu: 50m
+    limits:
+      memory: 150Mi
+  tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 1
+        preference:
+          matchExpressions:
+          - key: node-role.kubernetes.io/control-plane
+            operator: In
+            values:
+            - 'true'
+  persistentVolume:
+    storageClassName: synology-nfs-app-data-retain
+    size: 2Gi
+  service:
+    extraPorts:
+    - name: syslog-udp
+      port: 5140
+      targetPort: 5140
+      protocol: UDP
+
+vector:
+  enabled: true
+  role: Agent
+  resources:
+    requests:
+      memory: 32Mi
+      cpu: 10m
+    limits:
+      memory: 64Mi
+  tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"
+  customConfig:
+    data_dir: /vector-data-dir
+    api:
+      enabled: false
+    sources:
+      k8s:
+        type: kubernetes_logs
+        extra_label_selector: "app.kubernetes.io/instance=ingress-nginx-external"
+    transforms:
+      tag_log_type:
+        type: remap
+        inputs: [k8s]
+        source: |
+          .log_type = if contains(string!(.message), "\"transaction\"") {
+            "modsecurity"
+          } else {
+            "access"
+          }
+          .log = parse_json(.message) ?? .message
+          del(.message)
+    sinks:
+      vlogs:
+        type: elasticsearch
+        inputs: [tag_log_type]
+        endpoints: ["http://victorialogs.obs.svc:9428/insert/elasticsearch/"]
+        mode: bulk
+        api_version: v8
+        compression: gzip
+        healthcheck:
+          enabled: false
+        request:
+          headers:
+            VL-Time-Field: timestamp
+            VL-Stream-Fields: stream,kubernetes.pod_name,kubernetes.container_name,kubernetes.pod_namespace,log_type
+            VL-Msg-Field: message,msg,_msg,log.msg,log.message,log
+            AccountID: "0"
+            ProjectID: "0"

@@ -1,5 +1,6 @@
 plugins:
   - grafana-polystat-panel
+  - victoriametrics-logs-datasource
 
 adminPassword: {{ requiredEnv "GRAFANA_ADMIN_PASS" | quote }}
 
@@ -46,6 +47,10 @@ datasources:
       url: http://victoriametrics-server.obs.svc:8428
       access: proxy
       isDefault: true
+    - name: VictoriaLogs
+      type: victoriametrics-logs-datasource
+      access: proxy
+      url: http://victorialogs.obs.svc:9428
 
 dashboardProviders:
   dashboardproviders.yaml:

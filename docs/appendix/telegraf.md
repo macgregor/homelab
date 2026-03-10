@@ -4,7 +4,7 @@ description: >
   Load this document when working with Telegraf configuration, plugin tuning,
   containerized deployment, metric filtering, or debugging collection issues.
 categories: [observability, monitoring]
-tags: [telegraf, metrics, influxdb, snmp, diskio, kubernetes, containers, memory]
+tags: [telegraf, metrics, influxdb, snmp, diskio, kubernetes, containers, memory, tail, elasticsearch, logs]
 related_docs:
   - docs/06-observability.md
   - docs/appendix/grafana-dashboards.md
@@ -35,8 +35,10 @@ Reference for AI agents working with Telegraf 1.x. Covers configuration model, p
 10. [Plugin Reference: kubernetes](#10-plugin-reference-kubernetes)
 11. [Plugin Reference: SNMP](#11-plugin-reference-snmp)
 12. [Plugin Reference: influxdb_v2 Output](#12-plugin-reference-influxdb_v2-output)
-13. [Helm Charts](#13-helm-charts)
-14. [Documentation Links](#14-documentation-links)
+13. [Plugin Reference: tail](#13-plugin-reference-tail)
+14. [Plugin Reference: elasticsearch Output](#14-plugin-reference-elasticsearch-output)
+15. [Helm Charts](#15-helm-charts)
+16. [Documentation Links](#16-documentation-links)
 
 ---
 
@@ -506,7 +508,101 @@ VictoriaMetrics accepts InfluxDB line protocol at `/api/v2/write`. The `organiza
 
 ---
 
-## 13. Helm Charts
+## 13. Plugin Reference: tail
+
+**Source:** `plugins/inputs/tail/`
+
+Follows and reads lines appended to log files. Supports glob patterns for file discovery.
+
+### Configuration
+
+```toml
+[[inputs.tail]]
+  ## Glob patterns for files to tail
+  files = ["/var/log/myapp/*.log"]
+
+  ## Start position for new files (no persisted offset)
+  ## "beginning", "end", "saved-or-beginning", "saved-or-end" (default)
+  from_beginning = false
+
+  ## Watch method: "inotify" (Linux/BSD) or "poll" (250ms intervals)
+  # watch_method = "inotify"
+
+  ## Data format: "value" treats each line as a single string field
+  data_format = "value"
+  data_type = "string"
+
+  ## Named pipe mode (for reading from FIFOs)
+  # pipe = true
+
+  ## ANSI color stripping
+  # filters = ["ansi_color"]
+```
+
+### File discovery and rotation
+
+The plugin re-evaluates glob patterns on each gather cycle to discover new files. When a file is rotated (moved/replaced), `ReOpen: true` detects the replacement and starts reading the new file. Compressed files (`*.gz`) and temp files (`*.tmp`) are excluded by default.
+
+### Kubernetes container log limitations
+
+The tail plugin is **not designed for Kubernetes container log collection**:
+
+- **Symlink chains:** Container logs at `/var/log/containers/` are symlinks to `/var/log/pods/` which contain the actual log files. The tail plugin uses `os.Lstat()` (does not follow symlinks) for initial file matching. Both directories must be mounted as separate hostPath volumes for symlinks to resolve inside the container.
+- **SELinux:** On SELinux-enforcing systems (e.g., Rocky Linux 9), container log files are labeled `var_log_t:s0` with `640` permissions. Even containers running as root get "permission denied" because the container process lacks a context that grants read access to `var_log_t` files. The `telegraf-ds` chart provides no mechanism to set `seLinuxOptions`.
+- **CRI log format:** Container runtime (containerd/CRI-O) prepends each line with a CRI header: `<timestamp> <stream> <flags> <message>`. A processor (e.g., starlark) is needed to strip this prefix.
+- **No metadata enrichment:** Unlike dedicated Kubernetes log collectors (Vector `kubernetes_logs`, Fluent Bit `tail` with Kubernetes filter), the tail plugin does not automatically attach pod name, namespace, container name, or labels to log entries.
+
+For Kubernetes container log collection, use a purpose-built tool like Vector's `kubernetes_logs` source, which handles symlink resolution, log rotation, CRI format parsing, SELinux contexts, and metadata enrichment natively.
+
+---
+
+## 14. Plugin Reference: elasticsearch Output
+
+**Source:** `plugins/outputs/elasticsearch/`
+
+Writes metrics/logs to Elasticsearch-compatible endpoints using the bulk API.
+
+### Configuration
+
+```toml
+[[outputs.elasticsearch]]
+  urls = ["http://localhost:9200"]
+  index_name = "telegraf-%Y.%m.%d"
+
+  ## Disable cluster health checks and sniffing for non-Elasticsearch targets
+  enable_sniffer = false
+  health_check_interval = "0s"
+  manage_template = false
+
+  ## Custom HTTP headers (used by VictoriaLogs for field mapping)
+  [outputs.elasticsearch.headers]
+    VL-Msg-Field = "tail.value"
+    VL-Time-Field = "@timestamp"
+    VL-Stream-Fields = "tag.log_source,tag.log_type"
+```
+
+### VictoriaLogs compatibility
+
+VictoriaLogs accepts data via its `/insert/elasticsearch/_bulk` endpoint, which is compatible with the Elasticsearch bulk API. Use `VL-*` HTTP headers to control field mapping:
+
+| Header | Purpose | Example |
+|--------|---------|---------|
+| `VL-Msg-Field` | Field(s) containing the log message | `message,msg,_msg` |
+| `VL-Time-Field` | Field containing the timestamp | `@timestamp` |
+| `VL-Stream-Fields` | Fields used to group logs into streams | `host,log_source,log_type` |
+| `AccountID` | Multi-tenancy account (use `"0"` for single-tenant) | `0` |
+| `ProjectID` | Multi-tenancy project (use `"0"` for single-tenant) | `0` |
+
+Header values are comma-separated strings. Telegraf v1.32+ emits deprecation warnings about the string format, suggesting JSON array syntax. Both formats work; the warnings are cosmetic.
+
+Required settings for VictoriaLogs compatibility:
+- `enable_sniffer = false` -- VictoriaLogs does not support Elasticsearch cluster sniffing.
+- `health_check_interval = "0s"` -- Disables Elasticsearch-specific health checks.
+- `manage_template = false` -- VictoriaLogs does not use index templates.
+
+---
+
+## 15. Helm Charts
 
 Two charts from `influxdata/helm-charts`:
 
@@ -542,9 +638,19 @@ The DaemonSet chart has several hardcoded elements that cannot be overridden via
 
 Custom volumes and mounts are supported via `volumes` and `mountPoints` values.
 
+### telegraf-ds is not suitable for Kubernetes log collection
+
+The telegraf-ds chart is designed for host-level metrics collection, not container log tailing. Key blockers:
+
+- **RBAC collision:** The chart creates a cluster-scoped `ClusterRole` named `influx-stats-viewer`. A second instance of the chart (e.g., for logs) fails with an ownership metadata conflict because Helm tracks cluster-scoped resources per release.
+- **No SELinux support:** The chart exposes `podSecurityContext` but not container-level `securityContext` or `seLinuxOptions`. On SELinux-enforcing hosts, the tail plugin cannot read container log files (see [tail plugin limitations](#kubernetes-container-log-limitations)).
+- **No log-specific docs or examples:** The chart has zero documentation or configuration examples for log collection use cases.
+
+For Kubernetes container log collection, use a purpose-built agent like [Vector](https://vector.dev/) (with its `kubernetes_logs` source) deployed via its own Helm chart or as a bundled dependency of the VictoriaLogs chart.
+
 ---
 
-## 14. Documentation Links
+## 16. Documentation Links
 
 - [Telegraf Configuration](https://docs.influxdata.com/telegraf/v1/configuration/) -- agent settings, plugin config
 - [Input Plugin List](https://docs.influxdata.com/telegraf/v1/plugins/#input-plugins) -- all available inputs

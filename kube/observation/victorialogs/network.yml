@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: victorialogs-syslog
+  namespace: obs
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.1.228"
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+  selector:
+    app.kubernetes.io/name: victoria-logs-single
+    app.kubernetes.io/instance: victorialogs
+  ports:
+  - name: syslog-udp
+    port: 5140
+    targetPort: 5140
+    protocol: UDP
