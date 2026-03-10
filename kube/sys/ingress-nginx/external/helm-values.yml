@@ -18,6 +18,7 @@ controller:
     use-proxy-protocol: "true"
     enable-modsecurity: "true"
     enable-owasp-modsecurity-crs: "true"
+    use-gzip: "true"
   extraArgs:
     enable-ssl-passthrough: true
 

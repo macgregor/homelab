@@ -32,6 +32,11 @@
     - {name: fs.inotify.max_user_instances, value: "1024"}
     # NFS: allow more concurrent RPCs per TCP connection (default 2 is a bottleneck)
     - {name: sunrpc.tcp_slot_table_entries, value: "64"}
+    # TCP buffer limits: defaults (208K) cap auto-tuning and limit throughput
+    - {name: net.core.rmem_max, value: "4194304"}
+    - {name: net.core.wmem_max, value: "4194304"}
+    # don't reset congestion window after idle; hurts keepalive connections on LAN
+    - {name: net.ipv4.tcp_slow_start_after_idle, value: "0"}
 
 - name: Create .kube directory
   file:
