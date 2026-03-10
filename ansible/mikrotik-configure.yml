@@ -238,6 +238,73 @@
           - /snmp set enabled=yes
       when: not _snmp_enabled
 
+    # ── Firewall logging ────────────────────────────────────────────
+    # Rate-limited logging on drop and accept rules. Uses the log-before-drop
+    # pattern: a separate action=log rule with a limit matcher is placed before
+    # each target rule. The target rule itself has log=no. This samples events
+    # at 5/minute per rule without flooding syslog receivers.
+    #
+    # NAT rules only process the first packet per connection (inherently
+    # bounded), so they keep log=yes directly without rate limiting.
+
+    - name: Add rate-limited firewall log rules
+      community.routeros.command:
+        commands:
+          - >-
+            :if ([:len [/ip firewall filter find comment="{{ item.log_comment }}"]] = 0) do={
+            /ip firewall filter add chain={{ item.chain }} action=log
+            log-prefix={{ item.prefix }} limit={{ item.limit }}
+            {{ item.matchers }}
+            comment="{{ item.log_comment }}"
+            place-before=[find comment="{{ item.target_comment }}" chain={{ item.chain }}]
+            }
+          - >-
+            /ip firewall filter set [find comment="{{ item.log_comment }}"]
+            limit={{ item.limit }}
+          - >-
+            /ip firewall filter set [find comment="{{ item.target_comment }}" chain={{ item.chain }}]
+            log=no
+      loop:
+        - chain: input
+          prefix: drop-invalid
+          matchers: "connection-state=invalid"
+          limit: "1/2m,1"
+          target_comment: "defconf: drop invalid"
+          log_comment: "log: drop invalid (input)"
+        - chain: forward
+          prefix: drop-invalid
+          matchers: "connection-state=invalid"
+          limit: "1/2m,1"
+          target_comment: "defconf: drop invalid"
+          log_comment: "log: drop invalid (forward)"
+        - chain: input
+          prefix: drop-input-wan
+          matchers: "in-interface-list=!LAN"
+          limit: "1/2m,1"
+          target_comment: "defconf: drop all not coming from LAN"
+          log_comment: "log: drop input wan"
+        - chain: forward
+          prefix: drop-fwd-wan
+          matchers: "connection-nat-state=!dstnat in-interface-list=WAN"
+          limit: "5/1m,5"
+          target_comment: "defconf: drop all from WAN not DSTNATed"
+          log_comment: "log: drop forward wan"
+        - chain: forward
+          prefix: cloudflare-fwd
+          matchers: "connection-nat-state=dstnat protocol=tcp src-address-list=cloudflare dst-port=443"
+          limit: "5/1m,5"
+          target_comment: "cloudflare-proxy-forward"
+          log_comment: "log: cloudflare forward"
+      loop_control:
+        label: "{{ item.log_comment }}"
+
+    - name: Enable logging on cloudflare DNAT rule
+      community.routeros.command:
+        commands:
+          - >-
+            /ip firewall nat set [find comment="cloudflare-proxy-dnat"]
+            log=yes log-prefix=cloudflare-dnat
+
     # ── Syslog forwarding ──────────────────────────────────────────
     # Forward security-relevant logs to VictoriaLogs via UDP syslog.
     # The VictoriaLogs syslog LB is at 192.168.1.228:5140.

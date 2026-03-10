@@ -86,7 +86,7 @@ Both use the same community string from the `SNMP_COMMUNITY` env var in `.envrc`
 **VictoriaLogs** is a single-node log database from the same ecosystem as VictoriaMetrics. It collects targeted logs (not all container output) for security monitoring and debugging. Configuration lives in `kube/observation/victorialogs/`.
 
 - **Vector DaemonSet** -- Bundled as a dependency of the VictoriaLogs Helm chart. Collects Kubernetes container logs using Vector's `kubernetes_logs` source and pushes to VictoriaLogs via the Elasticsearch bulk API. Which pods are collected and how logs are tagged is configured in the `vector:` section of `helm-values.yml`.
-- **MikroTik syslog** -- The router forwards log topics via UDP syslog directly to VictoriaLogs' built-in syslog receiver (exposed via a MetalLB LoadBalancer). Configured in `ansible/mikrotik-configure.yml`.
+- **MikroTik syslog** -- The router forwards log topics via UDP syslog directly to VictoriaLogs' built-in syslog receiver (exposed via a MetalLB LoadBalancer). Firewall drop and accept rules use rate-limited `action=log` rules (5/min per rule) placed before each target rule to sample events without flooding. Logging topics and firewall log rules are configured in `ansible/mikrotik-configure.yml`.
 
 Logs can be queried via Grafana (Explore > VictoriaLogs datasource) or the [LogsQL](https://docs.victoriametrics.com/victorialogs/logsql/) HTTP API. To see what's currently collected, query the active streams:
 

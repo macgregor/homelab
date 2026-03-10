@@ -652,6 +652,54 @@ Bypasses firewall filter and mangle for established/related connections for high
 
 New forward-accept rules (e.g., port forwarding) must be placed **before** the "drop all from WAN not DSTNATed" rule using `place-before`.
 
+### Logging
+
+Two mechanisms for logging matched packets:
+
+**`log=yes` property** -- Available on any rule regardless of action. The rule performs its action (accept, drop, etc.) AND logs. No rate control -- every matched packet is logged.
+
+**`action=log`** -- A dedicated action that logs the packet and then passes it to the next rule (like `passthrough`). The packet is not terminated -- processing continues with the next rule. This is useful paired with rate-limiting matchers to log a sample before a subsequent drop/accept rule handles the packet.
+
+Both produce syslog messages on the `firewall` topic containing: in-interface, out-interface, src-mac, protocol, src-ip:port → dst-ip:port, and packet length.
+
+`log-prefix` (string) prepends text to each log message. Use it to identify which rule generated the entry.
+
+### Rate-limited logging
+
+The `limit` matcher implements a token bucket rate limiter. It can be combined with `action=log` rules to sample firewall events without flooding the log.
+
+**Syntax:** `limit=rate[/time],burst`
+
+| Parameter | Description |
+|-----------|-------------|
+| `rate` | Packets allowed per time interval |
+| `time` | Interval unit: `s` (second, default), `m` (minute), `h` (hour) |
+| `burst` | Initial burst allowance before rate limiting kicks in |
+
+The token bucket refills at approximately rate/100 every 10ms. Set burst to at least 1/100th of the per-second rate to avoid dropping the first packet.
+
+**Pattern: rate-limited log before a drop rule**
+
+Place an `action=log` rule with `limit` immediately before the drop rule. The log rule samples packets at the configured rate; unmatched packets fall through to the drop rule which handles them silently.
+
+```
+# Log at most 5 packets/minute (burst of 5), then drop silently
+/ip firewall filter add chain=input action=log log-prefix=drop-wan \
+    in-interface-list=!LAN limit=5/1m,5 \
+    place-before=[find comment="defconf: drop all not coming from LAN"]
+/ip firewall filter set [find comment="defconf: drop all not coming from LAN"] log=no
+```
+
+Without rate limiting, high-volume drop rules (internet background noise, port scans) can generate thousands of log entries per minute, consuming CPU and flooding syslog receivers.
+
+**Other rate-based matchers:**
+
+| Matcher | Format | Use case |
+|---------|--------|----------|
+| `connection-limit` | `count,netmask` | Limit concurrent connections per source IP/subnet. Pair with `connection-state=new`. |
+| `connection-rate` | `rate` | Match based on current connection throughput. |
+| `dst-limit` | `rate[/time],burst,mode[/expire]` | Per-flow rate limiting (mode = `src-address`, `dst-address`, etc.). More granular than `limit`. |
+
 ### Managing rules by comment
 
 ```
