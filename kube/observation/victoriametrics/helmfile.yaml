@@ -6,6 +6,7 @@ helmDefaults:
 releases:
 - name: victoriametrics
   chart: vm/victoria-metrics-single
+  version: 0.32.0
   namespace: obs
   values:
   - ./helm-values.yml

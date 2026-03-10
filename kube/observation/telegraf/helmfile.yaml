@@ -6,6 +6,7 @@ helmDefaults:
 releases:
 - name: telegraf
   chart: influxdata/telegraf-ds
+  version: 1.1.46
   namespace: obs
   values:
   - ./helm-values.yml

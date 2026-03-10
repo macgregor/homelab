@@ -6,6 +6,7 @@ helmDefaults:
 releases:
 - name: telegraf-snmp
   chart: influxdata/telegraf
+  version: 1.8.67
   namespace: obs
   values:
   - ./helm-values.yml.gotmpl
