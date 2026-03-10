@@ -1,26 +1,114 @@
 ---
 name: maintenance
 description: >
-  Load this document when upgrading k3s, rotating certificates, recovering from cluster
-  failures, managing container images, or performing routine maintenance tasks.
+  Load this document when upgrading Kubernetes components (Helm charts, container images),
+  planning or executing upgrades, recovering from cluster failures, rotating certificates,
+  or performing routine maintenance tasks.
 categories: [kubernetes, operations]
-tags: [upgrades, certificates, recovery, troubleshooting, maintenance]
+tags: [upgrades, certificates, recovery, troubleshooting, maintenance, helm]
 related_docs:
   - docs/02-rpis-and-k3s.md
   - docs/01-infrastructure-provisioning.md
+  - docs/04-networking.md
 complexity: intermediate
 ---
 
-# k3s Upgrades
+# Maintenance
 
-1. pick a new version from https://github.com/k3s-io/k3s/releases (probably look for "Latest")
-2. update the k3s version in `ansible/inventory/group_vars/all.yaml`:
+## Upgrading Kubernetes Components
+
+Components deploy via Helm (helmfile) or plain kubectl. The upgrade method depends on whether breaking changes involve immutable Kubernetes fields. Scale planning to the component's blast radius -- system infrastructure (`kube/sys/`) warrants thorough analysis and a written plan; application upgrades (media services, user apps) can skip to execution with lighter verification.
+
+### Planning an Upgrade
+
+Before writing any code, research the upgrade path: what changed, what breaks, and whether in-place upgrade works or uninstall+reinstall is required. For low-risk application upgrades, a quick changelog scan may suffice.
+
+**1. Determine the version gap and read changelogs.**
+
+Check the deployed version (`helm list -n <namespace>` for Helm, or the running image tag for kubectl-managed apps). Compare with the latest stable release. Read changelogs for every minor version in the gap -- breaking changes accumulate.
+
+**2. Identify immutable field changes.**
+
+Kubernetes prohibits modifying certain fields after creation (e.g., `matchLabels` on Deployments, `spec.attachRequired` on CSIDriver objects). If any chart version in the upgrade path changed an immutable field's default, in-place `helmfile apply` fails. This determines the upgrade method:
+
+- **No immutable changes**: In-place upgrade via `helmfile apply` or `kubectl apply`. Simpler, lower risk, supports `helm rollback`.
+- **Immutable changes**: Must uninstall first, then reinstall. Order matters -- delete the old release, delete immutable objects (CSIDriver, etc.), apply file changes, then deploy. Expect brief service disruption.
+
+**3. Check values schema changes.**
+
+Helm charts rename, restructure, or change defaults for values between versions. Upstream charts publish a `values.yaml` with defaults -- diff the old and new versions to catch:
+- Renamed keys (e.g., `external-snapshotter` to `externalSnapshotter`)
+- Flipped defaults (e.g., `attachRequired: false` becoming `true`)
+- Deprecated values (e.g., `installCRDs` replaced by `crds.enabled`)
+- New features enabled by default that add unnecessary resource overhead (e.g., FRR sidecars, external attacher containers)
+
+For kubectl-managed apps (e.g., CoreDNS), steps 2-3 are simpler: check for RBAC or config syntax changes, update the image tag, and `kubectl apply`.
+
+**4. Assess data safety and blast radius.**
+
+Understand what survives an uninstall. Key Kubernetes behaviors:
+- Helm never deletes CRDs on uninstall (`helmfile destroy` preserves CRDs and their instances)
+- PVs and PVCs are independent of the controllers that provisioned them
+- Namespaces persist through uninstall/reinstall
+- Services lose their LoadBalancer IPs during uninstall (MetalLB reassigns them on reinstall)
+
+For components with multiple instances (e.g., internal + external ingress controllers), upgrade the lower-risk instance first, verify, then proceed.
+
+**5. Document the plan.**
+
+Write upgrade plans to `docs/plans/` (gitignored, ephemeral). Use a consistent structure:
+- **Context**: Current version, target version, deployment method, current health
+- **Breaking Changes**: Table with version, change, impact assessment, and mitigation
+- **File Changes**: Exact edits needed, with before/after snippets
+- **Upgrade Procedure**: Pre-flight checks, execution steps, post-upgrade verification, rollback steps
+- **Observations**: Anything learned that might help future upgrades
+
+### Upgrade Procedure Structure
+
+Every upgrade follows the same phases:
+
+**Pre-flight (read-only):** Verify the component is healthy before touching it. Record current state for rollback comparison -- pod status, image versions, helm chart versions, service IPs.
+
+**Execute:** Apply file changes and deploy. For uninstall+reinstall upgrades, order matters: destroy old release, delete immutable objects, apply file edits, deploy new version. Never deploy with stale values files -- old values against a new chart silently produce wrong configuration.
+
+**Post-upgrade verification:** Confirm pods are running, images are correct, and services have their IPs. Verify the component works, not just runs. Test end-to-end:
+- DNS components: resolve internal and external names
+- Ingress controllers: hit actual endpoints through the ingress
+- Storage drivers: create and mount a test PVC
+- Certificate managers: dry-run a Certificate creation through the webhook
+
+**Rollback:** Document a rollback path before execution. For in-place Helm upgrades, `helm rollback <release> 0` reverts to the previous revision. For uninstall+reinstall upgrades: destroy the failed install, `git checkout` the file changes, redeploy with the old configuration.
+
+### Recurring Patterns
+
+Patterns from past upgrades:
+
+**Pin chart versions in helmfile.yaml.** Without a version pin, `helmfile apply` silently pulls the latest chart version. Always pin: `version: x.y.z`. This makes upgrades intentional and rollbacks predictable.
+
+**Clean up dead configuration during upgrades.** Upgrades are a natural time to remove stale values (unused annotations, references to undeployed components, deprecated value keys). Keep these cleanups in the same commit as the upgrade so the diff tells a coherent story.
+
+**Separate risky follow-up work into its own commit.** When an upgrade enables a follow-up migration (e.g., migrating `spec.loadBalancerIP` to `metallb.io/loadBalancerIPs` annotations after a MetalLB chart swap), upgrade first, verify, then migrate in a separate commit. This keeps each change's blast radius small and rollback boundaries clean.
+
+**Pre-pull images before uninstall+reinstall upgrades.** The downtime window shrinks when nodes already have the new images cached. During pre-flight, `ssh <node> "sudo crictl pull <image>:<tag>"` on each node. This avoids image pull delays when the new pods schedule after reinstall.
+
+**Verify ARM64 image availability.** This cluster runs on Raspberry Pi (ARM64). Confirm the target version publishes `linux/arm64` images -- check the image registry or release notes. An image that supported ARM64 in the past may drop it in a future release.
+
+**Chart swaps (e.g., Bitnami to upstream) always require uninstall+reinstall.** Different chart maintainers use different label selectors, values schemas, and resource naming. Treat a chart swap the same as an immutable field change.
+
+## Historical Reference
+
+Legacy troubleshooting notes. These sections will be replaced as automation improves.
+
+## k3s Upgrades
+
+1. Pick a new version from https://github.com/k3s-io/k3s/releases (probably look for "Latest")
+2. Update the k3s version in `ansible/inventory/group_vars/all.yaml`:
 ```
 k3s_version: v1.27.2+k3s1
 ```
 3. Run `ansible-playbook k3-install.yml`.
 
-## Agent Error rejoining cluster
+### Agent Error Rejoining Cluster
 
 https://github.com/k3s-io/k3s/issues/802#issuecomment-841748960
 
@@ -35,11 +123,11 @@ In my case it was:
 kubectl -n kube-system delete secrets k3-n1.node-password.k3s
 ```
 
-# Server OS Upgrade
+## Server OS Upgrade
 
 DONT DO IT. Its not worth the pain. Start with a fresh install instead.
 
-# Rotating k3s Certs
+## Rotating k3s Certs
 
 https://docs.k3s.io/cli/certificate#rotating-self-signed-ca-certificates
 
@@ -50,7 +138,7 @@ sudo k3s certificate rotate-ca --path=/var/lib/rancher/k3s/server/rotate-ca
 sudo systemctl restart k3s
 ```
 
-## Cert Weirdness recreating master node
+### Cert Weirdness Recreating Master Node
 
 ```
 Dec 28 11:43:36 k3-m1 k3s[9577]: time="2023-12-28T11:43:36-05:00" level=fatal msg="/var/lib/rancher/k3s/server/tls/etcd/peer-ca.crt, /var/lib/rancher/k3s/server/tls/etcd/server-ca.crt, /var/lib/rancher/k3s/server/cred/ipsec.psk, /var/lib/rancher/k3s/server/tls/request-header-ca.crt, /var/lib/rancher/k3s/server/tls/server-ca.crt, /var/lib/rancher/k3s/server/tls/client-ca.crt, /var/lib/rancher/k3s/server/tls/client-ca.key, /var/lib/rancher/k3s/server/tls/etcd/peer-ca.key, /var/lib/rancher/k3s/server/tls/etcd/server-ca.key, /var/lib/rancher/k3s/server/tls/request-header-ca.key, /var/lib/rancher/k3s/server/tls/server-ca.key, /var/lib/rancher/k3s/server/tls/service.key newer than datastore and could cause a cluster outage. Remove the file(s) from disk and restart to be recreated from datastore."
@@ -59,69 +147,4 @@ Dec 28 11:43:36 k3-m1 k3s[9577]: time="2023-12-28T11:43:36-05:00" level=fatal ms
 ```
 > sudo rm /var/lib/rancher/k3s/server/tls/etcd/peer-ca.crt /var/lib/rancher/k3s/server/tls/etcd/server-ca.crt /var/lib/rancher/k3s/server/cred/ipsec.psk /var/lib/rancher/k3s/server/tls/request-header-ca.crt /var/lib/rancher/k3s/server/tls/server-ca.crt /var/lib/rancher/k3s/server/tls/client-ca.crt /var/lib/rancher/k3s/server/tls/client-ca.key /var/lib/rancher/k3s/server/tls/etcd/peer-ca.key /var/lib/rancher/k3s/server/tls/etcd/server-ca.key /var/lib/rancher/k3s/server/tls/request-header-ca.key /var/lib/rancher/k3s/server/tls/server-ca.key /var/lib/rancher/k3s/server/tls/service.key
 > sudo systemctl restart k3s
-```
-# Image Cleanup
-
-kubernetes nodes automatically perform image garbage collection. You can find documentation on the default thresholds here:
-https://kubernetes.io/docs/concepts/cluster-administration/kubelet-garbage-collection/#user-configuration
-
-You can tune these thresholds on your k3s nodes by adding arguments to the service command line:
-```
---kubelet-arg=image-gc-high-threshold=70 --kubelet-arg=image-gc-low-threshold=50
-```
-
-## Manual
-```
-sudo k3s crictl images
-sudo k3s crictl rmi --prune
-```
-
-# Helm Delete Fails - policy/v1beta1 PodSecurityPolicy
-
-https://www.suse.com/support/kb/doc/?id=000021053
-
-```
-> helmfile --debug --file app/teleport/helmfile.yaml delete
-...
-helm:HGbUj> uninstall.go:95: [debug] uninstall: Deleting teleport-cluster
-helm:HGbUj> uninstall.go:117: [debug] uninstall: Failed to delete release: [unable to build kubernetes objects for delete: unable to recognize "": no matches for kind "PodSecurityPolicy" in version "policy/v1beta1"]
-Error: failed to delete release: teleport-cluster
-...
-> helm plugin install https://github.com/helm/helm-mapkubeapis
-> helm mapkubeapis teleport-cluster --namespace teleport
-
-# should work now
-> helmfile --file ./app/teleport/helmfile.yaml delete
-```
-
-helm mapkubeapis metallb --namespace metallb
-
-# dnf/dnf-automatic Failures
-
-Check the dnf-automatic update logs with `systemctl status dnf-automatic-install.service`:
-```
-# note you can 
-[macgregor@k3-n1 ~]$ systemctl status dnf-automatic-install.service
-× dnf-automatic-install.service - dnf automatic install updates
-     Loaded: loaded (/usr/lib/systemd/system/dnf-automatic-install.service; static)
-     Active: failed (Result: exit-code) since Sun 2024-06-02 06:21:36 EDT; 10h ago
-TriggeredBy: ● dnf-automatic-install.timer
-   Main PID: 476157 (code=exited, status=1/FAILURE)
-        CPU: 30.754s
-
-Jun 02 06:20:56 k3-n1 dnf-automatic[476157]: Last metadata expiration check: 4:07:16 ago on Sun 02 Jun 2024 02:13:40 AM EDT.
-Jun 02 06:21:02 k3-n1 dnf-automatic[476157]: Public key for raspberrypi2-kernel4-6.1.31-v8.1.el9.altarch.aarch64.rpm is not installed
-Jun 02 06:21:03 k3-n1 dnf-automatic[476157]: Public key for raspberrypi2-firmware-6.1.31-v8.1.el9.altarch.aarch64.rpm is not installed
-Jun 02 06:21:36 k3-n1 dnf-automatic[476157]: The downloaded packages were saved in cache until the next successful transaction.
-Jun 02 06:21:36 k3-n1 dnf-automatic[476157]: You can remove cached packages by executing 'dnf clean packages'.
-Jun 02 06:21:36 k3-n1 dnf-automatic[476157]: Error: GPG check FAILED
-Jun 02 06:21:36 k3-n1 systemd[1]: dnf-automatic-install.service: Main process exited, code=exited, status=1/FAILURE
-Jun 02 06:21:36 k3-n1 systemd[1]: dnf-automatic-install.service: Failed with result 'exit-code'.
-```
-
-Unfortunately, dnf-automatic does not automatically import new GPG keys when they change. Normally if this happens DNF will prompt you if you want to import the key for not, but I have not found a way to make this happen easily when dnf-automatic is piloting things. So you need to grab and import the new GPG key so dnf-automatic can start running again. In my case, this meant updating a rocky linux package that provides the new gpg key, then updating one of the failing packages to import the key:
-
-```
-sudo dnf update --disablerepo=* --enablerepo=extras
-sudo dnf update -y raspberrypi2-kernel4 raspberrypi2-firmware
 ```
