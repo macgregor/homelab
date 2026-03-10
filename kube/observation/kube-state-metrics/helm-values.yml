@@ -1,3 +1,11 @@
+collectors:
+  - daemonsets
+  - deployments
+  - jobs
+  - nodes
+  - pods
+  - statefulsets
+
 resources:
   requests:
     memory: 30Mi

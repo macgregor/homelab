@@ -15,8 +15,8 @@ config:
   agent:
     interval: "30s"
     round_interval: true
-    metric_batch_size: 1000
-    metric_buffer_limit: 10000
+    metric_batch_size: 200
+    metric_buffer_limit: 1000
     collection_jitter: "0s"
     flush_interval: "30s"
     flush_jitter: "5s"
@@ -28,8 +28,10 @@ config:
         totalcpu: true
         collect_cpu_time: false
         report_active: false
-    - mem: {}
+    - mem:
+        fieldinclude: ["available", "available_percent", "buffered", "cached", "free", "swap_free", "swap_total", "total", "used", "used_percent"]
     - disk:
+        mount_points: ["/", "/boot"]
         ignore_fs:
           - tmpfs
           - devtmpfs
@@ -38,15 +40,22 @@ config:
           - overlay
           - aufs
           - squashfs
-    - diskio: {}
-    - net: {}
-    - system: {}
-    - processes: {}
+        fieldinclude: ["free", "total", "used", "used_percent"]
+    - diskio:
+        fieldinclude: ["io_time", "read_bytes", "write_bytes", "reads", "writes", "io_await", "weighted_io_time"]
+        log_level: "error"
+    - net:
+        fieldinclude: ["bytes_recv", "bytes_sent", "drop_in", "drop_out", "err_in", "err_out"]
+    - system:
+        fieldinclude: ["uptime", "load1", "load5", "load15", "n_cpus"]
+    - processes:
+        fieldinclude: ["blocked", "running", "total", "total_threads", "zombies"]
     - temp: {}
     - kubernetes:
         url: "https://$HOSTIP:10250"
         bearer_token: "/var/run/secrets/kubernetes.io/serviceaccount/token"
         insecure_skip_verify: true
+        fieldinclude: ["cpu_usage_nanocores", "memory_working_set_bytes", "rx_bytes", "tx_bytes"]
   outputs:
     - influxdb_v2:
         urls:

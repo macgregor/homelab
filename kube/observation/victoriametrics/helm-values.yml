@@ -4,7 +4,7 @@ server:
     memory.allowedBytes: "200MB"
     search.maxUniqueTimeseries: "5000"
   persistentVolume:
-    storageClass: synology-nfs-app-data-retain
+    storageClassName: synology-nfs-app-data-retain
     size: 10Gi
   resources:
     requests:

@@ -45,6 +45,25 @@ VictoriaMetrics receives metrics from three sources:
 - **Homelab Overview** -- Infrastructure health across router, NAS, and cluster nodes (e.g. CPU, memory, temperatures, network traffic).
 - **Kubernetes** -- Workload state (e.g. pod phases, container restarts, resource usage vs limits). Filterable by namespace.
 
+## Metrics Filtering
+
+Metrics are filtered at the collection layer to reduce agent memory, ingestion volume, and VictoriaMetrics storage.
+
+**Telegraf inputs** use `fieldinclude` (whitelist) to control which fields are collected per plugin. This filters at collection time, before metrics enter the agent's buffer. Each input in `helm-values.yml` specifies only the fields it needs.
+
+**kube-state-metrics** uses a `collectors` list in `helm-values.yml` to restrict which Kubernetes resource types are scraped. Only resource types referenced by dashboards or needed for operational alerts are enabled.
+
+**Selection criteria** (apply when adding new metrics or reviewing existing ones):
+
+1. **Dashboard usage** -- Is a Grafana dashboard querying it? Retain.
+2. **Diagnostic value** -- Would this metric help diagnose a real scenario (OOM, IO stalls, network saturation, SD card wear)? Retain.
+3. **Cardinality** -- Per-node metrics are cheap; per-pod/per-container metrics multiply with workload count. Prefer lower cardinality sources.
+4. **Redundancy** -- If another input already provides equivalent data (e.g., the `net` input covers network errors, so `kubernetes` pod network errors are redundant), drop the duplicate.
+
+The `kubernetes` input is the highest cardinality source because it creates series per pod and container. Only fields unavailable from system-level inputs (per-container CPU/memory, per-pod network) are retained there.
+
+When adding new dashboards or metrics, re-evaluate against these criteria. Prefer adding a field to an existing input over enabling a new collector.
+
 ## SNMP Prerequisites
 
 Enable SNMPv2c on both targets before deploying Telegraf SNMP:
