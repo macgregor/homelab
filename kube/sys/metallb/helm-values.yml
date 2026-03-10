@@ -1,8 +1,5 @@
-# https://github.com/helm/charts/tree/master/stable/metallb
-# todo: switch to https://github.com/bitnami/charts/tree/master/bitnami/metallb
-
-# https://artifacthub.io/packages/helm/bitnami/metallb
-# https://github.com/bitnami/charts/tree/main/bitnami/metallb
+# https://artifacthub.io/packages/helm/metallb/metallb
+# https://metallb.universe.tf/
 .tolerate-control-plane: &tolerate-control-plane
   key: "CriticalAddonsOnly"
   operator: "Equal"
@@ -20,30 +17,22 @@
           values:
           - 'true'
 
-# PodSecurityPolicy is unavailable in Kubernetes v1.25 or later
-psp: 
-  create: false
-
 controller:
   tolerations:
     - <<: *tolerate-control-plane
-  affinity: 
+  affinity:
     <<: *node-affinity-prefer-control-plane
-
-  metrics:
-    enabled: false
-    serviceMonitor:
-      enabled: false
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
 
 speaker:
   tolerations:
     - <<: *tolerate-control-plane
-  
-  metrics:
+  frr:
     enabled: false
-    serviceMonitor:
-      enabled: false
-
-prometheus:
-  serviceMonitor:
-    enabled: false
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
