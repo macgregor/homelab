@@ -27,15 +27,16 @@ Reference for AI agents working with Telegraf 1.x. Covers configuration model, p
 2. [Configuration Model](#2-configuration-model)
 3. [Agent Settings](#3-agent-settings)
 4. [Per-Plugin Filters](#4-per-plugin-filters)
-5. [Containerized Deployment](#5-containerized-deployment)
-6. [Container Memory Behavior](#6-container-memory-behavior)
-7. [Plugin Reference: diskio](#7-plugin-reference-diskio)
-8. [Plugin Reference: disk](#8-plugin-reference-disk)
-9. [Plugin Reference: kubernetes](#9-plugin-reference-kubernetes)
-10. [Plugin Reference: SNMP](#10-plugin-reference-snmp)
-11. [Plugin Reference: influxdb_v2 Output](#11-plugin-reference-influxdb_v2-output)
-12. [Helm Charts](#12-helm-charts)
-13. [Documentation Links](#13-documentation-links)
+5. [Debugging](#5-debugging)
+6. [Containerized Deployment](#6-containerized-deployment)
+7. [Container Memory Behavior](#7-container-memory-behavior)
+8. [Plugin Reference: diskio](#8-plugin-reference-diskio)
+9. [Plugin Reference: disk](#9-plugin-reference-disk)
+10. [Plugin Reference: kubernetes](#10-plugin-reference-kubernetes)
+11. [Plugin Reference: SNMP](#11-plugin-reference-snmp)
+12. [Plugin Reference: influxdb_v2 Output](#12-plugin-reference-influxdb_v2-output)
+13. [Helm Charts](#13-helm-charts)
+14. [Documentation Links](#14-documentation-links)
 
 ---
 
@@ -61,17 +62,9 @@ When a table entry has a top-level `oid` (e.g., `oid: "1.3.6.1.2.1.2.2"`), Teleg
 
 The buffer is created as `make([]telegraf.Metric, capacity)` -- the full slice is allocated immediately, not grown on demand. Oversizing wastes memory. Size it based on actual metrics per cycle, not the default of 10,000.
 
-### `memory.current` at the limit is normal for DaemonSet pods
+### `memory.current` at the cgroup limit is normal for DaemonSet pods
 
-Monitoring DaemonSets that mount host filesystems will show `memory.current` at or near the cgroup limit. This is page cache from reading `/proc/*`, `/sys/*`, and other host files -- it is reclaimable and does not cause OOM kills. See [Container Memory Behavior](#6-container-memory-behavior).
-
-### `kubectl top` and the OOM killer use different metrics
-
-`kubectl top` reports `memory.working_set_bytes` (= `memory.current - inactive_file`). The OOM killer triggers on `memory.current` exceeding `memory.max`, but only after the kernel fails to reclaim page cache. A pod can show 95Mi in `kubectl top` while `memory.current` is 150Mi -- the difference is reclaimable page cache.
-
-### Deprecated filter aliases
-
-`fieldpass`/`fielddrop` were renamed to `fieldinclude`/`fieldexclude` in v1.29.0 and will be removed in v1.40.0. The old names still work but emit deprecation warnings.
+Page cache from reading host `/proc/*` and `/sys/*` fills `memory.current` to the limit. This is reclaimable and does not cause OOM kills. See [Container Memory Behavior](#6-container-memory-behavior).
 
 ---
 
@@ -116,6 +109,20 @@ Any plugin can be instantiated multiple times with different configs:
 
 Each instance runs independently with its own collection goroutine.
 
+### Measurement naming
+
+Per-input settings control the measurement name in emitted metrics:
+
+| Setting | Description |
+|---------|-------------|
+| `name_override` | Replace the plugin's default measurement name entirely. |
+| `name_prefix` | Prepend a string to the measurement name. |
+| `name_suffix` | Append a string to the measurement name. |
+
+### Config loading
+
+Telegraf loads config from `--config` (single file) and/or `--config-directory` (all `.conf` files in a directory, merged). In Helm chart deployments, the chart renders a single ConfigMap-mounted file. Telegraf does not support config reload via SIGHUP -- a restart is required after config changes.
+
 ---
 
 ## 3. Agent Settings
@@ -153,7 +160,7 @@ Both settings can be overridden per-output in the output plugin's config block.
 
 ### Go runtime
 
-Telegraf does not set `GOMEMLIMIT` or `GOGC` internally. You can set these as container environment variables to tune Go's garbage collector. `GOMEMLIMIT` (Go 1.19+) is useful when you want the GC to be more aggressive about reclaiming heap within a container memory limit.
+Telegraf does not set `GOMEMLIMIT` or `GOGC` internally. Both can be set as container environment variables to tune GC behavior.
 
 ---
 
@@ -188,9 +195,45 @@ When both include and exclude are set, a field/tag must match include AND not ma
 
 `fieldinclude` filters at collection time, before metrics enter the buffer. This reduces buffer memory usage and downstream ingestion volume.
 
+**Deprecated aliases:** `fieldpass`/`fielddrop` were renamed to `fieldinclude`/`fieldexclude` in v1.29.0 (removal in v1.40.0).
+
 ---
 
-## 5. Containerized Deployment
+## 5. Debugging
+
+**Docs:** https://docs.influxdata.com/telegraf/v1/administration/troubleshooting/
+
+### `--test` flag
+
+Runs all inputs once, prints metrics to stdout in line protocol format, then exits. Does not send to outputs. Essential for verifying what a config actually collects:
+
+```bash
+telegraf --config /etc/telegraf/telegraf.conf --test
+```
+
+### `--input-filter` / `--output-filter`
+
+Restrict which plugins run. Combine with `--test` to isolate a single input:
+
+```bash
+telegraf --config telegraf.conf --test --input-filter diskio --output-filter ""
+```
+
+### `internal` input plugin
+
+Exposes Telegraf's own operational metrics: gather errors, metrics written/dropped, buffer fullness. Enable with `[[inputs.internal]]`. Set `collect_memstats = false` to reduce noise unless debugging Go memory.
+
+### Common warning patterns
+
+| Warning | Cause | Fix |
+|---------|-------|-----|
+| `Unable to gather disk name for "X"` | diskio can't stat `/dev/X` in container | `log_level = "error"` on diskio input |
+| `DeprecationWarning: Value "hwaddr"` | SNMP table auto-discovered ifPhysAddress | Remove table-level `oid`, use explicit fields |
+| `Metric buffer overflow; N metrics dropped` | Output unreachable longer than buffer allows | Increase `metric_buffer_limit` or fix output |
+
+---
+
+## 6. Containerized Deployment
 
 ### Environment variables
 
@@ -204,7 +247,7 @@ Telegraf uses [gopsutil](https://github.com/shirou/gopsutil) for system metrics.
 | `HOST_ETC` | `/etc` | (rarely used) |
 | `HOST_VAR` | `/var` | (rarely used) |
 | `HOST_RUN` | `/run` | (rarely used) |
-| `HOST_DEV` | `/dev` | gopsutil device resolution (but diskio plugin hardcodes `/dev/`, ignoring this) |
+| `HOST_DEV` | `/dev` | gopsutil device resolution (diskio ignores this -- see [gotcha](#diskio-hardcodes-dev----no-env-var-override)) |
 
 ### The hostfs mount pattern
 
@@ -219,7 +262,7 @@ docker run -v /:/hostfs:ro \
   telegraf
 ```
 
-This makes the host's `/proc`, `/sys`, and all mount points accessible inside the container. The disk plugin uses `HOST_MOUNT_PREFIX` to prepend `/hostfs` to mount points before calling `statfs()`, then strips the prefix from reported paths.
+This makes the host's `/proc`, `/sys`, and all mount points accessible inside the container. The disk plugin uses `HOST_MOUNT_PREFIX` for path remapping (see [disk plugin](#host_mount_prefix-remapping)).
 
 ### What the hostfs mount exposes
 
@@ -227,28 +270,13 @@ Mounting host `/` at `/hostfs` makes **everything** on the host visible: all mou
 
 ---
 
-## 6. Container Memory Behavior
+## 7. Container Memory Behavior
 
-### cgroup v2 memory accounting
+Monitoring DaemonSets that mount host filesystems show `memory.current` near the cgroup limit. This is normal. The kernel fills reclaimable page cache (from reading `/proc/*`, `/sys/*`, etc.) up to the limit and evicts it on demand. OOM kills only occur when non-reclaimable memory (anon + kernel) exceeds the limit.
 
-| Metric | Source | What it includes |
-|--------|--------|-----------------|
-| `memory.current` | `/sys/fs/cgroup/memory.current` | Everything: anon (heap/stack) + file (page cache) + kernel + tmpfs |
-| `memory.stat: anon` | `/sys/fs/cgroup/memory.stat` | Non-reclaimable process memory (heap, stack, mmap'd anon) |
-| `memory.stat: file` | `/sys/fs/cgroup/memory.stat` | Reclaimable page cache from file reads |
-| `memory.working_set_bytes` | cadvisor (kubelet) | `memory.current - inactive_file` (approximate "real" demand) |
+Key metrics: `kubectl top` reports `memory.working_set_bytes` (`memory.current - inactive_file`), which excludes reclaimable pages. The OOM killer uses `memory.current` vs `memory.max`, but reclaims page cache first. A pod showing 95Mi in `kubectl top` with `memory.current` at 150Mi is healthy -- the 55Mi difference is reclaimable cache.
 
-Kubernetes `resources.limits.memory` sets `memory.max`. The OOM killer triggers when `memory.current` exceeds `memory.max` **and the kernel cannot reclaim enough page cache**. Since page cache is reclaimable, `memory.current` can sit at the limit indefinitely without OOM kills.
-
-### Why monitoring DaemonSets show high memory.current
-
-A Telegraf DaemonSet pod typically shows `memory.current` near its limit even though actual process memory (anon) is much lower. Breakdown from a typical pod:
-
-- **anon: ~32MB** -- Go runtime, metric buffers, parsed data structures
-- **file: ~120MB** -- page cache from reading host `/proc/*`, `/sys/*`, Go binary
-- **kernel: ~2.5MB** -- stack, page tables
-
-The page cache fills to the cgroup limit because the kernel caches any file read. It is evicted automatically under pressure. This is normal and expected.
+Typical breakdown: anon ~32MB (Go heap, metric buffers), file ~120MB (page cache), kernel ~2.5MB.
 
 ### Memory tuning levers
 
@@ -265,7 +293,7 @@ The memory limit should be set with awareness that page cache will fill the rema
 
 ---
 
-## 7. Plugin Reference: diskio
+## 8. Plugin Reference: diskio
 
 **Source:** `plugins/inputs/diskio/`
 
@@ -310,16 +338,11 @@ Calculated from deltas between consecutive collections. Not emitted on the first
 
 ### Container limitations
 
-In containers, `diskInfo()` fails because it stats `/dev/<devName>` (hardcoded). This affects:
-- `name_templates` -- cannot resolve udev properties, falls back to kernel name
-- `device_tags` -- cannot read udev data
-- Serial number -- may not be available
-
-Metrics from `/proc/diskstats` (reads, writes, bytes, io_time, etc.) work correctly via `HOST_PROC`.
+In containers, `name_templates`, `device_tags`, and serial numbers don't work because `diskInfo()` hardcodes `/dev/` (see [gotcha](#diskio-hardcodes-dev----no-env-var-override)). Core metrics from `/proc/diskstats` work correctly via `HOST_PROC`.
 
 ---
 
-## 8. Plugin Reference: disk
+## 9. Plugin Reference: disk
 
 **Source:** `plugins/inputs/disk/`, `plugins/common/psutil/ps.go`
 
@@ -360,7 +383,7 @@ When set (e.g., `/hostfs`), the plugin prepends the prefix to mount points befor
 
 ---
 
-## 9. Plugin Reference: kubernetes
+## 10. Plugin Reference: kubernetes
 
 **Source:** `plugins/inputs/kubernetes/`
 
@@ -393,11 +416,24 @@ This is typically the highest cardinality input because series multiply with pod
 
 ---
 
-## 10. Plugin Reference: SNMP
+## 11. Plugin Reference: SNMP
 
 **Source:** `plugins/inputs/snmp/`
 
 Polls SNMP agents for metrics via GET and WALK operations.
+
+### Connection config
+
+```toml
+[[inputs.snmp]]
+  agents = ["udp://192.168.1.1:161"]
+  version = 2                          # 1, 2, or 3
+  community = "public"                 # v1/v2c only
+  timeout = "5s"
+  retries = 3
+  agent_host_tag = "source"            # tag key for the agent address
+  name = "snmp_router"                 # measurement name prefix
+```
 
 ### Table collection modes
 
@@ -442,7 +478,7 @@ Per-table setting. Copies tag values from top-level (non-table) fields into each
 
 ---
 
-## 11. Plugin Reference: influxdb_v2 Output
+## 12. Plugin Reference: influxdb_v2 Output
 
 **Source:** `plugins/outputs/influxdb_v2/`
 
@@ -470,7 +506,7 @@ VictoriaMetrics accepts InfluxDB line protocol at `/api/v2/write`. The `organiza
 
 ---
 
-## 12. Helm Charts
+## 13. Helm Charts
 
 Two charts from `influxdata/helm-charts`:
 
@@ -508,7 +544,7 @@ Custom volumes and mounts are supported via `volumes` and `mountPoints` values.
 
 ---
 
-## 13. Documentation Links
+## 14. Documentation Links
 
 - [Telegraf Configuration](https://docs.influxdata.com/telegraf/v1/configuration/) -- agent settings, plugin config
 - [Input Plugin List](https://docs.influxdata.com/telegraf/v1/plugins/#input-plugins) -- all available inputs
