@@ -16,6 +16,7 @@ spec:
       labels:
         app.kubernetes.io/name: radarr
     spec:
+      ttlSecondsAfterFinished: 604800
       backoffLimit: 2
       activeDeadlineSeconds: 300
       template:
