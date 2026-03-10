@@ -76,7 +76,7 @@
           - /system identity set name=edge
           - /system clock set time-zone-name={{ router_timezone }}
           - /system ntp client set enabled=yes
-          - /ip ssh set strong-crypto=yes
+          - /ip ssh set strong-crypto=yes password-authentication=no
 
     - name: Add NTP server (Cloudflare)
       community.routeros.command:
