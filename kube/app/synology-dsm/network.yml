@@ -37,8 +37,6 @@ metadata:
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
     nginx.ingress.kubernetes.io/proxy-ssl-verify: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
-    nginx.ingress.kubernetes.io/limit-rps: "10"
-    nginx.ingress.kubernetes.io/limit-connections: "5"
 spec:
   ingressClassName: nginx-external
   tls:
