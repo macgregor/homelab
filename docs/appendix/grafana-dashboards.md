@@ -67,6 +67,14 @@ Steps sort highest to lowest automatically. First step must have `"value": null`
 
 Set on the dashboard root: `0` = none (no sharing), `1` = shared crosshair, `2` = shared crosshair + tooltip. Per-panel tooltip mode is a separate `options.tooltip` config.
 
+### Table panel `options.footer` crashes Grafana 12
+
+Grafana 12 migrates the legacy `options.footer` object (`show`, `enablePagination`, `countRows`, `reducer`) to the new schema. If `footer.show` is `true` but `footer.reducer` is missing, the migration crashes with `Uncaught (in promise)` in `migrations.ts`, showing "Loading plugin panel..." permanently. Use `"options": { "enablePagination": true }` directly instead of the legacy footer object. The old `custom.hidden` override property was also renamed to `custom.hideFrom.viz`. After fixing, restart Grafana to clear the cached migration state.
+
+### VictoriaLogs datasource plugin does not support `table` panels
+
+The VictoriaLogs Grafana plugin returns log frame data (Time, Line, labels). The `logs` panel type renders this natively; the `table` panel type cannot. Use `logs` panels with `showLabels: true` and LogsQL `extract` + `fields` pipes to show structured data. For aggregated stats, `stat` and `timeseries` panels work with `queryType: "stats"` and `queryType: "statsRange"`.
+
 ---
 
 ## 2. Dashboard JSON Model

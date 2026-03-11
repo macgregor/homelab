@@ -17,3 +17,30 @@ spec:
     port: 5140
     targetPort: 5140
     protocol: UDP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: victorialogs
+  namespace: obs
+  labels:
+    app.kubernetes.io/name: victorialogs
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+spec:
+  ingressClassName: nginx-internal
+  tls:
+  - hosts:
+    - victorialogs.matthew-stratton.me
+    secretName: victorialogs-tls
+  rules:
+  - host: victorialogs.matthew-stratton.me
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: victorialogs
+            port:
+              number: 9428

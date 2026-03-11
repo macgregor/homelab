@@ -1,0 +1,355 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_VICTORIALOGS",
+      "label": "VictoriaLogs",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "victoriametrics-logs-datasource",
+      "pluginName": "VictoriaLogs"
+    }
+  ],
+  "__requires": [
+    { "type": "datasource", "id": "victoriametrics-logs-datasource", "name": "VictoriaLogs", "version": "0.26.3" },
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" }
+  ],
+  "id": null,
+  "uid": "security",
+  "title": "Security",
+  "description": "Firewall events, ingress access logs, and traffic patterns",
+  "tags": ["homelab", "security"],
+  "timezone": "browser",
+  "editable": false,
+  "graphTooltip": 1,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "5m",
+  "schemaVersion": 39,
+  "version": 1,
+  "templating": {
+    "list": [
+      {
+        "name": "DS_VICTORIALOGS",
+        "type": "datasource",
+        "query": "victoriametrics-logs-datasource",
+        "current": { "selected": true, "text": "VictoriaLogs", "value": "VictoriaLogs" },
+        "hide": 0,
+        "label": "Logs Datasource"
+      }
+    ]
+  },
+  "annotations": { "list": [] },
+  "links": [],
+  "panels": [
+    {
+      "title": "Overview",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "Ingress Requests",
+      "type": "stat",
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+          "expr": "log_type:access stream:stdout | stats count() as requests",
+          "queryType": "stats"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Error Responses (4xx/5xx)",
+      "type": "stat",
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+          "expr": "log_type:access stream:stdout | extract \"\\\" <status> <_>\" from _msg | filter status:~\"^[45]\" | stats count() as errors",
+          "queryType": "stats"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 10, "color": "yellow" },
+              { "value": 50, "color": "red" }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 1,
+      "title": "Firewall Drops (Sampled)",
+      "description": "Rate-limited to 5/min per rule; actual drop count is higher.",
+      "type": "stat",
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+          "expr": "_msg:~\"firewall,info\" _msg:~\"drop-\" | stats count() as drops",
+          "queryType": "stats"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "orange" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 100, "color": "orange" },
+              { "value": 500, "color": "red" }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Unique Source IPs (Sampled)",
+      "description": "Distinct IPs seen in sampled firewall drops; actual count may be higher.",
+      "type": "stat",
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+          "expr": "_msg:~\"firewall,info\" _msg:~\"drop-\" | extract \"proto <_> (<_>), <src_ip>:<_>\" from _msg | stats count_uniq(src_ip) as unique_ips",
+          "queryType": "stats"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "purple" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "title": "Firewall (Sampled)",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
+    },
+    {
+      "id": 10,
+      "title": "Sampled Firewall Events by Action",
+      "description": "Rate-limited to 5/min per rule; shows relative trends, not absolute counts.",
+      "type": "timeseries",
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+          "expr": "_msg:~\"firewall,info\" | extract \"firewall,info <action> <chain>:\" from _msg | stats by (action) count() as events",
+          "queryType": "statsRange",
+          "legendFormat": "{{action}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "stacking": { "mode": "none" },
+            "spanNulls": false
+          },
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["sum", "mean", "max"] },
+        "tooltip": { "mode": "all", "sort": "desc" }
+      }
+    },
+    {
+      "id": 11,
+      "title": "Firewall Log Samples",
+      "description": "Rate-limited to 5/min per rule; not all dropped packets are logged.",
+      "type": "logs",
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 14 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+          "expr": "_msg:~\"firewall,info\" | extract \"firewall,info <action> <chain>: in:<in_iface> out:<out_iface>, connection-state:<conn_state> src-mac <src_mac>, proto <proto>, <src_ip>:<src_port>-><dst_ip>:<dst_port>, len <pkt_len>\" from _msg | fields _time, action, chain, proto, conn_state, src_ip, src_port, dst_ip, dst_port",
+          "maxLines": 100
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": false,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    },
+    {
+      "title": "Ingress Traffic",
+      "type": "row",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 }
+    },
+    {
+      "id": 20,
+      "title": "Requests by Status Code",
+      "type": "timeseries",
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+          "expr": "log_type:access stream:stdout | extract \"\\\" <status> <_>\" from _msg | filter status:~\"^[0-9]+$\" | stats by (status) count() as requests",
+          "queryType": "statsRange",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "stacking": { "mode": "none" },
+            "spanNulls": false
+          },
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum"] },
+        "tooltip": { "mode": "all", "sort": "desc" }
+      }
+    },
+    {
+      "id": 21,
+      "title": "Requests by Upstream Service",
+      "type": "timeseries",
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 25 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+          "expr": "log_type:access stream:stdout | extract \"] <_> <_> [<upstream>]\" from _msg | filter upstream:~\".+\" | stats by (upstream) count() as requests",
+          "queryType": "statsRange",
+          "legendFormat": "{{upstream}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 15,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "stacking": { "mode": "none" },
+            "spanNulls": false
+          },
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["sum"] },
+        "tooltip": { "mode": "all", "sort": "desc" }
+      }
+    },
+    {
+      "id": 22,
+      "title": "Ingress Access Logs",
+      "type": "logs",
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 33 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+          "expr": "log_type:access stream:stdout | extract \"<client_ip> <_> <_> [<_>] \\\"<method> <path> <_>\\\" <status> <body_bytes> \\\"<_>\\\" \\\"<_>\\\" <_> <request_time> [<upstream>]\" from _msg | fields _time, client_ip, method, path, status, body_bytes, request_time, upstream",
+          "maxLines": 100
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "showCommonLabels": false,
+        "wrapLogMessage": false,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      }
+    }
+  ]
+}

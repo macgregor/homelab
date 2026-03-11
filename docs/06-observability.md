@@ -52,6 +52,7 @@ VictoriaMetrics receives metrics from three sources:
 
 - **Homelab Overview** -- Infrastructure health across router, NAS, and cluster nodes (e.g. CPU, memory, temperatures, network traffic).
 - **Kubernetes** -- Workload state (e.g. pod phases, container restarts, resource usage vs limits). Filterable by namespace.
+- **Security** -- Firewall drop events, ingress access logs, HTTP status and upstream breakdowns. Powered by VictoriaLogs.
 
 ## Metrics Filtering
 
@@ -91,12 +92,12 @@ Both use the same community string from the `SNMP_COMMUNITY` env var in `.envrc`
 Logs can be queried via Grafana (Explore > VictoriaLogs datasource) or the [LogsQL](https://docs.victoriametrics.com/victorialogs/logsql/) HTTP API. To see what's currently collected, query the active streams:
 
 ```bash
-curl -s 'http://victorialogs.obs.svc:9428/select/logsql/streams?query=*'
+curl -sk 'https://victorialogs.matthew-stratton.me/select/logsql/streams?query=*'
 ```
 
 ## Ad-hoc Queries
 
-VictoriaMetrics exposes a Prometheus-compatible query API at `https://victoriametrics.matthew-stratton.me` (internal ingress). Useful for debugging metrics collection or exploring available data without Grafana.
+VictoriaMetrics and VictoriaLogs both expose query APIs via internal ingress. Useful for debugging collection or exploring data without Grafana.
 
 ```bash
 # Instant query -- current value
@@ -113,6 +114,21 @@ curl -sg 'https://victoriametrics.matthew-stratton.me/api/v1/labels?match[]=kube
 ```
 
 The in-cluster URL is `http://victoriametrics-server.obs.svc:8428` for queries from within pods.
+
+VictoriaLogs exposes a LogsQL query API at `https://victorialogs.matthew-stratton.me` (internal ingress).
+
+```bash
+# Search logs
+curl -sk 'https://victorialogs.matthew-stratton.me/select/logsql/query' --data-urlencode 'query=_msg:~"firewall,info"' --data-urlencode 'limit=5'
+
+# Active streams
+curl -sk 'https://victorialogs.matthew-stratton.me/select/logsql/streams?query=*'
+
+# Stats query -- count by field
+curl -sk 'https://victorialogs.matthew-stratton.me/select/logsql/stats_query' --data-urlencode 'query=log_type:access | stats count() as total' --data-urlencode 'time=1h'
+```
+
+The in-cluster URL is `http://victorialogs.obs.svc:9428` for queries from within pods.
 
 ## Previous Experiments
 

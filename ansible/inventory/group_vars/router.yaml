@@ -43,4 +43,5 @@ router_dns_hosts:
   - { name: "qbittorrent.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "radarr.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "sonarr.matthew-stratton.me", address: "192.168.1.221" }
+  - { name: "victorialogs.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "victoriametrics.matthew-stratton.me", address: "192.168.1.221" }
