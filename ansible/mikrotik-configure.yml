@@ -194,7 +194,7 @@
       community.routeros.command:
         commands:
           - /ip service disable telnet,ftp,api,api-ssl
-          - /ip service set ssh address=192.168.1.0/24
+          - /ip service set ssh address=0.0.0.0/0
           - /ip service set winbox address=192.168.1.0/24
           - /ip service set www address=192.168.1.0/24
 

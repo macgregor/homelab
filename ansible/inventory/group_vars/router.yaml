@@ -52,6 +52,15 @@ wg_peers:
     public_key: "{{ lookup('env', 'WG_PHONE_PUBLIC_KEY') | mandatory('WG_PHONE_PUBLIC_KEY is not set — source .envrc') }}"
     preshared_key: "{{ lookup('env', 'WG_PHONE_PSK') | mandatory('WG_PHONE_PSK is not set — source .envrc') }}"
     allowed_address: "10.100.0.2/32"
+  - name: laptop
+    public_key: "{{ lookup('env', 'WG_LAPTOP_PUBLIC_KEY') | mandatory('WG_LAPTOP_PUBLIC_KEY is not set — source .envrc') }}"
+    preshared_key: "{{ lookup('env', 'WG_LAPTOP_PSK') | mandatory('WG_LAPTOP_PSK is not set — source .envrc') }}"
+    allowed_address: "10.100.0.3/32"
+
+# Port knocking (read from .envrc)
+knock_port_1: "{{ lookup('env', 'KNOCK_PORT_1') | mandatory('KNOCK_PORT_1 is not set — source .envrc') }}"
+knock_port_2: "{{ lookup('env', 'KNOCK_PORT_2') | mandatory('KNOCK_PORT_2 is not set — source .envrc') }}"
+knock_port_3: "{{ lookup('env', 'KNOCK_PORT_3') | mandatory('KNOCK_PORT_3 is not set — source .envrc') }}"
 
 # Split-horizon DNS: per-host entries managed by homelab-sync-dns.sh
 router_dns_hosts:

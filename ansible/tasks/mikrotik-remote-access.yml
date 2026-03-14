@@ -75,3 +75,84 @@
         comment="wg: forward from wg0"
         place-before=[find comment="defconf: drop all from WAN not DSTNATed"]
   when: not _has_wg_forward_rule
+
+# ── SSH remote access ──────────────────────────────────────────
+
+- name: Enable SSH forwarding for ProxyJump
+  community.routeros.command:
+    commands:
+      - /ip ssh set forwarding-enabled=local
+
+- name: Query SSH firewall state
+  community.routeros.command:
+    commands:
+      - ':put [:len [/ip firewall filter find comment="ssh: LAN accept"]]'
+      - ':put [:len [/ip firewall filter find comment="ssh: knock step 1"]]'
+      - ':put [:len [/ip firewall filter find comment="ssh: knock step 2"]]'
+      - ':put [:len [/ip firewall filter find comment="ssh: knock step 3"]]'
+      - ':put [:len [/ip firewall filter find comment="ssh: WAN accept after knock"]]'
+  register: _ssh_fw_state
+
+- name: Set SSH firewall state facts
+  ansible.builtin.set_fact:
+    _has_ssh_lan: "{{ _ssh_fw_state.stdout[0] | int > 0 }}"
+    _has_ssh_knock1: "{{ _ssh_fw_state.stdout[1] | int > 0 }}"
+    _has_ssh_knock2: "{{ _ssh_fw_state.stdout[2] | int > 0 }}"
+    _has_ssh_knock3: "{{ _ssh_fw_state.stdout[3] | int > 0 }}"
+    _has_ssh_wan: "{{ _ssh_fw_state.stdout[4] | int > 0 }}"
+
+- name: Add LAN SSH accept rule
+  community.routeros.command:
+    commands:
+      - >-
+        /ip firewall filter add chain=input protocol=tcp dst-port=22
+        in-interface-list=LAN action=accept
+        comment="ssh: LAN accept"
+        place-before=[find comment="defconf: drop all not coming from LAN"]
+  when: not _has_ssh_lan
+
+- name: Add port knock step 1
+  community.routeros.command:
+    commands:
+      - >-
+        /ip firewall filter add chain=input protocol=tcp dst-port={{ knock_port_1 }}
+        action=add-src-to-address-list address-list=knock1 address-list-timeout=5s
+        in-interface-list=WAN
+        comment="ssh: knock step 1"
+        place-before=[find comment="defconf: drop all not coming from LAN"]
+  when: not _has_ssh_knock1
+
+- name: Add port knock step 2
+  community.routeros.command:
+    commands:
+      - >-
+        /ip firewall filter add chain=input protocol=tcp dst-port={{ knock_port_2 }}
+        src-address-list=knock1 action=add-src-to-address-list
+        address-list=knock2 address-list-timeout=5s
+        in-interface-list=WAN
+        comment="ssh: knock step 2"
+        place-before=[find comment="defconf: drop all not coming from LAN"]
+  when: not _has_ssh_knock2
+
+- name: Add port knock step 3
+  community.routeros.command:
+    commands:
+      - >-
+        /ip firewall filter add chain=input protocol=tcp dst-port={{ knock_port_3 }}
+        src-address-list=knock2 action=add-src-to-address-list
+        address-list=ssh-allowed address-list-timeout=15m
+        in-interface-list=WAN
+        comment="ssh: knock step 3"
+        place-before=[find comment="defconf: drop all not coming from LAN"]
+  when: not _has_ssh_knock3
+
+- name: Add WAN SSH accept after knock
+  community.routeros.command:
+    commands:
+      - >-
+        /ip firewall filter add chain=input protocol=tcp dst-port=22
+        src-address-list=ssh-allowed action=accept
+        in-interface-list=WAN
+        comment="ssh: WAN accept after knock"
+        place-before=[find comment="defconf: drop all not coming from LAN"]
+  when: not _has_ssh_wan
