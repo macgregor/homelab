@@ -69,6 +69,15 @@ LAN client -> CoreDNS (resolves *.matthew-stratton.me to MetalLB IP)
 
 CoreDNS static hosts resolve `*.matthew-stratton.me` domains to the appropriate MetalLB IPs, so LAN clients reach internal services directly without going through Cloudflare or requiring hairpin NAT.
 
+### Remote Access (VPN + SSH)
+
+Remote access uses two mechanisms, both configured in `ansible/tasks/mikrotik-remote-access.yml`:
+
+- **WireGuard VPN**: Full-tunnel VPN on the router (UDP 51820). Clients get IPs on `10.100.0.0/24` and can reach the LAN as if local. The `wg0` interface is a member of the LAN interface list. Peer definitions are in `ansible/inventory/group_vars/router.yaml`.
+- **SSH ProxyJump**: SSH to internal hosts via the router as a jump host. Port knocking (3-step sequence) gates WAN SSH access; LAN SSH is always open. SSH config aliases (`homelab-jump`, `k3-m1-remote`, `synology-remote`) are in `~/.ssh/config`.
+
+A separate Cloudflare DDNS record (`vpn.*`, not proxied) resolves to the WAN IP for VPN and SSH endpoints. See [Security](05-security.md#remote-access) for hardening details.
+
 ## DNS
 
 DNS resolution flows through a chain: clients query CoreDNS, which forwards unknown queries to AdGuard Home for ad-blocking, which falls back to Cloudflare (`1.1.1.1`) for upstream resolution. Public DNS is managed on Cloudflare.
@@ -100,7 +109,7 @@ A NetworkManager dispatcher script ([`scripts/homelab-split-dns.sh`](../scripts/
 The MikroTik RB5009UPr+S+IN is provisioned via Ansible with system configuration, DHCP, DNS, and service hardening. Two playbooks handle setup:
 
 - **`mikrotik-bootstrap.yml`** (one-time): Migrates from factory defaults (192.168.88.0/24) to 192.168.1.0/24, creates SSH user with key auth
-- **`mikrotik-configure.yml`** (idempotent): Configures system identity, DHCP pool (192.168.1.50-199), DNS (1.1.1.1), static DHCP leases for infrastructure, service hardening, auto-update scheduling, Cloudflare firewall rules, and DDNS
+- **`mikrotik-configure.yml`** (idempotent): Configures system identity, DHCP pool (192.168.1.50-199), DNS (1.1.1.1), static DHCP leases for infrastructure, service hardening, auto-update scheduling, Cloudflare firewall rules, DDNS, WireGuard VPN, and SSH port knocking
 
 The router ships with a factory-default firewall (NAT masquerade, input/forward chains). The configure playbook adds Cloudflare-specific rules: a DNAT rule forwarding port 443 traffic from Cloudflare IPs to the external ingress VIP (`192.168.1.220`), and a forward-accept rule placed before the default drop-all rule. The Cloudflare IP address list and DDNS record are maintained by scheduled scripts on the router.
 
