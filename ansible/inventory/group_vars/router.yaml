@@ -26,9 +26,32 @@ router_poe_watchdog:
 
 # Cloudflare (read from .envrc env vars)
 cf_zone_id: "{{ lookup('env', 'CF_ZONE_ID') | mandatory('CF_ZONE_ID is not set — source .envrc') }}"
-cf_dns_record_id: "{{ lookup('env', 'CF_DNS_RECORD_ID') | mandatory('CF_DNS_RECORD_ID is not set — source .envrc') }}"
-cf_dns_record_name: "{{ lookup('env', 'CF_DNS_RECORD_NAME') | mandatory('CF_DNS_RECORD_NAME is not set — source .envrc') }}"
 cf_mikrotik_ddns_token: "{{ lookup('env', 'CF_MIKROTIK_DDNS_TOKEN') | mandatory('CF_MIKROTIK_DDNS_TOKEN is not set — source .envrc') }}"
+cf_ddns_records:
+  - name: web
+    record_id: "{{ lookup('env', 'CF_DNS_RECORD_ID') | mandatory('CF_DNS_RECORD_ID is not set — source .envrc') }}"
+    record_name: "{{ lookup('env', 'CF_DNS_RECORD_NAME') | mandatory('CF_DNS_RECORD_NAME is not set — source .envrc') }}"
+    proxied: "true"
+  - name: vpn
+    record_id: "{{ lookup('env', 'CF_VPN_DNS_RECORD_ID') | mandatory('CF_VPN_DNS_RECORD_ID is not set — source .envrc') }}"
+    record_name: "{{ lookup('env', 'CF_VPN_DNS_RECORD_NAME') | mandatory('CF_VPN_DNS_RECORD_NAME is not set — source .envrc') }}"
+    proxied: "false"
+
+# WireGuard VPN peers
+# Each device gets its own keypair and preshared key. To add a new peer:
+#   1. Generate keys: wg genkey | tee ~/.wireguard/<name>-private.key | wg pubkey > ~/.wireguard/<name>-public.key && wg genpsk > ~/.wireguard/<name>-psk.key
+#   2. Add to .envrc: export WG_<NAME>_PUBLIC_KEY="$(cat ~/.wireguard/<name>-public.key)" and WG_<NAME>_PSK="$(cat ~/.wireguard/<name>-psk.key)"
+#   3. Add entry to wg_peers below with the next available address (e.g., 10.100.0.3/32)
+#   4. Run: ansible-playbook mikrotik-configure.yml (new peer created, existing peers untouched)
+#   5. Assemble client config using: <name> private key + <name> PSK + router public key (ssh router '/interface wireguard print') + endpoint
+#   6. Store all values in KeePass
+#   7. To revoke: remove wg_peers entry and .envrc vars, then: ssh router '/interface wireguard peers remove [find comment="<name>"]'
+# Address assignments: .1 = router, .2 = phone, .3 = laptop, ...
+wg_peers:
+  - name: phone
+    public_key: "{{ lookup('env', 'WG_PHONE_PUBLIC_KEY') | mandatory('WG_PHONE_PUBLIC_KEY is not set — source .envrc') }}"
+    preshared_key: "{{ lookup('env', 'WG_PHONE_PSK') | mandatory('WG_PHONE_PSK is not set — source .envrc') }}"
+    allowed_address: "10.100.0.2/32"
 
 # Split-horizon DNS: per-host entries managed by homelab-sync-dns.sh
 router_dns_hosts:

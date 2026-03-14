@@ -6,13 +6,13 @@
 # Checks the WAN IP on ether1, compares to the last known IP, and calls
 # the Cloudflare API to update the DNS record if it changed.
 
-/log info "cloudflare-ddns: starting"
+/log info "cloudflare-ddns-{{ cf_ddns_name }}: starting"
 
 :onerror e in={
 
     # ── Get WAN IP from ether1 ────────────────────────────────────────
     :if ([:len [/ip address find interface=ether1]] = 0) do={
-        /log warning "cloudflare-ddns: ether1 has no IP address, skipping"
+        /log warning "cloudflare-ddns-{{ cf_ddns_name }}: ether1 has no IP address, skipping"
         :error "no WAN IP"
     }
 
@@ -21,37 +21,37 @@
     :local wanIP [:pick $addrCidr 0 [:find $addrCidr "/"]]
 
     # ── Check if IP changed ───────────────────────────────────────────
-    :global lastWanIP
-    :if ($wanIP = $lastWanIP) do={
-        /log debug ("cloudflare-ddns: IP unchanged (" . $wanIP . ")")
+    :global lastWanIP{{ cf_ddns_name }}
+    :if ($wanIP = $lastWanIP{{ cf_ddns_name }}) do={
+        /log debug ("cloudflare-ddns-{{ cf_ddns_name }}: IP unchanged (" . $wanIP . ")")
         :error "unchanged"
     }
 
-    /log info ("cloudflare-ddns: IP changed from " . $lastWanIP . " to " . $wanIP . ", updating Cloudflare")
+    /log info ("cloudflare-ddns-{{ cf_ddns_name }}: IP changed from " . $lastWanIP{{ cf_ddns_name }} . " to " . $wanIP . ", updating Cloudflare")
 
     # ── Update Cloudflare DNS record ──────────────────────────────────
     :local result [/tool fetch \
         url="https://api.cloudflare.com/client/v4/zones/{{ cf_zone_id }}/dns_records/{{ cf_dns_record_id }}" \
         http-method=put \
         http-header-field="Authorization:Bearer {{ cf_mikrotik_ddns_token }},Content-Type:application/json" \
-        http-data=("{\"type\":\"A\",\"name\":\"{{ cf_dns_record_name }}\",\"content\":\"" . $wanIP . "\",\"proxied\":true}") \
+        http-data=("{\"type\":\"A\",\"name\":\"{{ cf_dns_record_name }}\",\"content\":\"" . $wanIP . "\",\"proxied\":{{ cf_proxied }}}") \
         output=user as-value]
 
     # ── Validate API response ─────────────────────────────────────────
     :if ([:find ($result->"data") "\"success\":true"] = nil) do={
-        /log error ("cloudflare-ddns: API update failed: " . ($result->"data"))
+        /log error ("cloudflare-ddns-{{ cf_ddns_name }}: API update failed: " . ($result->"data"))
         :error "API update failed"
     }
 
-    :set lastWanIP $wanIP
-    /log info ("cloudflare-ddns: updated A record to " . $wanIP)
+    :set lastWanIP{{ cf_ddns_name }} $wanIP
+    /log info ("cloudflare-ddns-{{ cf_ddns_name }}: updated A record to " . $wanIP)
 
-    /log info "cloudflare-ddns: complete"
+    /log info "cloudflare-ddns-{{ cf_ddns_name }}: complete"
 
 } do={
     # "unchanged" and "no WAN IP" are expected early-exit conditions, not errors.
     # Use :find (substring match) because RouterOS 7.17+ appends source location to $e.
     :if ([:find $e "unchanged"] != nil || [:find $e "no WAN IP"] != nil) do={} else={
-        /log error ("cloudflare-ddns: failed: " . $e)
+        /log error ("cloudflare-ddns-{{ cf_ddns_name }}: failed: " . $e)
     }
 }

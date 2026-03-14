@@ -367,13 +367,12 @@
 
     # ── Cloudflare ────────────────────────────────────────────────────
 
-    - name: Deploy Cloudflare scripts and schedulers
+    - name: Deploy Cloudflare firewall script and schedulers
       ansible.builtin.include_tasks:
         file: tasks/mikrotik-upload-and-schedule.yml
       vars:
         upload_files:
           - "{{ playbook_dir }}/files/cloudflare-firewall.rsc"
-          - "{{ playbook_dir }}/files/cloudflare-ddns.rsc.j2"
         schedulers:
           - name: cloudflare-firewall-startup
             on_event: "/import file-name=cloudflare-firewall.rsc"
@@ -383,11 +382,34 @@
             on_event: "/import file-name=cloudflare-firewall.rsc"
             start_time: "00:00:00"
             interval: 6h
-          - name: cloudflare-ddns-startup
-            on_event: "/import file-name=cloudflare-ddns.rsc"
+
+    - name: Deploy per-record DDNS scripts
+      ansible.builtin.include_tasks:
+        file: tasks/mikrotik-upload-and-schedule.yml
+      vars:
+        upload_dest_name: "cloudflare-ddns-{{ ddns_record.name }}.rsc"
+        cf_ddns_name: "{{ ddns_record.name }}"
+        cf_dns_record_id: "{{ ddns_record.record_id }}"
+        cf_dns_record_name: "{{ ddns_record.record_name }}"
+        cf_proxied: "{{ ddns_record.proxied }}"
+        upload_files:
+          - "{{ playbook_dir }}/files/cloudflare-ddns.rsc.j2"
+        schedulers:
+          - name: "cloudflare-ddns-{{ ddns_record.name }}-startup"
+            on_event: "/import file-name=cloudflare-ddns-{{ ddns_record.name }}.rsc"
             start_time: startup
             interval: 0
-          - name: cloudflare-ddns
-            on_event: "/import file-name=cloudflare-ddns.rsc"
+          - name: "cloudflare-ddns-{{ ddns_record.name }}"
+            on_event: "/import file-name=cloudflare-ddns-{{ ddns_record.name }}.rsc"
             start_time: startup
             interval: 5m
+      loop: "{{ cf_ddns_records }}"
+      loop_control:
+        loop_var: ddns_record
+        label: "{{ ddns_record.name }}"
+
+    # ── Remote access ──────────────────────────────────────────────
+
+    - name: Configure remote access (WireGuard + SSH)
+      ansible.builtin.include_tasks:
+        file: tasks/mikrotik-remote-access.yml

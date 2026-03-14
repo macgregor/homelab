@@ -27,7 +27,7 @@
     - name: Render .j2 templates
       ansible.builtin.template:
         src: "{{ item }}"
-        dest: "{{ _upload_tempdir.path }}/{{ item | basename | regex_replace('\\.j2$', '') }}"
+        dest: "{{ _upload_tempdir.path }}/{{ upload_dest_name | default(item | basename | regex_replace('\\.j2$', '')) }}"
         mode: '0600'
       delegate_to: localhost
       loop: "{{ upload_files | select('match', '.*\\.j2$') | list }}"
@@ -44,7 +44,7 @@
         {{ _src }}
         {{ base_user }}@{{ ansible_host }}:/{{ _dest }}
       vars:
-        _dest: "{{ item | basename | regex_replace('\\.j2$', '') }}"
+        _dest: "{{ upload_dest_name | default(item | basename | regex_replace('\\.j2$', '')) }}"
         _src: "{{ (_upload_tempdir.path ~ '/' ~ _dest) if (item | regex_search('\\.j2$') and _has_templates) else item }}"
       delegate_to: localhost
       ignore_errors: true

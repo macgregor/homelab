@@ -1,0 +1,77 @@
+---
+# WireGuard VPN and SSH remote access (port knocking + ProxyJump).
+#
+# Included by mikrotik-configure.yml. Requires vars from group_vars/router.yaml:
+#   wg_peers, knock_port_1, knock_port_2, knock_port_3
+
+# ── WireGuard VPN ──────────────────────────────────────────────
+
+- name: Query WireGuard state
+  community.routeros.command:
+    commands:
+      - ':put [:len [/interface wireguard find name=wg0]]'
+      - ':put [:len [/ip address find interface=wg0]]'
+      - ':put [:len [/ip firewall filter find comment="wg: accept UDP 51820"]]'
+      - ':put [:len [/ip firewall filter find comment="wg: forward from wg0"]]'
+      - ':put [:len [/interface list member find list=LAN interface=wg0]]'
+  register: _wg_state
+
+- name: Set WireGuard state facts
+  ansible.builtin.set_fact:
+    _has_wg_interface: "{{ _wg_state.stdout[0] | int > 0 }}"
+    _has_wg_address: "{{ _wg_state.stdout[1] | int > 0 }}"
+    _has_wg_input_rule: "{{ _wg_state.stdout[2] | int > 0 }}"
+    _has_wg_forward_rule: "{{ _wg_state.stdout[3] | int > 0 }}"
+    _has_wg_lan_member: "{{ _wg_state.stdout[4] | int > 0 }}"
+
+- name: Create WireGuard interface
+  community.routeros.command:
+    commands:
+      - /interface wireguard add name=wg0 listen-port=51820 mtu=1420
+  when: not _has_wg_interface
+
+- name: Add wg0 to LAN interface list
+  community.routeros.command:
+    commands:
+      - /interface list member add list=LAN interface=wg0
+  when: not _has_wg_lan_member
+
+- name: Add WireGuard peers
+  community.routeros.command:
+    commands:
+      - >-
+        :if ([:len [/interface wireguard peers find comment="{{ item.name }}"]] = 0) do={
+        /interface wireguard peers add interface=wg0
+        public-key="{{ item.public_key }}"
+        preshared-key="{{ item.preshared_key }}"
+        allowed-address={{ item.allowed_address }}
+        comment="{{ item.name }}"
+        }
+  loop: "{{ wg_peers }}"
+  loop_control:
+    label: "{{ item.name }} ({{ item.allowed_address }})"
+
+- name: Add WireGuard interface address
+  community.routeros.command:
+    commands:
+      - /ip address add address=10.100.0.1/24 interface=wg0
+  when: not _has_wg_address
+
+- name: Add WireGuard input firewall rule
+  community.routeros.command:
+    commands:
+      - >-
+        /ip firewall filter add chain=input protocol=udp dst-port=51820
+        in-interface-list=WAN action=accept
+        comment="wg: accept UDP 51820"
+        place-before=[find comment="defconf: drop all not coming from LAN"]
+  when: not _has_wg_input_rule
+
+- name: Add WireGuard forward firewall rule
+  community.routeros.command:
+    commands:
+      - >-
+        /ip firewall filter add chain=forward in-interface=wg0 action=accept
+        comment="wg: forward from wg0"
+        place-before=[find comment="defconf: drop all from WAN not DSTNATed"]
+  when: not _has_wg_forward_rule
