@@ -1,0 +1,788 @@
+#!/usr/bin/env python3
+"""Homelab observability query tool for the homelab-investigator skill.
+
+Queries VictoriaMetrics (metrics) and VictoriaLogs (logs) for infrastructure
+investigation. Each subcommand outputs JSON lines (one JSON object per line).
+
+Usage: obs-query <command> [args...]
+Run 'obs-query help' for the full command list.
+
+To add a new subcommand:
+1. Define a function cmd_<name>(args)
+2. Register it in the COMMANDS dict at the bottom
+3. Use emit() for each output record, emit_error() for errors
+"""
+
+import json
+import os
+import ssl
+import sys
+import urllib.request
+import urllib.parse
+
+VM_URL = os.environ.get("VM_URL", "https://victoriametrics.matthew-stratton.me")
+VL_URL = os.environ.get("VL_URL", "https://victorialogs.matthew-stratton.me")
+LOOKBACK = "30d"
+
+_SSL_CTX = ssl.create_default_context()
+
+
+# --- Helpers ---
+
+def vm_query(query):
+    """Run a PromQL instant query. Returns list of result dicts."""
+    url = f"{VM_URL}/api/v1/query"
+    data = urllib.parse.urlencode({"query": query}).encode()
+    try:
+        req = urllib.request.Request(url, data)
+        with urllib.request.urlopen(req, context=_SSL_CTX, timeout=30) as resp:
+            body = json.loads(resp.read())
+    except urllib.error.URLError as e:
+        emit_error(f"VictoriaMetrics not reachable at {VM_URL}: {e}")
+        sys.exit(1)
+    if body.get("status") != "success":
+        emit_error(f"Query failed: {body.get('error', 'unknown')}")
+        sys.exit(1)
+    return body["data"]["result"]
+
+
+def vm_scalar(query):
+    """Run a query expecting a single scalar. Returns float or None."""
+    r = vm_query(query)
+    return float(r[0]["value"][1]) if r else None
+
+
+def vl_query(query, limit=100):
+    """Run a LogsQL query via regular query endpoint. Returns list of dicts."""
+    url = f"{VL_URL}/select/logsql/query"
+    data = urllib.parse.urlencode({"query": query, "limit": limit}).encode()
+    try:
+        req = urllib.request.Request(url, data)
+        with urllib.request.urlopen(req, context=_SSL_CTX, timeout=30) as resp:
+            text = resp.read().decode()
+    except urllib.error.URLError as e:
+        emit_error(f"VictoriaLogs not reachable at {VL_URL}: {e}")
+        sys.exit(1)
+    if not text.strip():
+        return []
+    return [json.loads(line) for line in text.strip().split("\n") if line.strip()]
+
+
+def vl_stats(query, time="1h"):
+    """Run a LogsQL stats query via stats_query endpoint. Returns list of dicts."""
+    url = f"{VL_URL}/select/logsql/stats_query"
+    data = urllib.parse.urlencode({"query": query, "time": time}).encode()
+    try:
+        req = urllib.request.Request(url, data)
+        with urllib.request.urlopen(req, context=_SSL_CTX, timeout=30) as resp:
+            text = resp.read().decode()
+    except urllib.error.URLError as e:
+        emit_error(f"VictoriaLogs not reachable at {VL_URL}: {e}")
+        sys.exit(1)
+    if not text.strip():
+        return []
+    body = json.loads(text)
+    # stats_query returns Prometheus-format: {status, data: {result: [...]}}
+    if isinstance(body, dict) and body.get("status") == "success":
+        rows = []
+        for r in body.get("data", {}).get("result", []):
+            row = {k: v for k, v in r["metric"].items() if k != "__name__"}
+            agg_name = r["metric"].get("__name__", "value")
+            row[agg_name] = r["value"][1]
+            rows.append(row)
+        return rows
+    # Fallback: NDJSON
+    return [json.loads(line) for line in text.strip().split("\n") if line.strip()]
+
+
+def emit(obj):
+    """Print one JSON object per line."""
+    json.dump(obj, sys.stdout, separators=(",", ":"))
+    print()
+
+
+def emit_error(msg):
+    json.dump({"error": msg}, sys.stderr, separators=(",", ":"))
+    print(file=sys.stderr)
+
+
+def require_arg(args, name):
+    if not args:
+        emit_error(f"Missing required argument: {name}")
+        sys.exit(1)
+    return args[0]
+
+
+def val(r):
+    """Extract float value from a VM result entry."""
+    return float(r["value"][1])
+
+
+def label(r, name):
+    """Extract label value from a VM result entry."""
+    return r["metric"].get(name, "")
+
+
+def _q(metric, **labels):
+    """Build PromQL metric{labels} selector, omitting None values."""
+    parts = [f'{k}="{v}"' for k, v in labels.items() if v is not None]
+    return f"{metric}{{{','.join(parts)}}}" if parts else metric
+
+
+# --- Health Overview ---
+
+def cmd_health(args):
+    """Cluster-wide health snapshot."""
+    result = {}
+
+    # Node CPU
+    cpu = {}
+    for r in vm_query('100 - cpu_usage_idle{cpu="cpu-total"}'):
+        cpu[label(r, "host")] = round(val(r), 1)
+    result["cpu_pct"] = cpu
+
+    # Node memory
+    mem = {}
+    for r in vm_query("mem_used_percent"):
+        mem[label(r, "host")] = round(val(r), 1)
+    result["mem_pct"] = mem
+
+    # Node disk
+    disk = {}
+    for r in vm_query('disk_used_percent{path="/"}'):
+        disk[label(r, "host")] = round(val(r), 1)
+    result["disk_pct"] = disk
+
+    # Node temperature
+    temp = {}
+    for r in vm_query("temp_temp"):
+        temp[label(r, "host")] = round(val(r), 1)
+    result["temp_c"] = temp
+
+    # Router
+    router = {}
+    v = vm_scalar("snmp_mikrotik_cpu_load")
+    if v is not None:
+        router["cpu_load"] = round(v, 1)
+    v = vm_scalar("snmp_mikrotik_cpu_temperature")
+    if v is not None:
+        router["temp_c"] = round(v, 1)
+    used = vm_scalar("snmp_mikrotik_memory_used")
+    total = vm_scalar("snmp_mikrotik_memory_total")
+    if used is not None and total and total > 0:
+        router["mem_pct"] = round(100 * used / total, 1)
+    result["router"] = router
+
+    # NAS
+    nas = {}
+    v = vm_scalar("snmp_synology_system_temperature")
+    if v is not None:
+        nas["temp_c"] = round(v, 1)
+    v = vm_scalar("snmp_synology_load_1m")
+    if v is not None:
+        nas["load_1m"] = round(v, 2)
+    disks = []
+    for r in vm_query("snmp_synology_disk_disk_status"):
+        disks.append({"disk_id": label(r, "disk_id"), "status": int(val(r))})
+    if disks:
+        nas["disk_status"] = disks
+    raids = []
+    for r in vm_query("snmp_synology_raid_raid_status"):
+        raids.append({"raid_name": label(r, "raid_name"), "status": int(val(r))})
+    if raids:
+        nas["raid_status"] = raids
+    result["nas"] = nas
+
+    # Pod restarts (last 1h, top 5)
+    restarts = []
+    for r in vm_query("topk(5, increase(kube_pod_container_status_restarts_total[1h]) > 0)"):
+        restarts.append({
+            "pod": label(r, "pod"),
+            "namespace": label(r, "namespace"),
+            "restarts": round(val(r), 1),
+        })
+    result["pod_restarts"] = restarts
+
+    # Pods not running
+    not_running = []
+    for r in vm_query('kube_pod_status_phase{phase!="Running",phase!="Succeeded"} == 1'):
+        not_running.append({
+            "pod": label(r, "pod"),
+            "namespace": label(r, "namespace"),
+            "phase": label(r, "phase"),
+        })
+    result["pods_not_running"] = not_running
+
+    emit(result)
+
+
+def cmd_node_health(args):
+    """Detailed health for one or all nodes."""
+    node = args[0] if args else None
+    data = {}
+
+    metrics = {
+        "cpu_pct": f'100 - {_q("cpu_usage_idle", cpu="cpu-total", host=node)}',
+        "mem_pct": _q("mem_used_percent", host=node),
+        "disk_pct": _q("disk_used_percent", path="/", host=node),
+        "temp_c": _q("temp_temp", host=node),
+        "load1": _q("system_load1", host=node),
+        "load5": _q("system_load5", host=node),
+        "load15": _q("system_load15", host=node),
+        "uptime_s": _q("system_uptime", host=node),
+        "procs_blocked": _q("processes_blocked", host=node),
+        "procs_zombies": _q("processes_zombies", host=node),
+        "net_err_in": _q("net_err_in", interface="eth0", host=node),
+        "net_drop_in": _q("net_drop_in", interface="eth0", host=node),
+    }
+    rounding = {"uptime_s": 0, "procs_blocked": 0, "procs_zombies": 0, "net_err_in": 0, "net_drop_in": 0}
+
+    for key, query in metrics.items():
+        for r in vm_query(query):
+            host = label(r, "host")
+            if host not in data:
+                data[host] = {"host": host}
+            data[host][key] = round(val(r), rounding.get(key, 1))
+
+    for host in sorted(data):
+        emit(data[host])
+
+
+def cmd_pod_health(args):
+    """Pod health summary by namespace."""
+    ns = args[0] if args else None
+    ns_sel = f'namespace="{ns}",' if ns else ""
+
+    # Phase counts
+    phases = {}
+    for r in vm_query(f"sum by (phase) (kube_pod_status_phase{{{ns_sel}}} == 1)"):
+        phases[label(r, "phase")] = int(val(r))
+    emit({"phase_counts": phases})
+
+    # Restart counts
+    for r in vm_query(f"sort_desc(kube_pod_container_status_restarts_total{{{ns_sel}}} > 0)"):
+        emit({
+            "type": "restarts",
+            "pod": label(r, "pod"),
+            "namespace": label(r, "namespace"),
+            "container": label(r, "container"),
+            "total_restarts": int(val(r)),
+        })
+
+    # Unhealthy pods
+    for r in vm_query(f'kube_pod_status_phase{{phase!="Running",phase!="Succeeded",{ns_sel}}} == 1'):
+        emit({
+            "type": "unhealthy",
+            "pod": label(r, "pod"),
+            "namespace": label(r, "namespace"),
+            "phase": label(r, "phase"),
+        })
+
+
+# --- Node Diagnostics ---
+
+def cmd_cpu(args):
+    """CPU usage summary with avg/min/max over window."""
+    node = args[0] if args else None
+    window = args[1] if len(args) > 1 else "6h"
+    expr = f'100 - {_q("cpu_usage_idle", cpu="cpu-total", host=node)}'
+
+    current = {}
+    for r in vm_query(expr):
+        current[label(r, "host")] = round(val(r), 1)
+
+    avg_vals = {}
+    for r in vm_query(f"avg_over_time(({expr})[{window}:])"):
+        avg_vals[label(r, "host")] = round(val(r), 1)
+
+    min_vals = {}
+    for r in vm_query(f"min_over_time(({expr})[{window}:])"):
+        min_vals[label(r, "host")] = round(val(r), 1)
+
+    max_vals = {}
+    for r in vm_query(f"max_over_time(({expr})[{window}:])"):
+        max_vals[label(r, "host")] = round(val(r), 1)
+
+    for host in sorted(current):
+        emit({
+            "host": host, "window": window,
+            "current_pct": current.get(host),
+            "avg_pct": avg_vals.get(host),
+            "min_pct": min_vals.get(host),
+            "max_pct": max_vals.get(host),
+        })
+
+
+def cmd_memory(args):
+    """Memory usage summary."""
+    node = args[0] if args else None
+    window = args[1] if len(args) > 1 else "6h"
+
+    current = {}
+    for r in vm_query(_q("mem_used_percent", host=node)):
+        current[label(r, "host")] = round(val(r), 1)
+
+    avg_vals = {}
+    for r in vm_query(f"avg_over_time({_q('mem_used_percent', host=node)}[{window}:])"):
+        avg_vals[label(r, "host")] = round(val(r), 1)
+
+    avail = {}
+    for r in vm_query(_q("mem_available", host=node)):
+        avail[label(r, "host")] = round(val(r) / 1024 / 1024, 0)
+
+    total = {}
+    for r in vm_query(_q("mem_total", host=node)):
+        total[label(r, "host")] = round(val(r) / 1024 / 1024, 0)
+
+    for host in sorted(current):
+        emit({
+            "host": host, "window": window,
+            "current_pct": current.get(host),
+            "avg_pct": avg_vals.get(host),
+            "available_mb": avail.get(host),
+            "total_mb": total.get(host),
+        })
+
+
+def cmd_disk(args):
+    """Disk usage and IO stats."""
+    node = args[0] if args else None
+
+    usage = {}
+    for r in vm_query(_q("disk_used_percent", path="/", host=node)):
+        usage[label(r, "host")] = round(val(r), 1)
+
+    free = {}
+    for r in vm_query(_q("disk_free", path="/", host=node)):
+        free[label(r, "host")] = round(val(r) / 1024 / 1024, 0)
+
+    io_await = {}
+    for r in vm_query(_q("diskio_io_await", host=node)):
+        host = label(r, "host")
+        io_await.setdefault(host, {})[label(r, "name")] = round(val(r), 1)
+
+    read_rate = {}
+    for r in vm_query(f"rate({_q('diskio_read_bytes', host=node)}[5m])"):
+        host = label(r, "host")
+        read_rate.setdefault(host, {})[label(r, "name")] = round(val(r) / 1024, 1)
+
+    write_rate = {}
+    for r in vm_query(f"rate({_q('diskio_write_bytes', host=node)}[5m])"):
+        host = label(r, "host")
+        write_rate.setdefault(host, {})[label(r, "name")] = round(val(r) / 1024, 1)
+
+    for host in sorted(usage):
+        emit({
+            "host": host,
+            "used_pct": usage.get(host),
+            "free_mb": free.get(host),
+            "io_await_ms": io_await.get(host, {}),
+            "read_kbs": read_rate.get(host, {}),
+            "write_kbs": write_rate.get(host, {}),
+        })
+
+
+def cmd_temperature(args):
+    """Temperature summary."""
+    node = args[0] if args else None
+    window = args[1] if len(args) > 1 else "6h"
+
+    current = {}
+    for r in vm_query(_q("temp_temp", host=node)):
+        host = label(r, "host")
+        current.setdefault(host, {})[label(r, "sensor")] = round(val(r), 1)
+
+    avg_vals = {}
+    for r in vm_query(f"avg_over_time({_q('temp_temp', host=node)}[{window}:])"):
+        host = label(r, "host")
+        avg_vals.setdefault(host, {})[label(r, "sensor")] = round(val(r), 1)
+
+    max_vals = {}
+    for r in vm_query(f"max_over_time({_q('temp_temp', host=node)}[{window}:])"):
+        host = label(r, "host")
+        max_vals.setdefault(host, {})[label(r, "sensor")] = round(val(r), 1)
+
+    for host in sorted(current):
+        emit({
+            "host": host, "window": window,
+            "current_c": current.get(host, {}),
+            "avg_c": avg_vals.get(host, {}),
+            "max_c": max_vals.get(host, {}),
+        })
+
+
+def cmd_network(args):
+    """Network traffic and error stats."""
+    node = args[0] if args else None
+    data = {}
+
+    for r in vm_query(f"rate({_q('net_bytes_recv', interface='eth0', host=node)}[5m])"):
+        host = label(r, "host")
+        data.setdefault(host, {"host": host})["recv_kbs"] = round(val(r) / 1024, 1)
+
+    for r in vm_query(f"rate({_q('net_bytes_sent', interface='eth0', host=node)}[5m])"):
+        host = label(r, "host")
+        data.setdefault(host, {"host": host})["sent_kbs"] = round(val(r) / 1024, 1)
+
+    for metric in ["net_err_in", "net_err_out", "net_drop_in", "net_drop_out"]:
+        for r in vm_query(_q(metric, interface="eth0", host=node)):
+            host = label(r, "host")
+            data.setdefault(host, {"host": host})[metric] = int(val(r))
+
+    for host in sorted(data):
+        emit(data[host])
+
+
+# --- Infrastructure ---
+
+def cmd_router(args):
+    """MikroTik router health."""
+    result = {}
+
+    v = vm_scalar("snmp_mikrotik_cpu_load")
+    if v is not None:
+        result["cpu_load"] = round(v, 1)
+
+    v = vm_scalar("snmp_mikrotik_cpu_temperature")
+    if v is not None:
+        result["temp_c"] = round(v, 1)
+
+    used = vm_scalar("snmp_mikrotik_memory_used")
+    total = vm_scalar("snmp_mikrotik_memory_total")
+    if used is not None and total and total > 0:
+        result["mem_pct"] = round(100 * used / total, 1)
+        result["mem_used"] = int(used)
+        result["mem_total"] = int(total)
+
+    v = vm_scalar("snmp_mikrotik_uptime")
+    if v is not None:
+        result["uptime_s"] = int(v)
+
+    # Interfaces
+    interfaces = []
+    oper = {}
+    for r in vm_query("snmp_mikrotik_interface_oper_status"):
+        oper[label(r, "name")] = int(val(r))
+
+    recv = {}
+    for r in vm_query("rate(snmp_mikrotik_interface_bytes_recv[5m])"):
+        recv[label(r, "name")] = round(val(r) / 1024, 1)
+
+    sent = {}
+    for r in vm_query("rate(snmp_mikrotik_interface_bytes_sent[5m])"):
+        sent[label(r, "name")] = round(val(r) / 1024, 1)
+
+    for name in sorted(oper):
+        interfaces.append({
+            "name": name,
+            "oper_status": oper[name],
+            "recv_kbs": recv.get(name, 0),
+            "sent_kbs": sent.get(name, 0),
+        })
+    result["interfaces"] = interfaces
+
+    emit(result)
+
+
+def cmd_nas(args):
+    """Synology NAS health."""
+    result = {}
+
+    v = vm_scalar("snmp_synology_system_temperature")
+    if v is not None:
+        result["temp_c"] = round(v, 1)
+
+    for field in ["load_1m", "load_5m", "load_15m"]:
+        v = vm_scalar(f"snmp_synology_{field}")
+        if v is not None:
+            result[field] = round(v, 2)
+
+    v = vm_scalar("snmp_synology_uptime")
+    if v is not None:
+        result["uptime_s"] = int(v)
+
+    # Memory: compute used from components
+    mem_total = vm_scalar("snmp_synology_memory_total_real_kb")
+    mem_avail = vm_scalar("snmp_synology_memory_avail_real_kb")
+    mem_buf = vm_scalar("snmp_synology_memory_buffered_kb")
+    mem_cached = vm_scalar("snmp_synology_memory_cached_kb")
+    if all(v is not None for v in [mem_total, mem_avail, mem_buf, mem_cached]) and mem_total > 0:
+        mem_used = mem_total - mem_avail - mem_buf - mem_cached
+        result["mem_used_kb"] = int(mem_used)
+        result["mem_total_kb"] = int(mem_total)
+        result["mem_pct"] = round(100 * mem_used / mem_total, 1)
+
+    # Disks
+    disks = []
+    for r in vm_query("snmp_synology_disk_disk_status"):
+        disk = {"disk_id": label(r, "disk_id"), "status": int(val(r))}
+        disks.append(disk)
+    for r in vm_query("snmp_synology_disk_disk_temperature"):
+        did = label(r, "disk_id")
+        for d in disks:
+            if d["disk_id"] == did:
+                d["temp_c"] = round(val(r), 1)
+    result["disks"] = disks
+
+    # RAID
+    raids = []
+    for r in vm_query("snmp_synology_raid_raid_status"):
+        raids.append({"raid_name": label(r, "raid_name"), "status": int(val(r))})
+    result["raids"] = raids
+
+    emit(result)
+
+
+def cmd_nas_storage(args):
+    """Synology NAS storage volumes."""
+    vol_filter = 'storage_descr=~"/volume[0-9]+"'
+
+    used = {}
+    for r in vm_query(f"snmp_synology_storage_storage_used{{{vol_filter}}}"):
+        used[label(r, "storage_descr")] = val(r)
+
+    size = {}
+    for r in vm_query(f"snmp_synology_storage_storage_size{{{vol_filter}}}"):
+        size[label(r, "storage_descr")] = val(r)
+
+    alloc = {}
+    for r in vm_query(f"snmp_synology_storage_allocation_units{{{vol_filter}}}"):
+        alloc[label(r, "storage_descr")] = val(r)
+
+    for vol in sorted(used):
+        if vol in size and vol in alloc:
+            a = alloc[vol]
+            used_bytes = used[vol] * a
+            size_bytes = size[vol] * a
+            pct = (used_bytes / size_bytes * 100) if size_bytes > 0 else 0
+            emit({
+                "volume": vol,
+                "used_gb": round(used_bytes / 1024**3, 1),
+                "size_gb": round(size_bytes / 1024**3, 1),
+                "used_pct": round(pct, 1),
+            })
+
+
+# --- Kubernetes ---
+
+def cmd_pod_restarts(args):
+    """Pod restart counts over a window."""
+    ns = args[0] if args else None
+    window = args[1] if len(args) > 1 else "1h"
+    ns_sel = f'namespace="{ns}",' if ns else ""
+
+    for r in vm_query(f"sort_desc(increase(kube_pod_container_status_restarts_total{{{ns_sel}}}[{window}]) > 0)"):
+        emit({
+            "pod": label(r, "pod"),
+            "namespace": label(r, "namespace"),
+            "container": label(r, "container"),
+            "restarts": round(val(r), 1),
+        })
+
+
+def cmd_resource_pressure(args):
+    """Memory usage vs limits per pod."""
+    ns = args[0] if args else None
+    ns_sel = f'namespace="{ns}",' if ns else ""
+
+    # Telegraf kubernetes input: pod_name/container_name labels
+    usage = {}
+    for r in vm_query(f"kubernetes_pod_container_memory_working_set_bytes{{{ns_sel}}}"):
+        key = (label(r, "pod_name"), label(r, "container_name"), label(r, "namespace"))
+        usage[key] = val(r)
+
+    # KSM: pod/container labels
+    limits = {}
+    for r in vm_query(f'kube_pod_container_resource_limits{{{ns_sel}resource="memory"}}'):
+        key = (label(r, "pod"), label(r, "container"), label(r, "namespace"))
+        limits[key] = val(r)
+
+    # Join by matching pod names
+    for (pod, container, ns_name), used in sorted(usage.items()):
+        limit = limits.get((pod, container, ns_name))
+        out = {
+            "pod": pod,
+            "container": container,
+            "namespace": ns_name,
+            "usage_mb": round(used / 1024 / 1024, 1),
+        }
+        if limit:
+            out["limit_mb"] = round(limit / 1024 / 1024, 1)
+            out["ratio"] = round(used / limit, 3)
+        emit(out)
+
+
+def cmd_deployments(args):
+    """Deployment and DaemonSet health."""
+    ns = args[0] if args else None
+    ns_sel = f'namespace="{ns}",' if ns else ""
+
+    # Deployments
+    desired = {}
+    for r in vm_query(f"kube_deployment_spec_replicas{{{ns_sel}}}"):
+        key = (label(r, "namespace"), label(r, "deployment"))
+        desired[key] = int(val(r))
+
+    available = {}
+    for r in vm_query(f"kube_deployment_status_replicas_available{{{ns_sel}}}"):
+        key = (label(r, "namespace"), label(r, "deployment"))
+        available[key] = int(val(r))
+
+    for key in sorted(desired):
+        ns_name, deploy = key
+        d = desired[key]
+        a = available.get(key, 0)
+        emit({
+            "type": "deployment", "namespace": ns_name, "name": deploy,
+            "desired": d, "available": a, "unavailable": d - a,
+            "healthy": d - a == 0,
+        })
+
+    # DaemonSets
+    ds_desired = {}
+    for r in vm_query(f"kube_daemonset_status_desired_number_scheduled{{{ns_sel}}}"):
+        key = (label(r, "namespace"), label(r, "daemonset"))
+        ds_desired[key] = int(val(r))
+
+    ds_ready = {}
+    for r in vm_query(f"kube_daemonset_status_number_ready{{{ns_sel}}}"):
+        key = (label(r, "namespace"), label(r, "daemonset"))
+        ds_ready[key] = int(val(r))
+
+    for key in sorted(ds_desired):
+        ns_name, ds = key
+        d = ds_desired[key]
+        r = ds_ready.get(key, 0)
+        emit({
+            "type": "daemonset", "namespace": ns_name, "name": ds,
+            "desired": d, "ready": r, "unavailable": d - r,
+            "healthy": d - r == 0,
+        })
+
+
+def cmd_node_conditions(args):
+    """Kubernetes node conditions."""
+    for r in vm_query('kube_node_status_condition{status="true"} == 1'):
+        condition = label(r, "condition")
+        emit({
+            "node": label(r, "node"),
+            "condition": condition,
+            "ok": condition == "Ready",
+        })
+
+
+# --- Logs ---
+
+def cmd_ingress_status(args):
+    """Ingress request counts by HTTP status code."""
+    window = args[0] if args else "1h"
+    query = (
+        'log_type:access stream:stdout '
+        '| extract "\\" <status> <_>" from _msg '
+        '| filter status:~"^[0-9]+$" '
+        '| stats by (status) count() as requests'
+    )
+    for r in vl_stats(query, time=window):
+        emit(r)
+
+
+def cmd_ingress_errors(args):
+    """Ingress 4xx/5xx error log entries."""
+    window = args[0] if args else "1h"
+    limit = int(args[1]) if len(args) > 1 else 50
+    query = (
+        f'_time:{window} log_type:access stream:stdout '
+        '| extract "<client_ip> <_> <_> [<_>] '
+        '\\"<method> <path> <_>\\" <status> <body_bytes> '
+        '\\"<_>\\" \\"<_>\\" <_> <request_time> [<upstream>]" from _msg '
+        '| filter status:~"^[45]" '
+        '| fields _time, client_ip, method, path, status, body_bytes, request_time, upstream'
+    )
+    fields = ["_time", "client_ip", "method", "path", "status", "body_bytes", "request_time", "upstream"]
+    for e in vl_query(query, limit=limit):
+        emit({k: e.get(k) for k in fields})
+
+
+def cmd_firewall_drops(args):
+    """MikroTik firewall drop events."""
+    window = args[0] if args else "1h"
+    limit = int(args[1]) if len(args) > 1 else 50
+    query = (
+        f'_time:{window} _msg:~"firewall,info" '
+        '| extract "firewall,info <action> <chain>: in:<in_iface> out:<out_iface>, '
+        'connection-state:<conn_state> src-mac <src_mac>, proto <proto>, '
+        '<src_ip>:<src_port>-><dst_ip>:<dst_port>, len <pkt_len>" from _msg '
+        '| fields _time, action, chain, proto, conn_state, src_ip, src_port, dst_ip, dst_port'
+    )
+    fields = ["_time", "action", "chain", "proto", "src_ip", "src_port", "dst_ip", "dst_port"]
+    for e in vl_query(query, limit=limit):
+        emit({k: e.get(k) for k in fields})
+
+
+def cmd_modsecurity(args):
+    """ModSecurity events from ingress."""
+    window = args[0] if args else "1h"
+    limit = int(args[1]) if len(args) > 1 else 50
+    for e in vl_query(f"_time:{window} log_type:modsecurity", limit=limit):
+        emit({"_time": e.get("_time"), "_msg": e.get("_msg")})
+
+
+def cmd_search_logs(args):
+    """Search logs with raw LogsQL query."""
+    query = require_arg(args, "query")
+    limit = int(args[1]) if len(args) > 1 else 50
+    for e in vl_query(query, limit=limit):
+        emit(e)
+
+
+# --- Command registry ---
+
+COMMANDS = {
+    # Health Overview
+    "health":            (cmd_health,            "",                      "Cluster-wide health snapshot"),
+    "node-health":       (cmd_node_health,       "[node]",                "Detailed node health"),
+    "pod-health":        (cmd_pod_health,        "[namespace]",           "Pod health by namespace"),
+    # Node Diagnostics
+    "cpu":               (cmd_cpu,               "[node] [window]",       "CPU usage summary"),
+    "memory":            (cmd_memory,            "[node] [window]",       "Memory usage summary"),
+    "disk":              (cmd_disk,              "[node]",                "Disk usage and IO stats"),
+    "temperature":       (cmd_temperature,       "[node] [window]",       "Temperature summary"),
+    "network":           (cmd_network,           "[node]",                "Network traffic and errors"),
+    # Infrastructure
+    "router":            (cmd_router,            "",                      "MikroTik router health"),
+    "nas":               (cmd_nas,               "",                      "Synology NAS health"),
+    "nas-storage":       (cmd_nas_storage,       "",                      "NAS storage volumes"),
+    # Kubernetes
+    "pod-restarts":      (cmd_pod_restarts,      "[namespace] [window]",  "Pod restart counts"),
+    "resource-pressure": (cmd_resource_pressure, "[namespace]",           "Memory usage vs limits"),
+    "deployments":       (cmd_deployments,       "[namespace]",           "Deployment/DaemonSet health"),
+    "node-conditions":   (cmd_node_conditions,   "",                      "Node status conditions"),
+    # Logs
+    "ingress-status":    (cmd_ingress_status,    "[window]",              "HTTP status code counts"),
+    "ingress-errors":    (cmd_ingress_errors,    "[window] [limit]",      "Ingress 4xx/5xx errors"),
+    "firewall-drops":    (cmd_firewall_drops,    "[window] [limit]",      "Firewall drop events"),
+    "modsecurity":       (cmd_modsecurity,       "[window] [limit]",      "ModSecurity events"),
+    "search-logs":       (cmd_search_logs,       "<query> [limit]",       "Raw LogsQL search"),
+}
+
+
+def cmd_help(_args):
+    print("Usage: obs-query <command> [args...]")
+    print()
+    max_name = max(len(n) for n in COMMANDS)
+    max_usage = max(len(u) for _, u, _ in COMMANDS.values())
+    for name in sorted(COMMANDS):
+        _, usage, desc = COMMANDS[name]
+        print(f"  {name:<{max_name}}  {usage:<{max_usage}}  {desc}")
+
+
+if __name__ == "__main__":
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "help"
+    if cmd in ("help", "--help", "-h"):
+        cmd_help([])
+        sys.exit(0)
+    if cmd not in COMMANDS:
+        emit_error(f"Unknown command: {cmd}")
+        cmd_help([])
+        sys.exit(1)
+    COMMANDS[cmd][0](sys.argv[2:])
