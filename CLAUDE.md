@@ -114,6 +114,10 @@ When investigating homelab issues using ad-hoc VictoriaMetrics or VictoriaLogs q
 
 The obs-query script runs as a pre-approved Bash command. Ad-hoc Python scripts and raw HTTP calls require explicit user permission for every invocation and fail entirely when run by subagents. Capturing queries in obs-query makes them reliably available to the homelab-investigator skill and any agent that uses it.
 
+## Dashboard Verification
+
+After creating or modifying Grafana dashboards, verify them visually in the browser using chrome-devtools MCP. Don't rely solely on JSON syntax validation -- panels can be syntactically valid but render "No data", "Configure your query", or display incorrect data. Navigate to the dashboard URL, wait for panels to load, and screenshot to confirm panels render with actual data.
+
 ## Conventions
 
 - Just recipes follow `<app>-<action>` naming (e.g., `jellyfin-deploy`, `metallb-status`)
