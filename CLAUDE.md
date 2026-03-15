@@ -21,7 +21,7 @@ Load these documents based on the task at hand. Do not load speculatively.
 | `docs/appendix/mikrotik-routeros.md` | Working with MikroTik router config, RouterOS scripting, or firewall rules |
 | `docs/appendix/media-services.md` | Working with Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Gluetun, Tdarr, Seerr, or Decluttarr |
 | `docs/appendix/grafana-dashboards.md` | Creating, editing, or troubleshooting Grafana dashboards, dashboard JSON, PromQL/MetricsQL queries, or panel configuration |
-| `docs/appendix/grafana-visualizations.md` | Choosing visualization types, dashboard design principles, layout patterns, data format gotchas |
+| `docs/appendix/grafana-visualizations.md` | Choosing visualization types, dashboard design principles, layout patterns, color discipline |
 | `docs/appendix/telegraf.md` | Working with Telegraf configuration, plugin tuning, metric filtering, containerized deployment, or debugging collection issues |
 | `docs/appendix/victoriametrics-queries.md` | Writing PromQL/MetricsQL or LogsQL queries, investigating metrics or logs |
 | `docs/appendix/media-playback-hardware.md` | Troubleshooting audio/video playback, Shield TV or soundbar configuration, HDMI/ARC issues |

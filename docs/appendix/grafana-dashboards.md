@@ -29,11 +29,12 @@ Concise working reference for generating and editing Grafana dashboard JSON. Not
 4. [Queries and Data Sources](#4-queries-and-data-sources)
 5. [Variables (Templating)](#5-variables-templating)
 6. [Transformations](#6-transformations)
-7. [Thresholds, Overrides, and Mappings](#7-thresholds-overrides-and-mappings)
-8. [Units and Colors](#8-units-and-colors)
-9. [Provisioning](#9-provisioning)
-10. [MetricsQL Differences](#10-metricsql-differences)
-11. [Documentation Links](#11-documentation-links)
+7. [Data Format Gotchas](#7-data-format-gotchas)
+8. [Thresholds, Overrides, and Mappings](#8-thresholds-overrides-and-mappings)
+9. [Units and Colors](#9-units-and-colors)
+10. [Provisioning](#10-provisioning)
+11. [MetricsQL Differences](#11-metricsql-differences)
+12. [Documentation Links](#12-documentation-links)
 
 ---
 
@@ -220,24 +221,44 @@ When provisioning dashboards via file (not the import UI), `__inputs` variables 
 
 ### Common type identifiers
 
-| `"type"` value | Visualization |
-|----------------|---------------|
-| `timeseries` | Time series (line/bar/point). Default graph. Replaces deprecated `graph`. |
-| `stat` | Single value + optional sparkline |
-| `gauge` | Arc gauge with min/max |
-| `bargauge` | Horizontal/vertical bar gauge |
-| `table` | Tabular data |
-| `barchart` | Categorical bar chart |
-| `piechart` | Pie/donut chart |
-| `heatmap` | 2D density heatmap |
-| `state-timeline` | State changes over time |
-| `status-history` | Historical status grid |
-| `text` | Markdown/HTML content |
-| `row` | Collapsible row grouping (not a visualization) |
+| `"type"` value | Visualization | Notes |
+|----------------|---------------|-------|
+| `timeseries` | Time series (line/bar/point) | Default graph. Replaces deprecated `graph`. Supports stacking, dual Y-axis, thresholds, annotations. |
+| `stat` | Single value + optional sparkline | Use `graphMode: "area"` for sparkline. Good for KPIs at dashboard top. |
+| `gauge` | Arc gauge with min/max | Good for utilization/capacity metrics with known min/max. |
+| `bargauge` | Horizontal/vertical bar gauge | Use `displayMode: "basic"` to avoid gradient washout. Good for leaderboards/rankings. |
+| `table` | Tabular data | Supports sorting, filtering, column links, cell coloring. Single instant query works. |
+| `barchart` | Categorical bar chart | Horizontal/vertical. Good for comparing named values. Not great for time-based data. |
+| `piechart` | Pie/donut chart | Each series becomes a slice. Use for success/failure ratios, category breakdowns. |
+| `histogram` | Distribution of values | Shows frequency distribution. Good for latency/duration distributions. |
+| `heatmap` | 2D density heatmap | X=time, Y=buckets, color=count. Good for spotting patterns in high-cardinality data. |
+| `state-timeline` | State changes over time | Horizontal bands showing when things were up/down/degraded. |
+| `status-history` | Historical status grid | Like state timeline but more compact. |
+| `candlestick` | OHLC financial-style chart | Can show min/avg/max envelopes. Requires specific field naming. |
+| `nodeGraph` | Directed graph visualization | Dependency maps, service graphs. Requires nodes + edges frames. |
+| `traces` | Distributed tracing waterfall | Span hierarchy with timing. Requires trace format. |
+| `flamegraph` | Profiling visualization | Call stack hierarchy. Requires flame graph format. |
+| `geomap` | Geographic visualization | Data with lat/lon or geohash. Multiple layer types. |
+| `canvas` | Freeform data-driven layout | Highly customizable but manual positioning. |
+| `trend` | Sparkline-only panel | Compact trend indicator. No axes. |
+| `xychart` | Scatter/bubble plots | X and Y numeric columns. Good for correlation analysis. |
+| `logs` | Log line display | Timestamps, labels, expandable details. Use with log datasources only. |
+| `text` | Markdown/HTML content | Static content for dashboard documentation and help panels. |
+| `row` | Collapsible row grouping | Not a visualization. |
 
 Full list: https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/
 
 Note: most type identifiers are lowercase, but some use camelCase (e.g., `nodeGraph`). Check the docs for the exact string.
+
+### Popular plugins
+
+| Plugin | `"type"` value | Notes |
+|--------|---------------|-------|
+| Treemap | `marcusolsson-treemap-panel` | Hierarchical area visualization. `separator` goes in `fieldConfig.defaults.custom.separator` (NOT `options`). Use `reduce` transform with `reducers: ["lastNotNull"]` to convert time series into table format. |
+| Gantt | `marcusolsson-gantt-panel` | Task timeline bars. Unmaintained. X-axis locked to dashboard time range. Field options (`textField`, `startField`, `endField`) must match post-transform column names. Consider State Timeline for simpler use cases. |
+| Diagram | `jdbranham-diagram-panel` | Mermaid.js diagrams. Static text in panel config. Metric series can color nodes by matching alias to node ID. |
+| ECharts | `volkovlabs-echarts-panel` | Apache ECharts wrapper. JavaScript code in panel config. Extremely flexible but higher maintenance. |
+| Hourly Heatmap | `marcusolsson-hourly-heatmap-panel` | Day-of-week vs hour-of-day heatmap. Aggregates into day/hour buckets automatically. |
 
 ### Time series (`timeseries`)
 
@@ -461,6 +482,22 @@ Add multiple targets with different `refId` values. Each renders as a separate s
 
 Invalid format falls back to `glob`. Multi-value variables require `=~` regex operator. Full format list: https://grafana.com/docs/grafana/latest/dashboards/variables/variable-syntax/
 
+**Empty variable gotcha:** `${var:regex}` with an empty textbox produces `""` which matches only empty strings. Use `.*$var.*` instead for optional filtering.
+
+**Multi-select in LogsQL:** Use `${var:pipe}` formatting to produce `val1|val2` for regex matching: `level:~"${level:pipe}"`. The `:pipe` format also works correctly when "All" is selected (outputs the `allValue`).
+
+### label_values vs query_result
+
+`label_values(metric{filters}, label)` is the standard way to populate variable dropdowns, but it does not reliably scope results to the dashboard time range in VictoriaMetrics. The dropdown may show values from outside the visible window, leading to "No data" when users select them.
+
+**Fix:** Use `query_result()` with `[$__range:]` to force time-range scoping:
+
+```
+query_result(group by (namespace) (count_over_time(kube_pod_status_phase{filters}[$__range:])))
+```
+
+Add a `regex` field to extract the label value: `/namespace="([^"]+)"/`
+
 ### Built-in global variables
 
 | Variable | Value |
@@ -513,7 +550,67 @@ Combine queries A and B: `merge` transformation, then `organize` to select and r
 
 ---
 
-## 7. Thresholds, Overrides, and Mappings
+## 7. Data Format Gotchas
+
+### The Multi-Frame Problem
+
+Prometheus instant queries with `format: "table"` return **one data frame per series**. Labels are frame metadata, NOT data columns. This is the root cause of most "No data" or "Configure your query" errors on non-timeseries panels.
+
+**What fails:**
+- Two instant table queries + `merge` transform expecting joined columns -- `merge` appends rows, doesn't join
+- Table panel expecting `namespace` as a column -- it's in frame metadata
+- Treemap/Gantt expecting string + number columns from table format -- they see separate frames with only Time + Value
+
+### Working Patterns
+
+**Bar gauge / Pie chart** (simplest):
+```
+format: default (NOT table)
+legendFormat: "{{label_name}}"
+instant: true
+```
+Each series becomes a named value. No transforms needed.
+
+**Treemap:**
+```
+format: default, legendFormat with / separator, instant: true
+transform: reduce (reducers: ["lastNotNull"])
+fieldConfig.defaults.custom.separator: "/"
+```
+The `reduce` transform collapses multi-frame time series into one table with `Field` (string) and `Last` (number) columns.
+
+**Single-query table:**
+```
+format: table, instant: true
+transform: merge (combines frames into one table with labels as columns)
+transform: organize (rename/hide columns)
+```
+Works for ONE query. Labels become columns after merge.
+
+**Multi-query table (e.g. total + passed counts):**
+```
+Single query using label_replace + or:
+  label_replace(query_a, "metric", "total", "", "") or label_replace(query_b, "metric", "passed", "", "")
+format: table, instant: true
+transform: merge
+transform: groupingToMatrix (columnField: "metric", rowField: "source", valueField: "Value")
+```
+Combines two metrics into one query with a `metric` label, then pivots into columns.
+
+### Plugin Config: options vs fieldConfig
+
+Plugin settings live in either `options` (panel-level) or `fieldConfig.defaults.custom` (field-level). Check the plugin's source to know which.
+
+| Plugin | Setting | Location |
+|--------|---------|----------|
+| Treemap | `separator` | `fieldConfig.defaults.custom` |
+| Treemap | `tiling` | `options` |
+| Gantt | `textField`, `startField`, `endField` | `options` |
+| Bar gauge | `displayMode`, `orientation` | `options` |
+
+---
+
+## 8. Thresholds, Overrides, and Mappings
 
 ### Thresholds
 
@@ -576,7 +673,7 @@ Special match values: `null`, `NaN`, `true`, `false`.
 
 ---
 
-## 8. Units and Colors
+## 9. Units and Colors
 
 ### Common unit strings
 
@@ -626,7 +723,7 @@ Full unit list available in the Grafana UI under panel field config > Unit dropd
 
 ---
 
-## 9. Provisioning
+## 10. Provisioning
 
 ### Dashboard provider
 
@@ -659,7 +756,7 @@ Use the API: `GET /api/dashboards/uid/<uid>`. Set `id: null` and replace hardcod
 
 ---
 
-## 10. MetricsQL Differences
+## 11. MetricsQL Differences
 
 VictoriaMetrics implements MetricsQL, a PromQL-compatible superset. Standard PromQL queries work unchanged. Key behavioral differences that affect dashboard queries:
 
@@ -689,7 +786,7 @@ Full reference: https://docs.victoriametrics.com/victoriametrics/metricsql/
 
 ---
 
-## 11. Documentation Links
+## 12. Documentation Links
 
 ### Grafana
 
