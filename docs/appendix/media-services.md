@@ -283,16 +283,16 @@ Tiered scoring system that isolates language, audio, and other preferences into 
 |------|----------|-------|---------|
 | Thousands | Language | ±1000+ | — |
 | Hundreds | Audio format | ±100–500 | 500 |
-| Tens | Other | ±10–50 | 60 |
+| Tens | Other | ±10–50 | 80 |
 
-Constraint: max(hundreds) + max(tens) = 560 < 1000. Lower tiers cannot overcome language penalties.
+Constraint: max(hundreds) + max(tens) = 580 < 1000. Lower tiers cannot overcome language penalties.
 
 #### Scores
 
 | Custom Format | Score | Tier | Rationale |
 |---|---|---|---|
 | Not English + Not Original | -10000 | Language | Hard block |
-| English | 0 | Language | Implicit: having English prevents the penalty |
+| English | +10 | Other | Minimum floor for English releases; absorbs small audio penalties |
 | DD (AC3) | +500 | Audio | Soundbar-native |
 | DTS | +500 | Audio | Soundbar-native |
 | TrueHD ATMOS | +300 | Audio | Shield decodes |
@@ -301,7 +301,7 @@ Constraint: max(hundreds) + max(tens) = 560 < 1000. Lower tiers cannot overcome 
 | DD+ | +200 | Audio | Shield decodes |
 | AAC | 0 | Audio | Neutral |
 | FLAC | 0 | Audio | Neutral |
-| 7.1 Surround | -100 | Audio | Soundbar is 5.1, extra channels unused |
+| 7.1 Surround | -10 | Other | Soundbar is 5.1; mild preference, not a block |
 | MP3 | -500 | Audio | Bad quality |
 | Season Pack | +50 | Other | Sonarr only |
 | Repack/Proper | +10 | Other | Tiebreaker |
