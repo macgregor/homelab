@@ -48,7 +48,7 @@ metadata:
     cert-manager.io/cluster-issuer: "letsencrypt"
     nginx.ingress.kubernetes.io/proxy-body-size: 32m
 spec:
-  ingressClassName: nginx-external
+  ingressClassName: nginx-internal
   tls:
   - hosts:
     - dnd.matthew-stratton.me

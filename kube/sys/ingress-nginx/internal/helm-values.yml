@@ -35,9 +35,4 @@ controller:
       metallb.io/loadBalancerIPs: "192.168.1.221"
     external:
       enabled: true
-      loadBalancerSourceRanges:
-      - 192.168.1.0/24
-      - 10.42.0.0/24
-      - 10.43.0.0/16
-      externalTrafficPolicy: Local
 

@@ -38,7 +38,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-ssl-verify: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
 spec:
-  ingressClassName: nginx-external
+  ingressClassName: nginx-internal
   tls:
   - hosts:
     - synology.matthew-stratton.me

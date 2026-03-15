@@ -42,7 +42,7 @@ Security hardening is automated via Ansible and covers SSH access, service harde
 
 External SSH and VPN access to the homelab are gated at the router:
 
-- **WireGuard VPN**: Preshared keys per peer, `/32` allowed-address per client. The VPN DNS record is not proxied through Cloudflare (direct UDP to WAN IP).
+- **WireGuard VPN**: Preshared keys per peer, `/32` allowed-address per client. The VPN DNS record is not proxied through Cloudflare (direct UDP to WAN IP). VPN clients have full LAN access (including internal ingress services) because `wg0` is in the router's LAN interface list.
 - **SSH port knocking**: 3-step TCP knock sequence with 5-second inter-step timeout. Successful completion grants 15 minutes of SSH access from the knocking IP. Knock ports are stored in `.envrc`, not in source.
 - **SSH hardening**: Key-only authentication (`strong-crypto=yes`, `password-authentication=no`), forwarding restricted to local destinations only.
 

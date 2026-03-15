@@ -73,7 +73,7 @@ CoreDNS static hosts resolve `*.matthew-stratton.me` domains to the appropriate 
 
 Remote access uses two mechanisms, both configured in `ansible/tasks/mikrotik-remote-access.yml`:
 
-- **WireGuard VPN**: Full-tunnel VPN on the router (UDP 51820). Clients get IPs on `10.100.0.0/24` and can reach the LAN as if local. The `wg0` interface is a member of the LAN interface list. Peer definitions are in `ansible/inventory/group_vars/router.yaml`.
+- **WireGuard VPN**: Full-tunnel VPN on the router (UDP 51820). Clients get IPs on `10.100.0.0/24` and have full LAN access -- the `wg0` interface is a member of the router's LAN interface list, so VPN traffic is treated as LAN traffic. This means VPN clients can reach all internal ingress services, NAS shares, and other LAN resources. Peer definitions are in `ansible/inventory/group_vars/router.yaml`.
 - **SSH ProxyJump**: SSH to internal hosts via the router as a jump host. Port knocking (3-step sequence) gates WAN SSH access; LAN SSH is always open. SSH config aliases (`homelab-jump`, `k3-m1-remote`, `synology-remote`) are in `~/.ssh/config`.
 
 A separate Cloudflare DDNS record (`vpn.*`, not proxied) resolves to the WAN IP for VPN and SSH endpoints. See [Security](05-security.md#remote-access) for hardening details.
@@ -146,14 +146,12 @@ Proxy protocol is needed because traffic arrives through Cloudflare's reverse pr
 
 ### Internal (`nginx-internal`)
 
-Handles LAN-only traffic. Restricted by source IP ranges.
+Handles LAN-only traffic. Access control is enforced at the router level -- the internal ingress VIP (`192.168.1.221`) is only reachable from the LAN interface list, which includes `wg0` (WireGuard VPN). VPN clients have the same access as local LAN clients.
 
 | Setting | Value |
 | ------- | ----- |
 | IngressClass | `nginx-internal` |
 | LoadBalancer IP | `192.168.1.221` |
-| Source IP allowlist | `192.168.1.0/24`, `10.42.0.0/24`, `10.43.0.0/16` |
-| External traffic policy | `Local` (preserves client IP) |
 | SSL passthrough | Enabled |
 
 No ModSecurity or WAF rules -- internal traffic is trusted.

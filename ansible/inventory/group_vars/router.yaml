@@ -64,16 +64,16 @@ knock_port_3: "{{ lookup('env', 'KNOCK_PORT_3') | mandatory('KNOCK_PORT_3 is not
 
 # Split-horizon DNS: per-host entries managed by homelab-sync-dns.sh
 router_dns_hosts:
-  - { name: "cook.matthew-stratton.me", address: "192.168.1.220" }
-  - { name: "dnd.matthew-stratton.me", address: "192.168.1.220" }
   - { name: "jellyfin.matthew-stratton.me", address: "192.168.1.220" }
   - { name: "seerr.matthew-stratton.me", address: "192.168.1.220" }
-  - { name: "synology.matthew-stratton.me", address: "192.168.1.220" }
+  - { name: "cook.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "debug.matthew-stratton.me", address: "192.168.1.221" }
+  - { name: "dnd.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "grafana.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "prowlarr.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "qbittorrent.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "radarr.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "sonarr.matthew-stratton.me", address: "192.168.1.221" }
+  - { name: "synology.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "victorialogs.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "victoriametrics.matthew-stratton.me", address: "192.168.1.221" }
