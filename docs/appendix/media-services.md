@@ -267,6 +267,65 @@ Log level changed in Settings > General (takes effect immediately, no restart ne
 | Naming complexity | Season/episode numbering | Year, edition (Director's Cut, etc.) |
 | Search commands | `EpisodeSearch`, `MissingEpisodeSearch`, `SeriesSearch` | `MoviesSearch`, `MissingMoviesSearch` |
 
+### Custom Format Scoring Strategy
+
+Tiered scoring system that isolates language, audio, and other preferences into magnitude-separated categories. Lower-priority preferences cannot override higher-priority decisions.
+
+#### Design Principles
+
+1. **Tier isolation:** Each category occupies a distinct order of magnitude. The maximum possible sum of all lower tiers cannot overcome the minimum penalty of any higher tier.
+2. **Language gatekeeper:** Must have English audio. No amount of audio quality or other attributes can override a language failure.
+3. **Audio preference:** Within language-passing releases, prefer codecs the hardware plays natively (DD/DTS for soundbar), then lossless codecs the Shield decodes.
+
+#### Tier Structure
+
+| Tier | Category | Range | Max Sum |
+|------|----------|-------|---------|
+| Thousands | Language | ±1000+ | — |
+| Hundreds | Audio format | ±100–500 | 500 |
+| Tens | Other | ±10–50 | 60 |
+
+Constraint: max(hundreds) + max(tens) = 560 < 1000. Lower tiers cannot overcome language penalties.
+
+#### Scores
+
+| Custom Format | Score | Tier | Rationale |
+|---|---|---|---|
+| Not English + Not Original | -10000 | Language | Hard block |
+| English | 0 | Language | Implicit: having English prevents the penalty |
+| DD (AC3) | +500 | Audio | Soundbar-native |
+| DTS | +500 | Audio | Soundbar-native |
+| TrueHD ATMOS | +300 | Audio | Shield decodes |
+| DTS X | +300 | Audio | Shield decodes |
+| DTS-HD MA | +300 | Audio | Shield decodes |
+| DD+ | +200 | Audio | Shield decodes |
+| AAC | 0 | Audio | Neutral |
+| FLAC | 0 | Audio | Neutral |
+| 7.1 Surround | -100 | Audio | Soundbar is 5.1, extra channels unused |
+| MP3 | -500 | Audio | Bad quality |
+| Season Pack | +50 | Other | Sonarr only |
+| Repack/Proper | +10 | Other | Tiebreaker |
+
+#### Multi-Codec Releases
+
+Release names listing multiple codecs (e.g., `TrueHD.Atmos.DD5.1`) cause zero audio CF matches because each codec CF's exclusion conditions see the other codec. Fix: DD and DD+ exclusion conditions are removed from premium codec CFs (TrueHD ATMOS, DTS-HD MA, DTS X). The premium codec matches instead of nothing. No double-counting because DD/DD+ CFs still exclude premium codecs from their side.
+
+#### Dual Language Releases (DL/DUAL/MULTi)
+
+Sonarr/Radarr detect language from release names. Non-English media releases often use `DL` (Dual Language), `DUAL`, or `MULTi` to indicate multiple audio tracks including English, but the parser may only detect the original language. This causes the "Not English + Not Original" penalty to fire on valid releases.
+
+Fix: a required release-title condition on the "Not English + Not Original" CF exempts releases tagged with these markers:
+
+- **Regex:** `(?<!WEB[-_. ])\bDL\b|\b(DUAL|MULTi)\b`
+- **Negated + Required:** The penalty only fires when the release does NOT contain DL/DUAL/MULTi
+- The negative lookbehind `(?<!WEB[-_. ])` prevents matching `WEB-DL`, `WEB.DL`, `WEB_DL`, and `WEB DL` (space-separated, common in normalized titles)
+
+**Assumption:** DL/DUAL/MULTi releases include English. Standard for German/European scene releases. A rare non-English multi-language release could slip through.
+
+#### Radarr Profile Language
+
+Radarr quality profiles use `Language: Any` (not `English`) so that non-English-tagged releases reach CF evaluation instead of being pre-filtered. Language enforcement is handled entirely by CF scoring.
+
 ---
 
 ## 7. Prowlarr
