@@ -64,10 +64,6 @@ Time series panels need range queries (`"instant": false`). Stat, gauge, and tab
 
 Steps sort highest to lowest automatically. First step must have `"value": null` (base color). Cannot be manually reordered.
 
-### `graphTooltip` is dashboard-level, not per-panel
-
-Set on the dashboard root: `0` = none (no sharing), `1` = shared crosshair, `2` = shared crosshair + tooltip. Per-panel tooltip mode is a separate `options.tooltip` config.
-
 ### Table panel `options.footer` crashes Grafana 12
 
 Grafana 12 migrates the legacy `options.footer` object (`show`, `enablePagination`, `countRows`, `reducer`) to the new schema. If `footer.show` is `true` but `footer.reducer` is missing, the migration crashes with `Uncaught (in promise)` in `migrations.ts`, showing "Loading plugin panel..." permanently. Use `"options": { "enablePagination": true }` directly instead of the legacy footer object. The old `custom.hidden` override property was also renamed to `custom.hideFrom.viz`. After fixing, restart Grafana to clear the cached migration state.
@@ -193,27 +189,7 @@ Link types: `"dashboards"` (by tag match) or `"link"` (explicit URL). `includeVa
 
 ### `__inputs` and `__requires` (exported dashboards)
 
-Dashboards exported from the Grafana UI include `__inputs` and `__requires` at the top level. These are metadata for the import process, not runtime config.
-
-```json
-{
-  "__inputs": [{
-    "name": "DS_VICTORIAMETRICS",
-    "label": "VictoriaMetrics",
-    "type": "datasource",
-    "pluginId": "prometheus"
-  }],
-  "__requires": [
-    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
-    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
-  ]
-}
-```
-
-- `__inputs`: Declares datasource placeholders. Panels reference them via `"uid": "${DS_VICTORIAMETRICS}"`. On import, Grafana prompts the user to map each input to an existing datasource.
-- `__requires`: Declares minimum versions of Grafana, datasource plugins, and panel plugins needed.
-
-When provisioning dashboards via file (not the import UI), `__inputs` variables are **not resolved** — panels must use literal datasource UIDs or provisioned datasource names instead.
+Dashboards exported from the UI include `__inputs` (datasource placeholders) and `__requires` (version constraints). These are import metadata -- when provisioning via file, `__inputs` variables are **not resolved**. Use literal datasource UIDs instead.
 
 ---
 
@@ -271,16 +247,12 @@ Note: most type identifiers are lowercase, but some use camelCase (e.g., `nodeGr
         "drawStyle": "line",
         "lineInterpolation": "linear",
         "fillOpacity": 10,
-        "lineWidth": 2,
-        "pointSize": 5,
         "stacking": { "mode": "none" },
-        "spanNulls": false,
-        "axisPlacement": "auto"
+        "spanNulls": false
       },
       "unit": "bytes",
       "min": 0,
-      "color": { "mode": "palette-classic" },
-      "noValue": "N/A"
+      "color": { "mode": "palette-classic" }
     }
   },
   "options": {
@@ -327,9 +299,7 @@ Note: most type identifiers are lowercase, but some use camelCase (e.g., `nodeGr
 
 Used in stat, gauge, bar gauge, table reduce options, and legend calcs.
 
-Common: `lastNotNull`, `last`, `first`, `firstNotNull`, `min`, `max`, `mean`, `sum`, `count`, `range`, `delta`, `diff`
-
-Additional: `diffperc`, `changeCount`, `distinctCount`, `variance`, `stdDev`, `median`, `step`, `logmin`, `allIsZero`, `allIsNull`
+Common: `lastNotNull`, `last`, `first`, `firstNotNull`, `min`, `max`, `mean`, `sum`, `count`, `range`, `delta`, `diff`, `changeCount`, `distinctCount`
 
 Full list: https://grafana.com/docs/grafana/latest/panels-visualizations/query-transform-data/calculation-types/
 
@@ -475,12 +445,8 @@ Add multiple targets with different `refId` values. Each renders as a separate s
 | `${var:pipe}` | `val1\|val2` | Pipe-separated |
 | `${var:regex}` | Regex-escaped pipe-separated | Safe regex matchers |
 | `${var:raw}` | No escaping | Variable is a sub-expression |
-| `${var:json}` | JSON array | API payloads |
-| `${var:sqlstring}` | SQL-safe single-quoted | SQL clauses |
-| `${var:doublequote}` | Double-quoted, escaped | SQL strings |
-| `${var:queryparam}` | `var-name=val1&...` | URL parameters |
 
-Invalid format falls back to `glob`. Multi-value variables require `=~` regex operator. Full format list: https://grafana.com/docs/grafana/latest/dashboards/variables/variable-syntax/
+Multi-value variables require `=~` regex operator. Full format list: https://grafana.com/docs/grafana/latest/dashboards/variables/variable-syntax/
 
 **Empty variable gotcha:** `${var:regex}` with an empty textbox produces `""` which matches only empty strings. Use `.*$var.*` instead for optional filtering.
 
@@ -488,32 +454,28 @@ Invalid format falls back to `glob`. Multi-value variables require `=~` regex op
 
 ### label_values vs query_result
 
-`label_values(metric{filters}, label)` is the standard way to populate variable dropdowns, but it does not reliably scope results to the dashboard time range in VictoriaMetrics. The dropdown may show values from outside the visible window, leading to "No data" when users select them.
-
-**Fix:** Use `query_result()` with `[$__range:]` to force time-range scoping:
+`label_values(metric, label)` does not reliably scope to the dashboard time range in VictoriaMetrics. Use `query_result()` with `[$__range:]` instead:
 
 ```
 query_result(group by (namespace) (count_over_time(kube_pod_status_phase{filters}[$__range:])))
 ```
 
-Add a `regex` field to extract the label value: `/namespace="([^"]+)"/`
+Add `regex: /namespace="([^"]+)"/` to extract the label value.
 
 ### Built-in global variables
 
 | Variable | Value |
 |----------|-------|
 | `$__interval` | Auto-calculated query step (e.g., `15s`, `1m`) |
-| `$__interval_ms` | Same in milliseconds |
-| `$__rate_interval` | `max($__interval + scrape_interval, 4 * scrape_interval)` |
-| `$__range` | Dashboard time range as duration |
-| `$__range_s` / `$__range_ms` | Time range in seconds / milliseconds |
+| `$__rate_interval` | Safe rate window (see [Query gotchas](#query-gotchas)) |
+| `$__range` / `$__range_s` | Dashboard time range as duration / seconds |
 | `$__from` / `$__to` | Epoch milliseconds of time range bounds |
 
 ---
 
 ## 6. Transformations
 
-Transformations process query results client-side before rendering. Applied sequentially — order matters. Configured under `"transformations"`. All text inputs accept variable syntax.
+Applied sequentially — order matters. Configured under `"transformations"`.
 
 ```json
 "transformations": [{
@@ -683,20 +645,14 @@ Special match values: `null`, `NaN`, `true`, `false`.
 | `percentunit` | 0-1 | `0.85` → `85%` |
 | `bytes` | bytes (IEC, base-2) | `1.5 GiB` |
 | `decbytes` | bytes (SI, base-10) | `1.5 GB` |
-| `bits` | bits (IEC, base-2) | `12 Mib` |
 | `s` | seconds | `2m 30s` |
 | `ms` | milliseconds | `150 ms` |
 | `short` | auto-SI suffix | `1.5K` |
 | `none` | raw value | `1500` |
 | `celsius` | degrees | `72 °C` |
-| `reqps` | requests/sec | `1.2K req/s` |
-| `ops` | operations/sec | `500 ops/s` |
-| `watt` | watts | `150 W` |
-| `hertz` | hertz | `3.5 GHz` |
-| `dtdurationms` | duration from ms | `2h 15m` |
 | `dtdurations` | duration from seconds | `1d 3h` |
 
-Full unit list available in the Grafana UI under panel field config > Unit dropdown.
+Full unit list in Grafana UI: panel field config > Unit dropdown.
 
 ### Color specification
 
@@ -706,20 +662,12 @@ Full unit list available in the Grafana UI under panel field config > Unit dropd
 
 **Color mode object** (in `fieldConfig.defaults.color`):
 
-```json
-{ "mode": "palette-classic" }
-{ "mode": "palette-classic-by-name" }
-{ "mode": "fixed", "fixedColor": "#FF0000" }
-{ "mode": "continuous-GrYlRd" }
-{ "mode": "continuous-BlYlRd" }
-{ "mode": "continuous-blues" }
-{ "mode": "continuous-greens" }
-{ "mode": "continuous-reds" }
-{ "mode": "continuous-YlRd" }
-{ "mode": "shades" }
-```
-
-`palette-classic` auto-assigns colors from a fixed palette. `fixed` uses a single color. `continuous-*` creates gradient scales (useful with thresholds). `shades` varies shades of a single color.
+| Mode | Behavior |
+|------|----------|
+| `palette-classic` | Auto-assigns from a fixed palette |
+| `fixed` | Single color: `{ "mode": "fixed", "fixedColor": "#FF0000" }` |
+| `continuous-*` | Gradient scales (`GrYlRd`, `BlYlRd`, `blues`, `greens`, `reds`, `YlRd`) |
+| `shades` | Shades of a single color |
 
 ---
 
@@ -772,15 +720,10 @@ VictoriaMetrics implements MetricsQL, a PromQL-compatible superset. Standard Pro
 
 ### Notable MetricsQL-only functions
 
-**Label manipulation:** `label_set(q, "k", "v")`, `label_del(q, "k")`, `label_keep(q, "k")`, `label_copy(q, "src", "dst")`, `label_move(q, "src", "dst")`, `label_join(q, "dst", "sep", "src1", ...)`, `label_value(q, "label")`, `label_match(q, "label", "regex")`, `label_mismatch(q, "label", "regex")`
-
-**Range transforms:** `range_first(q)`, `range_last(q)`, `range_avg(q)`, `range_min(q)`, `range_max(q)`, `range_quantile(phi, q)`, `range_normalize(q)`, `range_trim_outliers(k, q)`
-
-**Gap filling:** `keep_last_value(q)`, `keep_next_value(q)`, `interpolate(q)`
-
-**Rollup extensions:** `count_eq_over_time(q[d], N)`, `share_gt_over_time(q[d], N)`, `distinct_over_time(q[d])`, `mode_over_time(q[d])`, `mad_over_time(q[d])`, `rollup(q[d])` (returns min/max/avg as separate series)
-
-**Other:** `union(q1, ..., qN)`, `sort_by_label(q, "label")`, `limit_offset(limit, offset, q)`, `running_avg(q)`, `running_sum(q)`, `smooth_exponential(q, sf)`, `remove_resets(q)`
+- **Label manipulation:** `label_set`, `label_del`, `label_keep`, `label_copy`, `label_join`, `label_match`
+- **Gap filling:** `keep_last_value(q)`, `keep_next_value(q)`, `interpolate(q)`
+- **Range transforms:** `range_avg(q)`, `range_min(q)`, `range_max(q)`, `range_normalize(q)`
+- **Other:** `union(q1, ..., qN)`, `sort_by_label(q, "label")`, `limit_offset(limit, offset, q)`
 
 Full reference: https://docs.victoriametrics.com/victoriametrics/metricsql/
 
@@ -793,25 +736,12 @@ Full reference: https://docs.victoriametrics.com/victoriametrics/metricsql/
 | Topic | URL |
 |-------|-----|
 | Dashboard JSON model | https://grafana.com/docs/grafana/latest/dashboards/build-dashboards/view-dashboard-json-model/ |
-| Dashboard JSON schema v2 | https://grafana.com/docs/grafana/latest/as-code/observability-as-code/schema-v2/ |
 | Visualizations overview | https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/ |
-| Time series panel | https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/time-series/ |
-| Stat panel | https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/stat/ |
-| Gauge panel | https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/gauge/ |
-| Table panel | https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/table/ |
-| Bar gauge panel | https://grafana.com/docs/grafana/latest/panels-visualizations/visualizations/bar-gauge/ |
-| Calculation types | https://grafana.com/docs/grafana/latest/panels-visualizations/query-transform-data/calculation-types/ |
 | Variables | https://grafana.com/docs/grafana/latest/dashboards/variables/ |
-| Add variables | https://grafana.com/docs/grafana/latest/dashboards/variables/add-template-variables/ |
 | Variable syntax | https://grafana.com/docs/grafana/latest/dashboards/variables/variable-syntax/ |
-| Prometheus variables | https://grafana.com/docs/grafana/latest/datasources/prometheus/template-variables/ |
 | Transformations | https://grafana.com/docs/grafana/latest/panels-visualizations/query-transform-data/transform-data/ |
-| Thresholds | https://grafana.com/docs/grafana/latest/panels-visualizations/configure-thresholds/ |
-| Value mappings | https://grafana.com/docs/grafana/latest/panels-visualizations/configure-value-mappings/ |
-| Field overrides | https://grafana.com/docs/grafana/latest/panels-visualizations/configure-overrides/ |
 | Provisioning | https://grafana.com/docs/grafana/latest/administration/provisioning/ |
 | HTTP API | https://grafana.com/docs/grafana/latest/developers/http_api/ |
-| Dashboard API | https://grafana.com/docs/grafana/latest/developers/http_api/dashboard/ |
 
 ### PromQL / MetricsQL
 
