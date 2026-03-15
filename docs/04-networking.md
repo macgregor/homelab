@@ -80,7 +80,7 @@ A separate Cloudflare DDNS record (`vpn.*`, not proxied) resolves to the WAN IP 
 
 ## DNS
 
-DNS resolution flows through a chain: clients query CoreDNS, which forwards unknown queries to AdGuard Home for ad-blocking, which falls back to Cloudflare (`1.1.1.1`) for upstream resolution. Public DNS is managed on Cloudflare.
+DNS resolution flows through a chain: clients query CoreDNS, which forwards unknown queries to Cloudflare (`1.1.1.1`) for upstream resolution. Public DNS is managed on Cloudflare.
 
 ### Cloudflare (Public DNS)
 
@@ -92,7 +92,7 @@ Cloudflare also acts as a reverse proxy for internet-facing services -- external
 
 k3s's built-in CoreDNS is disabled. A custom CoreDNS deployment provides both in-cluster DNS (`cluster.local`) and LAN-wide DNS resolution.
 
-CoreDNS is exposed to the LAN at `192.168.1.223` via two LoadBalancer services (one UDP, one TCP, sharing the same IP via MetalLB's `allow-shared-ip` annotation). LAN clients (or the router's DHCP settings) can point to this IP for DNS.
+CoreDNS is exposed to the LAN at `192.168.1.223` via two LoadBalancer services (one UDP, one TCP, sharing the same IP via MetalLB's `allow-shared-ip` annotation). LAN clients can be manually configured to use this IP for DNS (the router's DHCP pushes the router itself as the DNS server, not CoreDNS).
 
 The Corefile forwards unknown queries to Cloudflare (`1.1.1.1`). A static hosts file maps infrastructure hostnames and `*.matthew-stratton.me` domains to their MetalLB IPs, so LAN clients resolve internal services without hairpin NAT.
 

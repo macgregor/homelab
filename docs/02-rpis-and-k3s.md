@@ -58,7 +58,7 @@ See [Infrastructure Provisioning](01-infrastructure-provisioning.md) for detaile
 
 The master node's k3s service (`ansible/roles/k3s/master/templates/k3s.service`) runs `k3s server` with these flags:
 
-**External datastore**: Cluster state is persisted to a MySQL database on the Synology NAS (`--datastore-endpoint`) rather than the default embedded etcd. This avoids wearing out the SD card with etcd writes and allows the cluster to be rebuilt from scratch without losing state.
+**External datastore**: Cluster state is persisted to a MariaDB database on the Synology NAS (`--datastore-endpoint`) rather than the default embedded etcd. This avoids wearing out the SD card with etcd writes and allows the cluster to be rebuilt from scratch without losing state.
 
 **Node taint**: `--node-taint CriticalAddonsOnly=true:NoSchedule` prevents application workloads from scheduling on the 4 GB master node, reserving it for control-plane components.
 
@@ -82,7 +82,7 @@ SD cards have limited write endurance and poor random I/O performance. Since the
 
 - Journald uses volatile storage (`/run/log/journal/` in RAM) instead of writing to disk. Container and pod logs are unaffected -- kubelet manages those independently at `/var/log/pods/`. To temporarily persist system logs for troubleshooting, change `Storage=volatile` to `Storage=auto` in `journald.conf` and restart journald.
 - rsyslog is disabled and masked. Journald captures everything rsyslog would, so the duplicate writes to `/var/log/messages`, `/var/log/secure`, etc. are eliminated.
-- Kernel dirty page writeback is tuned to batch writes into fewer, larger flushes rather than frequent small ones. This reduces the number of flash erase cycles at the cost of a larger data loss window on unexpected power loss (acceptable since cluster state lives in MySQL on the NAS and persistent app data is on NFS).
+- Kernel dirty page writeback is tuned to batch writes into fewer, larger flushes rather than frequent small ones. This reduces the number of flash erase cycles at the cost of a larger data loss window on unexpected power loss (acceptable since cluster state lives in MariaDB on the NAS and persistent app data is on NFS).
 - The I/O scheduler is set to `none` (noop) for SD card devices, removing unnecessary seek reordering overhead for flash media.
 
 **Kernel tuning for k3s:**
@@ -101,7 +101,7 @@ SD cards have limited write endurance and poor random I/O performance. Since the
 
 k3s uses tokens for nodes to join the cluster. The master generates these on first start. Ansible handles passing the agent token from master to worker nodes automatically.
 
-On a fresh cluster install (no existing MySQL state), `KUBE_SERVER_TOKEN` can be left empty for the first run. After the master starts, grab the generated token for future use:
+On a fresh cluster install (no existing MariaDB state), `KUBE_SERVER_TOKEN` can be left empty for the first run. After the master starts, grab the generated token for future use:
 
 ```bash
 sudo cat /var/lib/rancher/k3s/server/token | rev | cut -d':' -f1 | rev
@@ -113,15 +113,11 @@ When reinstalling k3s on the master against an existing datastore (e.g., during 
 level=fatal msg="starting kubernetes: preparing server: bootstrap data already found and encrypted with different token"
 ```
 
-When recovering a lost worker node (fresh OS install), you may also need to delete the old node secret from the master:
-
-```bash
-kubectl -n kube-system delete secrets k3-n1.node-password.k3s
-```
+When recovering a lost worker node (fresh OS install), you may also need to delete the old node secret -- see [Infrastructure Provisioning](01-infrastructure-provisioning.md#recovery-scenarios) for recovery procedures.
 
 ## Secrets and Configuration
 
-Ansible variables are defined in `ansible/inventory/group_vars/all.yaml`. Sensitive values (user password, k3s server token, MySQL credentials, Docker registry credentials) are read from environment variables via `lookup('env', ...)`, sourced from `.envrc` (gitignored).
+See [Infrastructure Provisioning](01-infrastructure-provisioning.md#secrets-and-configuration) for secrets management.
 
 ## References
 

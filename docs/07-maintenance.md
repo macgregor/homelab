@@ -95,16 +95,12 @@ Patterns from past upgrades:
 
 **Chart swaps (e.g., Bitnami to upstream) always require uninstall+reinstall.** Different chart maintainers use different label selectors, values schemas, and resource naming. Treat a chart swap the same as an immutable field change.
 
-## Historical Reference
-
-Legacy troubleshooting notes. These sections will be replaced as automation improves.
-
 ## k3s Upgrades
 
 1. Pick a new version from https://github.com/k3s-io/k3s/releases (probably look for "Latest")
 2. Update the k3s version in `ansible/inventory/group_vars/all.yaml`:
 ```
-k3s_version: v1.27.2+k3s1
+k3s_version: v1.xx.x+k3s1  # check https://github.com/k3s-io/k3s/releases for latest
 ```
 3. Run `ansible-playbook k3-install.yml`.
 
@@ -116,16 +112,14 @@ https://github.com/k3s-io/k3s/issues/802#issuecomment-841748960
 Jun 02 20:15:03 k3-n1 k3s[2335]: time="2024-06-02T20:15:03-04:00" level=info msg="Waiting to retrieve agent configuration; server is not ready: Node password rejected, duplicate hostname or contents of '/etc/rancher/node/password' may not match server passwd entry
 ```
 
-Solution: from the master node (or any connected kubectl) run `kubectl -n kube-system delete secret <agent-node-name>.node-password.k3s`
-
-In my case it was:
+Solution: from the master node (or any connected kubectl) run:
 ```
-kubectl -n kube-system delete secrets k3-n1.node-password.k3s
+kubectl -n kube-system delete secrets <agent-node-name>.node-password.k3s
 ```
 
 ## Server OS Upgrade
 
-DONT DO IT. Its not worth the pain. Start with a fresh install instead.
+Not recommended -- in-place OS upgrades caused enough issues that a fresh install is faster and more reliable. Flash a fresh SD card and re-run the provisioning playbooks instead.
 
 ## Rotating k3s Certs
 
@@ -145,6 +139,6 @@ Dec 28 11:43:36 k3-m1 k3s[9577]: time="2023-12-28T11:43:36-05:00" level=fatal ms
 ```
 
 ```
-> sudo rm /var/lib/rancher/k3s/server/tls/etcd/peer-ca.crt /var/lib/rancher/k3s/server/tls/etcd/server-ca.crt /var/lib/rancher/k3s/server/cred/ipsec.psk /var/lib/rancher/k3s/server/tls/request-header-ca.crt /var/lib/rancher/k3s/server/tls/server-ca.crt /var/lib/rancher/k3s/server/tls/client-ca.crt /var/lib/rancher/k3s/server/tls/client-ca.key /var/lib/rancher/k3s/server/tls/etcd/peer-ca.key /var/lib/rancher/k3s/server/tls/etcd/server-ca.key /var/lib/rancher/k3s/server/tls/request-header-ca.key /var/lib/rancher/k3s/server/tls/server-ca.key /var/lib/rancher/k3s/server/tls/service.key
-> sudo systemctl restart k3s
+sudo rm /var/lib/rancher/k3s/server/tls/etcd/peer-ca.crt /var/lib/rancher/k3s/server/tls/etcd/server-ca.crt /var/lib/rancher/k3s/server/cred/ipsec.psk /var/lib/rancher/k3s/server/tls/request-header-ca.crt /var/lib/rancher/k3s/server/tls/server-ca.crt /var/lib/rancher/k3s/server/tls/client-ca.crt /var/lib/rancher/k3s/server/tls/client-ca.key /var/lib/rancher/k3s/server/tls/etcd/peer-ca.key /var/lib/rancher/k3s/server/tls/etcd/server-ca.key /var/lib/rancher/k3s/server/tls/request-header-ca.key /var/lib/rancher/k3s/server/tls/server-ca.key /var/lib/rancher/k3s/server/tls/service.key
+sudo systemctl restart k3s
 ```

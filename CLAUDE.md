@@ -3,7 +3,6 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 @README.md
-@docs/01-infrastructure-provisioning.md
 
 ## Project Documentation
 
@@ -79,7 +78,7 @@ app-name/
 Three patterns exist depending on the component:
 
 1. **Plain kubectl** - Most apps. `kubectl apply -f` on YAML files directly.
-2. **Helmfile** - Complex upstream charts (cert-manager, ingress-nginx, prometheus). Uses `helmfile apply` with `helm-values.yml`.
+2. **Helmfile** - Complex upstream charts (cert-manager, ingress-nginx, victoriametrics). Uses `helmfile apply` with `helm-values.yml`.
 3. **envsubst** - For injecting env vars into plain YAML before `kubectl apply` (used by cert-manager cluster issuers).
 
 `.gotmpl` files use Go template syntax (`{{ requiredEnv "VAR_NAME" | quote }}`) for Helmfile value injection.

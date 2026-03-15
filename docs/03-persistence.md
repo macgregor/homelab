@@ -50,7 +50,7 @@ MariaDB [(none)]> CREATE user 'kubernetes'@'%' IDENTIFIED BY '<password>';
 MariaDB [(none)]> GRANT ALL PRIVILEGES ON `kubernetes`.* TO 'kubernetes'@'%';
 ```
 
-The password must match the `KUBE_MYSQL_PASSWORD` environment variable in `.envrc`. k3s connects via the `--datastore-endpoint` flag in the server systemd unit -- see [RPis and k3s](01-rpis-and-k3s.md#k3s-server-configuration) for the connection details and Ansible variables.
+The password must match the `KUBE_MYSQL_PASSWORD` environment variable in `.envrc`. k3s connects via the `--datastore-endpoint` flag in the server systemd unit -- see [RPis and k3s](02-rpis-and-k3s.md#k3s-server-configuration) for the connection details and Ansible variables.
 
 ## Storage Patterns
 
@@ -61,7 +61,7 @@ The cluster uses several storage patterns depending on the workload.
 | Workload Characteristic | Pattern | Example |
 | ----------------------- | ------- | ------- |
 | Needs POSIX file locking (SQLite, databases) | iSCSI (static PV) | Jellyfin config, arr app configs |
-| General application config/data | NFS (dynamic or static PV) | AdGuard, Tdarr, Diun |
+| General application config/data | NFS (dynamic or static PV) | Grafana, VictoriaMetrics, VictoriaLogs |
 | Read-heavy media files, shared across pods | NFS (direct volume mount) | Media libraries |
 | Volatile cache or temp files | local-path | Transcode scratch space |
 

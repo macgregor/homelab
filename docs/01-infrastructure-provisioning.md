@@ -28,7 +28,7 @@ Provisioning follows a bootstrap-then-configure pattern:
 
 | Target | Bootstrap | Configure | Scope |
 |--------|-----------|-----------|-------|
-| MikroTik router | `mikrotik-bootstrap.yml` | `mikrotik-configure.yml` | Subnet migration, identity, DHCP, DNS, security, auto-updates |
+| MikroTik router | `mikrotik-bootstrap.yml` | `mikrotik-configure.yml` | Subnet setup, identity, DHCP, DNS, security, auto-updates |
 | Raspberry Pis | `rpi-bootstrap.yml` | `k3-install.yml` | System user, OS tuning, k3s installation |
 
 ## Prerequisites
@@ -87,7 +87,7 @@ Set a temporary password when prompted. Record this as `MIKROTIK_DEFAULT_PASSWOR
 
 ### Phase 1: Bootstrap (`mikrotik-bootstrap.yml`)
 
-**One-time setup.** Migrates from factory defaults (192.168.88.1/24) to 192.168.1.0/24 and creates a secure SSH user for ongoing management.
+**One-time setup.** Adds 192.168.1.0/24 alongside factory defaults (192.168.88.0/24 is left intact) and creates a secure SSH user for ongoing management.
 
 **Running:**
 ```bash
@@ -105,7 +105,7 @@ ssh 192.168.1.1
 
 **Idempotent.** Applies system configuration, security hardening, and automation. Safe to re-run.
 
-Covers: system identity and time, DHCP pools and static leases, DNS upstreams, service hardening (disabling insecure protocols, restricting SSH/web UI to LAN), auto-update scheduling.
+Covers: system identity and time, DHCP pools and static leases, DNS upstreams, service hardening (disabling insecure protocols, restricting web UI to LAN), WireGuard VPN, SSH port knocking, Cloudflare DDNS, auto-update scheduling.
 
 **Running:**
 ```bash
@@ -137,7 +137,7 @@ Before Ansible provisioning can begin, Rocky Linux 9 ARM must be flashed onto ea
 **Running:**
 ```bash
 cd ansible
-ssh-add ~/.ssh/id_rsa
+ssh-add ~/.ssh/macgregor.id_ed25519
 ansible-playbook rpi-bootstrap.yml
 ```
 
@@ -162,7 +162,7 @@ ssh k3-n1
 **Running:**
 ```bash
 cd ansible
-ssh-add ~/.ssh/id_rsa
+ssh-add ~/.ssh/macgregor.id_ed25519
 ansible-playbook k3-install.yml
 
 # Skip slow tasks for faster iteration during development
@@ -180,7 +180,7 @@ Configure `~/.envrc` or your shell to load it via `export KUBECONFIG=~/.kube/hom
 
 **Key configuration:**
 - k3s version pinned in `ansible/inventory/group_vars/all.yaml`
-- Control-plane stores state in MySQL on Synology NAS (not embedded etcd, to reduce SD card wear)
+- Control-plane stores state in MariaDB on Synology NAS (not embedded etcd, to reduce SD card wear)
 - Control-plane is tainted to run only critical system components; workers run application workloads
 
 ## Secrets and Configuration
@@ -190,22 +190,41 @@ Ansible reads sensitive values from environment variables via `lookup('env', ...
 - SSH user and key path
 - MikroTik factory credentials
 - k3s server token (for reinstalls against existing state)
-- Database credentials (MySQL)
+- Database credentials (MariaDB)
 - Container registry credentials
 - MAC addresses for network devices
-- Cloudflare API credentials (zone ID, DNS record ID, domain name, DDNS token)
+- SNMP community string
+- Cloudflare API credentials (zone ID, DNS record IDs, domain names, DDNS token)
 
-Example `.envrc` structure (not checked in):
+Example `.envrc` structure (not checked in). See `ansible/inventory/group_vars/` for the complete list of expected env vars.
 ```bash
-export SSH_USER="username"
-export SSH_KEY_PATH="~/.ssh/id_rsa"
+export ANSIBLE_USER_PASSWORD="..."
 export MIKROTIK_DEFAULT_USER="admin"
-export MIKROTIK_DEFAULT_PASSWORD=""
-export SYNOLOGY_ETH1_MAC="90:09:d0:10:17:53"
-export CF_ZONE_ID="<cloudflare-zone-id>"
-export CF_DNS_RECORD_ID="<cloudflare-dns-record-id>"
-export CF_DNS_RECORD_NAME="example.com"
-export CF_MIKROTIK_DDNS_TOKEN="<cloudflare-api-token>"
+export MIKROTIK_DEFAULT_PASSWORD="..."
+export MIKROTIK_NEW_USER_PASSWORD="..."
+
+# MAC addresses for DHCP static leases
+export AP_MAC="..." DESKTOP_MAC="..." SYNOLOGY_ETH1_MAC="..." SYNOLOGY_ETH2_MAC="..."
+export K3_M1_MAC="..." K3_N1_MAC="..."
+
+# k3s / MariaDB
+export KUBE_SERVER_TOKEN="..."
+export KUBE_MYSQL_USER="..." KUBE_MYSQL_PASSWORD="..."
+
+# Cloudflare (DDNS uses multi-record structure: web + vpn)
+export CF_ZONE_ID="..." CF_MIKROTIK_DDNS_TOKEN="..."
+export CF_DNS_RECORD_ID="..." CF_DNS_RECORD_NAME="example.com"
+export CF_VPN_DNS_RECORD_ID="..." CF_VPN_DNS_RECORD_NAME="vpn.example.com"
+
+# WireGuard VPN peers
+export WG_PHONE_PUBLIC_KEY="..." WG_PHONE_PSK="..."
+export WG_LAPTOP_PUBLIC_KEY="..." WG_LAPTOP_PSK="..."
+
+# SSH port knocking
+export KNOCK_PORT_1="..." KNOCK_PORT_2="..." KNOCK_PORT_3="..."
+
+# SNMP
+export SNMP_COMMUNITY="..."
 # ... more variables
 ```
 

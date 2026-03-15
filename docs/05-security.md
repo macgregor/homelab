@@ -21,7 +21,7 @@ Security decisions are informed by the threat model:
 
 - **Environment**: Small home lab serving a few specific people, not a shared platform
 - **Data sensitivity**: Low. Non-personal media files, isolated service credentials
-- **Primary concern**: Publicly accessible services (Jellyfin, Arr apps exposed via DNS/Cloudflare)
+- **Primary concern**: Publicly accessible services (Jellyfin, Seerr exposed via DNS/Cloudflare)
 - **Attack type**: Deterring automated, low-effort attacks (script kiddies, mass scanning). Not defending against:
   - Targeted, sophisticated attacks
   - Compliance requirements (GDPR, PCI-DSS, etc.)
@@ -36,7 +36,7 @@ Security hardening is automated via Ansible and covers SSH access, service harde
 
 **Raspberry Pi hosts**: SSH key-only authentication, automatic OS updates, firewall disabled (relying on network isolation). See `ansible/roles/sys/tasks/main.yml` and [Infrastructure Provisioning](01-infrastructure-provisioning.md) for details.
 
-**MikroTik router**: Insecure services disabled, SSH/Winbox/HTTP restricted to LAN, strong crypto enabled, automatic firmware updates. See `ansible/mikrotik-configure.yml` and [Infrastructure Provisioning](01-infrastructure-provisioning.md) for details.
+**MikroTik router**: Insecure services disabled, SSH key-only auth on all interfaces (WAN access gated by port knocking), Winbox/HTTP restricted to LAN, strong crypto enabled, automatic firmware updates. See `ansible/mikrotik-configure.yml` and [Infrastructure Provisioning](01-infrastructure-provisioning.md) for details.
 
 ### Remote Access
 
@@ -53,7 +53,7 @@ Configuration: `ansible/tasks/mikrotik-remote-access.yml`. Peer and knock port d
 The MikroTik router implements firewall rules that:
 
 - **Allow external traffic only from Cloudflare IPs**: Incoming HTTPS from the internet is restricted to Cloudflare proxy IPs, then DNAT'd to the ingress controller
-- **Isolate cluster subnets**: Internal MetalLB service IPs (192.168.1.220-239) are restricted from external access via firewall rules (see `ansible/files/cloudflare-firewall.rsc`)
+- **Isolate cluster subnets**: Internal MetalLB service IPs (192.168.1.220-239) are not directly accessible from the WAN -- the router's default firewall drops all WAN traffic that isn't DSTNATed, and only the Cloudflare DNAT rule (managed by `ansible/files/cloudflare-firewall.rsc`) forwards to the external ingress VIP
 
 See [Networking](04-networking.md) for traffic flow and external access setup.
 

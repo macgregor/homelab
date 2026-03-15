@@ -58,7 +58,7 @@
     - name: Set derived variables
       set_fact:
         ansible_user_new: "{{ router_vars.router_user }}"
-        key_dest_filename: "{{ router_vars.router_user }}.id_rsa.pub"
+        key_dest_filename: "{{ router_vars.router_user }}.pub"
 
     - name: Render user creation script
       ansible.builtin.template:
