@@ -72,7 +72,7 @@ obs-query pod-health cert-manager
 obs-query deployments cert-manager
 ```
 **Impact**: All HTTPS services return certificate errors. Let's Encrypt certs auto-renew, so this usually indicates cert-manager failure.
-**Remediation**: Check cert-manager logs. Verify ClusterIssuer. Check `kubectl get certificates -A` for NotReady certs. See `docs/07-maintenance.md` for cert rotation.
+**Remediation**: Check cert-manager logs. Verify ClusterIssuer. Check `kubectl get certificates -A` for NotReady certs. See `docs/08-maintenance.md` for cert rotation.
 
 ## 7. Synology RAID Degradation
 

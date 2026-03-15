@@ -157,7 +157,7 @@ With only AC3 and DTS enabled, the Shield decodes all advanced formats internall
 
 ### Samsung Q90T Picture Settings
 
-See `docs/appendix/media-playback-hardware-video.md` (TODO) or reference the detailed settings below.
+See `docs/07-media-playback-hardware-video.md` (TODO) or reference the detailed settings below.
 
 **SDR (Movie/Filmmaker mode):** Backlight 35, Contrast 45, Local Dimming Standard, Contrast Enhancer Off, Gamma 2.2, Color Tone Warm2. Disable all Eco settings and Adaptive Picture/Intelligent Mode.
 

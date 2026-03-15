@@ -269,4 +269,4 @@ If the k3s master node becomes unavailable:
 - [Networking](04-networking.md) -- DNS, load balancing, ingress, TLS
 - [Security](05-security.md) -- Authentication, network policies
 - [Observability](06-observability.md) -- Logging and monitoring
-- [Maintenance](07-maintenance.md) -- Cluster operations and upgrades
+- [Maintenance](08-maintenance.md) -- Cluster operations and upgrades

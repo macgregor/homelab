@@ -34,7 +34,8 @@ just deploy-all       # Everything
 5. [Networking](docs/04-networking.md) -- Network topology, DNS, MetalLB, ingress controllers, TLS, and authentication.
 6. [Security](docs/05-security.md) -- Authentication and access control.
 7. [Observability](docs/06-observability.md) -- Logging and monitoring stack.
-8. [Maintenance](docs/07-maintenance.md) -- k3s upgrades and cluster maintenance procedures.
+8. [Media Playback Hardware](docs/07-media-playback-hardware.md) -- Media playback chain, device configuration, and audio/video troubleshooting.
+9. [Maintenance](docs/08-maintenance.md) -- k3s upgrades and cluster maintenance procedures.
 
 ## Repository Layout
 

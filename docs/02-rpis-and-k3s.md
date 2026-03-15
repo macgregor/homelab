@@ -129,4 +129,4 @@ See [Infrastructure Provisioning](01-infrastructure-provisioning.md#secrets-and-
 - [Infrastructure Provisioning](01-infrastructure-provisioning.md) -- Ansible provisioning of MikroTik and Pis
 - [Persistence](03-persistence.md) -- Synology NAS and Kubernetes storage
 - [Networking](04-networking.md) -- MetalLB, ingress, DNS, TLS
-- [Maintenance](07-maintenance.md) -- k3s upgrade procedures
+- [Maintenance](08-maintenance.md) -- k3s upgrade procedures

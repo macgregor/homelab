@@ -17,14 +17,14 @@ Load these documents based on the task at hand. Do not load speculatively.
 | `docs/04-networking.md` | Working with MetalLB, ingress, DNS, TLS, or Cloudflare configuration |
 | `docs/05-security.md` | Implementing authentication, access control, or security hardening |
 | `docs/06-observability.md` | Working with logging, monitoring, or debugging infrastructure |
-| `docs/07-maintenance.md` | Upgrading k3s, rotating certificates, or cluster recovery |
+| `docs/07-media-playback-hardware.md` | Troubleshooting audio/video playback, Shield TV or soundbar configuration, HDMI/ARC issues |
+| `docs/08-maintenance.md` | Upgrading k3s, rotating certificates, or cluster recovery |
 | `docs/appendix/mikrotik-routeros.md` | Working with MikroTik router config, RouterOS scripting, or firewall rules |
 | `docs/appendix/media-services.md` | Working with Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Gluetun, Tdarr, Seerr, or Decluttarr |
 | `docs/appendix/grafana-dashboards.md` | Creating, editing, or troubleshooting Grafana dashboards, dashboard JSON, PromQL/MetricsQL queries, or panel configuration |
 | `docs/appendix/grafana-visualizations.md` | Choosing visualization types, dashboard design principles, layout patterns, color discipline |
 | `docs/appendix/telegraf.md` | Working with Telegraf configuration, plugin tuning, metric filtering, containerized deployment, or debugging collection issues |
 | `docs/appendix/victoriametrics-queries.md` | Writing PromQL/MetricsQL or LogsQL queries, investigating metrics or logs |
-| `docs/appendix/media-playback-hardware.md` | Troubleshooting audio/video playback, Shield TV or soundbar configuration, HDMI/ARC issues |
 
 **`docs/plans/`** — Files here are speculative or historical planning documents (gitignored, ephemeral). Never load them unless the user explicitly asks. They contain outdated or hypothetical information that will contradict the actual state of the project. Never reference or link to them from long-lived documentation.
 
