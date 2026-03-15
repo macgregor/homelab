@@ -22,6 +22,8 @@ Load these documents based on the task at hand. Do not load speculatively.
 | `docs/appendix/media-services.md` | Working with Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Gluetun, Tdarr, Seerr, or Decluttarr |
 | `docs/appendix/grafana-dashboards.md` | Creating, editing, or troubleshooting Grafana dashboards, dashboard JSON, PromQL/MetricsQL queries, or panel configuration |
 | `docs/appendix/telegraf.md` | Working with Telegraf configuration, plugin tuning, metric filtering, containerized deployment, or debugging collection issues |
+| `docs/appendix/victoriametrics-queries.md` | Writing PromQL/MetricsQL or LogsQL queries, investigating metrics or logs |
+| `docs/appendix/media-playback-hardware.md` | Troubleshooting audio/video playback, Shield TV or soundbar configuration, HDMI/ARC issues |
 
 **`docs/plans/`** — Files here are speculative or historical planning documents (gitignored, ephemeral). Never load them unless the user explicitly asks. They contain outdated or hypothetical information that will contradict the actual state of the project. Never reference or link to them from long-lived documentation.
 
@@ -99,6 +101,18 @@ When connecting to any system (RPis, Synology, router, etc.), check `~/.ssh/conf
 ## Split-Horizon DNS
 
 When adding, removing, or changing Ingress resources (including `ingressClassName`), run `./scripts/homelab-sync-dns.sh` to regenerate the CoreDNS hosts block and router static DNS entries. Then deploy both: `cd kube && just coredns-deploy` and `cd ansible && ansible-playbook mikrotik-configure.yml`.
+
+## Observability Query Capture
+
+When investigating homelab issues using ad-hoc VictoriaMetrics or VictoriaLogs queries that prove useful, **capture them as obs-query subcommands** rather than leaving them as inline Python or raw curl/HTTP calls:
+
+1. Develop the query during investigation (ad-hoc is fine for exploration)
+2. Once useful, add a `cmd_<name>(args)` function to `.claude/skills/homelab-investigator/obs-query`
+3. Register it in the `COMMANDS` dict
+4. Document it in `.claude/skills/homelab-investigator/query-recipes.md`
+5. If it reveals a stable failure pattern, add that to `.claude/skills/homelab-investigator/known-patterns.md`
+
+The obs-query script runs as a pre-approved Bash command. Ad-hoc Python scripts and raw HTTP calls require explicit user permission for every invocation and fail entirely when run by subagents. Capturing queries in obs-query makes them reliably available to the homelab-investigator skill and any agent that uses it.
 
 ## Conventions
 
