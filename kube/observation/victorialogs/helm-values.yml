@@ -67,7 +67,7 @@ vector:
           } else {
             "access"
           }
-          .log = parse_json(.message) ?? .message
+          .log = .message
           del(.message)
     sinks:
       vlogs:
