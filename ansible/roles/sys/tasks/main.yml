@@ -150,6 +150,35 @@
     - /usr/local/bin/dnf-automatic-reboot.sh
   notify: reload-systemd
 
+# Time synchronization: ensure dnf-automatic waits for accurate clock.
+# RPi 4B has no battery-backed RTC, so the system clock is wrong at boot until
+# chrony syncs via NTP. chrony-wait blocks time-sync.target until sync completes;
+# the drop-in makes the dnf-automatic timer wait for it.
+- name: Enable chrony-wait for time-sync.target
+  ansible.builtin.service:
+    name: chrony-wait.service
+    enabled: true
+
+- name: Create dnf-automatic-install.timer drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/dnf-automatic-install.timer.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Make dnf-automatic-install.timer wait for time sync
+  ansible.builtin.copy:
+    content: |
+      [Unit]
+      After=time-sync.target
+      Wants=time-sync.target
+    dest: /etc/systemd/system/dnf-automatic-install.timer.d/time-sync.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: reload-systemd
+
 # Systemd
 - name: Deploy systemd unit files
   ansible.builtin.template:
