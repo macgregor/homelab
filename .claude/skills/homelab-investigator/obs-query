@@ -456,7 +456,7 @@ def cmd_router(args):
 
     v = vm_scalar("snmp_mikrotik_uptime")
     if v is not None:
-        result["uptime_s"] = int(v)
+        result["uptime_s"] = int(v / 100)  # sysUpTime returns centiseconds
 
     # Interfaces
     interfaces = []
@@ -499,7 +499,7 @@ def cmd_nas(args):
 
     v = vm_scalar("snmp_synology_uptime")
     if v is not None:
-        result["uptime_s"] = int(v)
+        result["uptime_s"] = int(v / 100)  # sysUpTime returns centiseconds
 
     # Memory: compute used from components
     mem_total = vm_scalar("snmp_synology_memory_total_real_kb")
