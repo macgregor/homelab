@@ -51,7 +51,7 @@
       "title": "Ingress Requests",
       "type": "stat",
       "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 1 },
       "targets": [
         {
           "refId": "A",
@@ -79,7 +79,7 @@
       "title": "Error Responses (4xx/5xx)",
       "type": "stat",
       "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 1 },
       "targets": [
         {
           "refId": "A",
@@ -116,7 +116,7 @@
       "description": "Rate-limited to 5/min per rule; actual drop count is higher.",
       "type": "stat",
       "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 1 },
       "targets": [
         {
           "refId": "A",
@@ -149,11 +149,48 @@
     },
     {
       "id": 4,
+      "title": "Threat Intel Hits",
+      "description": "Egress connections to IPs on curated threat feeds (Spamhaus DROP/EDROP, Feodo Tracker). Any hit warrants investigation.",
+      "type": "stat",
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+      "gridPos": { "h": 4, "w": 5, "x": 15, "y": 1 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
+          "expr": "_msg:~\"firewall,info\" _msg:~\"threat-intel\" | stats count() as hits",
+          "queryType": "stats"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 1, "color": "red" }
+            ]
+          },
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 5,
       "title": "Unique Source IPs (Sampled)",
       "description": "Distinct IPs seen in sampled firewall drops; actual count may be higher.",
       "type": "stat",
       "datasource": { "type": "victoriametrics-logs-datasource", "uid": "${DS_VICTORIALOGS}" },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
       "targets": [
         {
           "refId": "A",

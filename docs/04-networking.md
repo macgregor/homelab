@@ -109,9 +109,9 @@ A NetworkManager dispatcher script ([`scripts/homelab-split-dns.sh`](../scripts/
 The MikroTik RB5009UPr+S+IN is provisioned via Ansible with system configuration, DHCP, DNS, and service hardening. Two playbooks handle setup:
 
 - **`mikrotik-bootstrap.yml`** (one-time): Migrates from factory defaults (192.168.88.0/24) to 192.168.1.0/24, creates SSH user with key auth
-- **`mikrotik-configure.yml`** (idempotent): Configures system identity, DHCP pool (192.168.1.50-199), DNS (1.1.1.1), static DHCP leases for infrastructure, service hardening, auto-update scheduling, Cloudflare firewall rules, DDNS, WireGuard VPN, and SSH port knocking
+- **`mikrotik-configure.yml`** (idempotent): Configures system identity, DHCP pool (192.168.1.50-199), DNS (1.1.1.1), static DHCP leases for infrastructure, service hardening, auto-update scheduling, Cloudflare firewall rules, threat intelligence monitoring, DDNS, WireGuard VPN, and SSH port knocking
 
-The router ships with a factory-default firewall (NAT masquerade, input/forward chains). The configure playbook adds Cloudflare-specific rules: a DNAT rule forwarding port 443 traffic from Cloudflare IPs to the external ingress VIP (`192.168.1.220`), and a forward-accept rule placed before the default drop-all rule. The Cloudflare IP address list and DDNS record are maintained by scheduled scripts on the router.
+The router ships with a factory-default firewall (NAT masquerade, input/forward chains). The configure playbook adds Cloudflare-specific rules: a DNAT rule forwarding port 443 traffic from Cloudflare IPs to the external ingress VIP (`192.168.1.220`), and a forward-accept rule placed before the default drop-all rule. It also deploys a threat intelligence script (`ansible/files/threat-intel-firewall.rsc`) that fetches curated IP blocklists (Spamhaus DROP/EDROP, abuse.ch Feodo Tracker) and logs egress connections to listed destinations. Both the Cloudflare IP address list and threat-intel address list are maintained by scheduled scripts on the router.
 
 Node-level firewalls are disabled -- `firewalld` is masked on all nodes via Ansible. k3s manages its own iptables rules.
 

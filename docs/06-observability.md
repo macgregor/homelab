@@ -52,7 +52,7 @@ VictoriaMetrics receives metrics from three sources:
 
 - **Homelab Overview** -- Infrastructure health across router, NAS, and cluster nodes (e.g. CPU, memory, temperatures, network traffic).
 - **Kubernetes** -- Workload state (e.g. pod phases, container restarts, resource usage vs limits). Filterable by namespace.
-- **Security** -- Firewall drop events, ingress access logs, HTTP status and upstream breakdowns. Powered by VictoriaLogs.
+- **Security** -- Firewall drop events, threat intelligence egress hits, ingress access logs, HTTP status and upstream breakdowns. Powered by VictoriaLogs.
 
 ## Metrics Filtering
 

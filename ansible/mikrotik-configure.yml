@@ -408,6 +408,24 @@
         loop_var: ddns_record
         label: "{{ ddns_record.name }}"
 
+    # ── Threat intelligence ────────────────────────────────────────
+
+    - name: Deploy threat intelligence firewall script and schedulers
+      ansible.builtin.include_tasks:
+        file: tasks/mikrotik-upload-and-schedule.yml
+      vars:
+        upload_files:
+          - "{{ playbook_dir }}/files/threat-intel-firewall.rsc"
+        schedulers:
+          - name: threat-intel-firewall-startup
+            on_event: "/import file-name=threat-intel-firewall.rsc"
+            start_time: startup
+            interval: 0
+          - name: threat-intel-firewall
+            on_event: "/import file-name=threat-intel-firewall.rsc"
+            start_time: "03:00:00"
+            interval: 1d
+
     # ── Remote access ──────────────────────────────────────────────
 
     - name: Configure remote access (WireGuard + SSH)

@@ -183,6 +183,20 @@ obs-query firewall-drops 1h 20
 - `drop-forward-wan`: Blocked outbound traffic. Check if internal host is compromised.
 - High volume from single `src_ip` = targeted scan.
 
+### `threat-intel [window] [limit]`
+```
+obs-query threat-intel          # last 24h (default wider window since hits should be rare)
+obs-query threat-intel 7d 100   # last week
+```
+**Output**: Per-event `_time`, `proto`, `src_ip`, `src_port`, `dst_ip`, `dst_port`, `src_mac`.
+
+**Interpretation**:
+- Any hit means a LAN device attempted a connection to an IP on a curated threat feed (Spamhaus DROP/EDROP, abuse.ch Feodo Tracker).
+- `src_ip` identifies which LAN device made the connection. Cross-reference with DHCP leases to identify the device.
+- `src_mac` provides hardware identification even if the IP changes.
+- `dst_ip` is the threat-listed destination. Look it up on Spamhaus/abuse.ch for context.
+- Zero results is the expected healthy state. Any hit warrants investigation.
+
 ### `modsecurity [window] [limit]`
 ```
 obs-query modsecurity 1h 20

@@ -321,6 +321,13 @@ _msg:~"firewall,info"
 | fields _time, action, chain, proto, conn_state, src_ip, src_port, dst_ip, dst_port
 ```
 
+### Threat Intelligence Egress Hits
+```logsql
+_msg:~"firewall,info" _msg:~"threat-intel"
+| extract "firewall,info <action> <chain>: in:<in_iface> out:<out_iface>, connection-state:<conn_state> src-mac <src_mac>, proto <proto>, <src_ip>:<src_port>-><dst_ip>:<dst_port>, len <pkt_len>" from _msg
+| fields _time, proto, src_ip, src_port, dst_ip, dst_port, src_mac
+```
+
 ### ModSecurity Events
 ```logsql
 log_type:modsecurity

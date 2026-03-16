@@ -54,6 +54,7 @@ The MikroTik router implements firewall rules that:
 
 - **Allow external traffic only from Cloudflare IPs**: Incoming HTTPS from the internet is restricted to Cloudflare proxy IPs, then DNAT'd to the ingress controller
 - **Isolate cluster subnets**: Internal MetalLB service IPs (192.168.1.220-239) are not directly accessible from the WAN -- the router's default firewall drops all WAN traffic that isn't DSTNATed, and only the Cloudflare DNAT rule (managed by `ansible/files/cloudflare-firewall.rsc`) forwards to the external ingress VIP
+- **Monitor egress to known threats**: A threat intelligence address list (managed by `ansible/files/threat-intel-firewall.rsc`) aggregates curated feeds (Spamhaus DROP/EDROP, abuse.ch Feodo Tracker) and logs new connections from LAN devices to listed IPs. The list refreshes daily via scheduler.
 
 See [Networking](04-networking.md) for traffic flow and external access setup.
 

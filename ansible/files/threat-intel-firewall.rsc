@@ -1,0 +1,119 @@
+# Threat intelligence firewall: fetch curated threat feeds and maintain firewall address list
+#
+# Runs daily via scheduler (plus once at boot). Safe to run manually:
+#   /import file-name=threat-intel-firewall.rsc
+#
+# Maintains:
+#   - Address list "threat-intel" with IPs/CIDRs from curated threat feeds
+#   - Rate-limited log rule on forward chain for egress to listed destinations
+#
+# Feeds:
+#   - Spamhaus DROP: hijacked/spammer-controlled netblocks (~800 CIDRs)
+#   - Spamhaus EDROP: extended DROP allocation (~300 CIDRs)
+#   - abuse.ch Feodo Tracker: botnet C2 servers (~200 IPs)
+#
+# Feed formats:
+#   - Spamhaus: comment lines start with ";", inline comments " ; SBLnnn" after CIDR
+#   - Feodo: comment lines start with "#", plain IPs one per line
+
+/log info "threat-intel-firewall: starting"
+
+:onerror e in={
+
+    # ── Fetch all feeds before modifying anything ─────────────────────
+    /tool fetch url="https://www.spamhaus.org/drop/drop.txt" dst-path="threat-drop.txt"
+    /tool fetch url="https://www.spamhaus.org/drop/edrop.txt" dst-path="threat-edrop.txt"
+    /tool fetch url="https://feodotracker.abuse.ch/downloads/ipblocklist.txt" dst-path="threat-feodo.txt"
+
+    # ── Parse all feeds into a single array ───────────────────────────
+    :local allEntries [:toarray ""]
+    :local feedFiles {"threat-drop.txt";"threat-edrop.txt";"threat-feodo.txt"}
+
+    :foreach feedFile in=$feedFiles do={
+        :local content [/file get [/file find name=$feedFile] contents]
+        :local contentLen [:len $content]
+        :local lastEnd 0
+
+        :do {
+            :local lineEnd [:find $content "\n" $lastEnd]
+            :local line ""
+            :if ([:typeof $lineEnd] = "nil") do={
+                :set line [:pick $content $lastEnd $contentLen]
+                :set lastEnd $contentLen
+            } else={
+                :set line [:pick $content $lastEnd $lineEnd]
+                :set lastEnd ($lineEnd + 1)
+            }
+            # Strip trailing \r
+            :if ([:len $line] > 0 && [:pick $line ([:len $line] - 1)] = "\r") do={
+                :set line [:pick $line 0 ([:len $line] - 1)]
+            }
+            # Skip empty lines and comment lines (; or #)
+            :if ([:len $line] > 0 && [:pick $line 0 1] != ";" && [:pick $line 0 1] != "#") do={
+                # Strip inline comment (Spamhaus format: "CIDR ; SBLnnn")
+                :local semiPos [:find $line " ;"]
+                :if ([:typeof $semiPos] != "nil") do={
+                    :set line [:pick $line 0 $semiPos]
+                }
+                # Trim trailing spaces
+                :while ([:len $line] > 0 && [:pick $line ([:len $line] - 1)] = " ") do={
+                    :set line [:pick $line 0 ([:len $line] - 1)]
+                }
+                :if ([:len $line] > 0) do={
+                    :set ($allEntries->[:len $allEntries]) $line
+                }
+            }
+        } while ($lastEnd < $contentLen)
+    }
+
+    :local entryCount [:len $allEntries]
+    /log debug ("threat-intel-firewall: parsed " . $entryCount . " entries")
+
+    # ── Validate ──────────────────────────────────────────────────────
+    :if ($entryCount < 100) do={
+        /log warning ("threat-intel-firewall: only " . $entryCount . " entries parsed (expected >= 100), aborting")
+        :error "validation failed"
+    }
+
+    /log info ("threat-intel-firewall: validation passed (" . $entryCount . " entries)")
+
+    # ── Rebuild address list (remove-then-add) ────────────────────────
+    /ip firewall address-list remove [find list=threat-intel]
+    :foreach entry in=$allEntries do={
+        /ip firewall address-list add list=threat-intel address=$entry
+    }
+    /log info ("threat-intel-firewall: added " . $entryCount . " entries to address list")
+
+    # ── Ensure egress log rule exists ─────────────────────────────────
+    :if ([:len [/ip firewall filter find comment="threat-intel-log-egress"]] = 0) do={
+        :local anchorId [/ip firewall filter find comment="defconf: drop all from WAN not DSTNATed"]
+        :if ([:len $anchorId] > 0) do={
+            /ip firewall filter add chain=forward action=log \
+                log-prefix=threat-intel connection-state=new \
+                dst-address-list=threat-intel \
+                limit=10/1m,10 \
+                place-before=$anchorId \
+                comment="threat-intel-log-egress"
+            /log info "threat-intel-firewall: created egress log rule"
+        } else={
+            /log warning "threat-intel-firewall: anchor rule not found, skipping log rule creation"
+        }
+    }
+
+    # ── Cleanup temp files ────────────────────────────────────────────
+    :foreach feedFile in=$feedFiles do={
+        :onerror cleanupErr in={
+            /file remove $feedFile
+        } do={}
+    }
+
+    /log info ("threat-intel-firewall: complete (" . $entryCount . " entries)")
+
+} do={
+    /log error ("threat-intel-firewall: failed: " . $e)
+    :foreach f in={"threat-drop.txt";"threat-edrop.txt";"threat-feodo.txt"} do={
+        :onerror cleanupErr in={
+            /file remove $f
+        } do={}
+    }
+}

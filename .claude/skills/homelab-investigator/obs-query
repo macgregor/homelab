@@ -727,6 +727,22 @@ def cmd_modsecurity(args):
         emit({"_time": e.get("_time"), "_msg": e.get("_msg")})
 
 
+def cmd_threat_intel(args):
+    """Threat intelligence egress hits (connections to threat-listed IPs)."""
+    window = args[0] if args else "24h"
+    limit = int(args[1]) if len(args) > 1 else 50
+    query = (
+        f'_time:{window} _msg:~"firewall,info" _msg:~"threat-intel" '
+        '| extract "firewall,info <action> <chain>: in:<in_iface> out:<out_iface>, '
+        'connection-state:<conn_state> src-mac <src_mac>, proto <proto>, '
+        '<src_ip>:<src_port>-><dst_ip>:<dst_port>, len <pkt_len>" from _msg '
+        '| fields _time, proto, src_ip, src_port, dst_ip, dst_port, src_mac'
+    )
+    fields = ["_time", "proto", "src_ip", "src_port", "dst_ip", "dst_port", "src_mac"]
+    for e in vl_query(query, limit=limit):
+        emit({k: e.get(k) for k in fields})
+
+
 def cmd_search_logs(args):
     """Search logs with raw LogsQL query."""
     query = require_arg(args, "query")
@@ -761,6 +777,7 @@ COMMANDS = {
     "ingress-status":    (cmd_ingress_status,    "[window]",              "HTTP status code counts"),
     "ingress-errors":    (cmd_ingress_errors,    "[window] [limit]",      "Ingress 4xx/5xx errors"),
     "firewall-drops":    (cmd_firewall_drops,    "[window] [limit]",      "Firewall drop events"),
+    "threat-intel":      (cmd_threat_intel,      "[window] [limit]",      "Threat intel egress hits"),
     "modsecurity":       (cmd_modsecurity,       "[window] [limit]",      "ModSecurity events"),
     "search-logs":       (cmd_search_logs,       "<query> [limit]",       "Raw LogsQL search"),
 }
