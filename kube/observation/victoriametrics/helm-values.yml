@@ -3,6 +3,7 @@ server:
   extraArgs:
     memory.allowedBytes: "200MB"
     search.maxUniqueTimeseries: "5000"
+    inmemoryDataFlushInterval: "120s"
   persistentVolume:
     storageClassName: synology-nfs-app-data-retain
     size: 10Gi
@@ -36,6 +37,6 @@ server:
         static_configs:
         - targets:
           - kube-state-metrics.obs.svc:8080
-        scrape_interval: 30s
+        scrape_interval: 60s
 
 fullnameOverride: victoriametrics

@@ -4,6 +4,7 @@ server:
   extraArgs:
     syslog.listenAddr.udp: :5140
     memory.allowedBytes: "100MB"
+    inmemoryDataFlushInterval: "120s"
   resources:
     requests:
       memory: 75Mi

@@ -13,12 +13,12 @@ tolerations:
 
 config:
   agent:
-    interval: "30s"
+    interval: "60s"
     round_interval: true
     metric_batch_size: 200
     metric_buffer_limit: 1000
     collection_jitter: "0s"
-    flush_interval: "30s"
+    flush_interval: "60s"
     flush_jitter: "5s"
     hostname: "$HOSTNAME"
     omit_hostname: false

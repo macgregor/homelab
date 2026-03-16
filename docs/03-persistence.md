@@ -52,6 +52,14 @@ MariaDB [(none)]> GRANT ALL PRIVILEGES ON `kubernetes`.* TO 'kubernetes'@'%';
 
 The password must match the `KUBE_MYSQL_PASSWORD` environment variable in `.envrc`. k3s connects via the `--datastore-endpoint` flag in the server systemd unit -- see [RPis and k3s](02-rpis-and-k3s.md#k3s-server-configuration) for the connection details and Ansible variables.
 
+### InnoDB Tuning
+
+InnoDB defaults are tuned for high-traffic database servers. Custom settings in `my.cnf` reduce disk write frequency to minimize HDD noise and wear -- the k3s datastore workload is light enough that relaxed durability and lower I/O budgets are safe tradeoffs.
+
+**Config file location:** Synology's `mysql.server` loads `$basedir/my.cnf` (`/var/packages/MariaDB10/target/usr/local/mariadb10.11/my.cnf`) as `--defaults-extra-file`. The `synology.cnf` comment directing users to `/var/packages/MariaDB10/etc/my.cnf` is incorrect -- that path is not loaded. The basedir path may be overwritten on MariaDB package upgrades; verify after DSM package updates.
+
+Restart after changes: `ssh synology "sudo /var/packages/MariaDB10/target/usr/local/mariadb10.11/share/mysql/mysql.server restart"`
+
 ## Storage Patterns
 
 The cluster uses several storage patterns depending on the workload.
