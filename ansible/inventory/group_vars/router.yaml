@@ -21,8 +21,9 @@ router_static_leases:
 # PoE watchdog: power-cycle the port if the device stops responding to ping.
 # Port assignments are physical — update if Pis move to different ports.
 router_poe_watchdog:
-  - { port: "ether5", address: "192.168.1.211", name: "k3-n1", timeout: "5m" }
-  - { port: "ether6", address: "192.168.1.210", name: "k3-m1", timeout: "5m" }
+  - { port: "ether2", address: "192.168.1.2",   name: "wifi-ap", timeout: "5m" }
+  - { port: "ether5", address: "192.168.1.211", name: "k3-n1",   timeout: "5m" }
+  - { port: "ether6", address: "192.168.1.210", name: "k3-m1",   timeout: "5m" }
 
 # Cloudflare (read from .envrc env vars)
 cf_zone_id: "{{ lookup('env', 'CF_ZONE_ID') | mandatory('CF_ZONE_ID is not set — source .envrc') }}"
