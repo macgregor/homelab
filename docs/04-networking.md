@@ -62,12 +62,12 @@ User -> Cloudflare DNS (resolves to WAN IP)
 ### Internal Request (LAN -> Service)
 
 ```
-LAN client -> CoreDNS (resolves *.matthew-stratton.me to MetalLB IP)
+LAN client -> Router DNS (resolves *.matthew-stratton.me to MetalLB IP via static entries)
            -> 192.168.1.221 (nginx-internal LB)
            -> ingress-nginx matches Host header -> routes to Service -> Pod
 ```
 
-CoreDNS static hosts resolve `*.matthew-stratton.me` domains to the appropriate MetalLB IPs, so LAN clients reach internal services directly without going through Cloudflare or requiring hairpin NAT.
+The router's static DNS entries resolve `*.matthew-stratton.me` domains to the appropriate MetalLB IPs, so LAN clients reach internal services directly without going through Cloudflare or requiring hairpin NAT.
 
 ### Remote Access (VPN + SSH)
 
@@ -80,7 +80,7 @@ A separate Cloudflare DDNS record (`vpn.*`, not proxied) resolves to the WAN IP 
 
 ## DNS
 
-DNS resolution flows through a chain: clients query CoreDNS, which forwards unknown queries to Cloudflare (`1.1.1.1`) for upstream resolution. Public DNS is managed on Cloudflare.
+DNS uses two layers: the router handles LAN split-horizon DNS, and k3s's bundled CoreDNS handles cluster DNS (`cluster.local`). Public DNS is managed on Cloudflare.
 
 ### Cloudflare (Public DNS)
 
@@ -88,21 +88,19 @@ Cloudflare manages the `matthew-stratton.me` zone. Public A records point to the
 
 Cloudflare also acts as a reverse proxy for internet-facing services -- external HTTPS traffic passes through Cloudflare before reaching the cluster. The router firewall only accepts traffic from Cloudflare's IP ranges.
 
-### CoreDNS (Cluster + LAN DNS)
+### CoreDNS (Cluster DNS)
 
-k3s's built-in CoreDNS is disabled. A custom CoreDNS deployment provides both in-cluster DNS (`cluster.local`) and LAN-wide DNS resolution.
+k3s's bundled CoreDNS handles in-cluster DNS (`cluster.local`). It forwards unknown queries to the node's `/etc/resolv.conf`, which points to the router (`192.168.1.1`). This means pods resolving `*.matthew-stratton.me` go through the router's static DNS entries -- same split-horizon behavior as LAN clients.
 
-CoreDNS is exposed to the LAN at `192.168.1.223` via two LoadBalancer services (one UDP, one TCP, sharing the same IP via MetalLB's `allow-shared-ip` annotation). LAN clients can be manually configured to use this IP for DNS (the router's DHCP pushes the router itself as the DNS server, not CoreDNS).
+### Router Static DNS (LAN Split-Horizon)
 
-The Corefile forwards unknown queries to Cloudflare (`1.1.1.1`). A static hosts file maps infrastructure hostnames and `*.matthew-stratton.me` domains to their MetalLB IPs, so LAN clients resolve internal services without hairpin NAT.
+The router maintains static DNS entries that map `*.matthew-stratton.me` domains to their MetalLB IPs. These entries are managed by `scripts/homelab-sync-dns.sh`, which scans Ingress resources and writes to `ansible/inventory/group_vars/router.yaml`. Apply with `cd ansible && ansible-playbook mikrotik-configure.yml`.
 
-Configuration lives in `kube/sys/coredns/coredns.yml`.
+Internal services have no public DNS records. LAN clients resolve them via the router (which is the DHCP-pushed DNS server). Pods resolve them via CoreDNS -> router forwarding.
 
 ### Local Client DNS (Split DNS)
 
-Internal services have no public DNS records -- they only exist in CoreDNS's static hosts file. LAN clients using an external resolver (Cloudflare, VPN-pushed DNS, etc.) won't be able to resolve them.
-
-A NetworkManager dispatcher script ([`scripts/homelab-split-dns.sh`](../scripts/homelab-split-dns.sh)) handles this for Linux workstations with `systemd-resolved`. On every connection event, it probes CoreDNS to detect the home network, then configures a `~matthew-stratton.me` routing domain via `resolvectl` to direct matching queries to CoreDNS. It works across connection types (wifi, ethernet, thunderbolt dock), is inert off the home network, and survives VPN reconnects. Install to `/etc/NetworkManager/dispatcher.d/` and `chmod 755`.
+A NetworkManager dispatcher script ([`scripts/homelab-split-dns.sh`](../scripts/homelab-split-dns.sh)) handles VPN scenarios for Linux workstations with `systemd-resolved`. When a VPN reconnects with a catch-all `~.` routing domain, it can override the default DNS, causing homelab domains to fail. The script probes the router to detect the home network, then configures a `~matthew-stratton.me` routing domain via `resolvectl` to direct matching queries to the router. It works across connection types (wifi, ethernet, thunderbolt dock), is inert off the home network, and survives VPN reconnects. Install to `/etc/NetworkManager/dispatcher.d/` and `chmod 755`.
 
 ## Router Configuration (MikroTik)
 
@@ -202,7 +200,7 @@ Reference: [Synology DSM 7 with LetsEncrypt and DNS Challenge](https://dr-b.io/p
 ## Related Documentation
 
 - [Getting Started](00-getting-started.md) -- Hardware details, software stack overview
-- [RPis and k3s](02-rpis-and-k3s.md) -- k3s configuration, disabled components (Traefik, ServiceLB, CoreDNS)
+- [RPis and k3s](02-rpis-and-k3s.md) -- k3s configuration, disabled components (Traefik, ServiceLB)
 - [Persistence](03-persistence.md) -- Synology NAS storage configuration
 - [Security](05-security.md) -- Authentication and access control
 - [Observability](06-observability.md) -- Logging and monitoring

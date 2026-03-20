@@ -101,7 +101,7 @@ When connecting to any system (RPis, Synology, router, etc.), check `~/.ssh/conf
 
 ## Split-Horizon DNS
 
-When adding, removing, or changing Ingress resources (including `ingressClassName`), run `./scripts/homelab-sync-dns.sh` to regenerate the CoreDNS hosts block and router static DNS entries. Then deploy both: `cd kube && just coredns-deploy` and `cd ansible && ansible-playbook mikrotik-configure.yml`.
+When adding, removing, or changing Ingress resources (including `ingressClassName`), run `./scripts/homelab-sync-dns.sh` to regenerate the router static DNS entries. Then deploy: `cd ansible && ansible-playbook mikrotik-configure.yml`.
 
 ## Observability Query Capture
 

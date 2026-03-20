@@ -60,7 +60,7 @@ obs-query pod-health kube-system # CoreDNS health
 obs-query pod-restarts kube-system
 ```
 **Impact**: All services relying on DNS fail. Ingress returns 502 for requests it can't route.
-**Remediation**: Check CoreDNS pods (`kubectl -n kube-system logs -l k8s-app=kube-dns`). Verify CoreDNS configmap. Run `just coredns-deploy` to redeploy.
+**Remediation**: Check CoreDNS pods (`kubectl -n kube-system logs -l k8s-app=kube-dns`). Verify CoreDNS configmap. CoreDNS is managed by k3s's bundled HelmChart CR -- restart with `kubectl -n kube-system rollout restart deployment/coredns`.
 
 ## 6. Certificate Expiry
 

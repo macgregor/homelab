@@ -22,23 +22,6 @@ spec:
         app.kubernetes.io/name: foundry-vtt
     spec:
       serviceAccountName: default
-      dnsConfig:
-        # had a weird quirk where urls wouldnt resolve because kubernetes DNS
-        # tried to search my own subdomain of matthew-stratton.me (e.g.
-        # plex.tx.matthew-stratton.me) which would claim authority over the domain
-        # (even though that domain doesnt exist) which halts DNS
-        #
-        # This override tells the DNS resolver to skip all the custom search
-        # domains if there is a single dot in the domain name rather than the
-        # default of 5.
-        #
-        # This may break pod to pod comms that rely on cluster name resolution,
-        # but plex does not.
-        #
-        # https://pracucci.com/kubernetes-dns-resolution-ndots-options-and-why-it-may-affect-application-performances.html
-        options:
-          - name: ndots
-            value: "1"
       containers:
       - name: foundry-vtt
         image: "felddy/foundryvtt:release-9.269"

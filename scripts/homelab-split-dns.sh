@@ -3,7 +3,7 @@
 # systemd-resolved can lose the DNS scope on the underlying link when a VPN
 # reconnects with a catch-all (~.) routing domain. This restores it.
 #
-# Runs on every NM connection event. Probes CoreDNS to determine if the home
+# Runs on every NM connection event. Probes the router to determine if the home
 # network is reachable -- works regardless of interface type (wifi, ethernet,
 # thunderbolt dock, etc.).
 #
@@ -12,7 +12,7 @@
 export LC_ALL=C
 
 IFACE="$1"
-COREDNS="192.168.1.223"
+DNS_SERVER="192.168.1.1"
 
 # Skip loopback
 [ "$IFACE" = "lo" ] && exit 0
@@ -26,9 +26,9 @@ case "$IFACE" in
         ;;
 esac
 
-# Probe CoreDNS with a short timeout
-if dig +short +time=1 +tries=1 @"$COREDNS" dns.matthew-stratton.me A >/dev/null 2>&1; then
-    resolvectl dns "$IFACE" "$COREDNS"
+# Probe the router's DNS with a short timeout
+if dig +short +time=1 +tries=1 @"$DNS_SERVER" jellyfin.matthew-stratton.me A >/dev/null 2>&1; then
+    resolvectl dns "$IFACE" "$DNS_SERVER"
     resolvectl domain "$IFACE" '~matthew-stratton.me'
 fi
 

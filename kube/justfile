@@ -76,7 +76,6 @@ import 'app/synology-dsm/justfile'
 import 'demo/whoami/justfile'
 import 'demo/kuard/justfile'
 
-import 'sys/coredns/justfile'
 import 'sys/cert-manager/justfile'
 import 'sys/democratic-csi/justfile'
 import 'sys/metallb/justfile'
@@ -92,9 +91,9 @@ import 'observation/grafana/justfile'
 
 # --- Aggregate targets ---
 
-deploy-sys: coredns-deploy democratic-csi-deploy cert-manager-deploy metallb-deploy ingress-internal-deploy ingress-external-deploy victoriametrics-deploy victorialogs-deploy telegraf-deploy telegraf-snmp-deploy kube-state-metrics-deploy grafana-deploy
+deploy-sys: democratic-csi-deploy cert-manager-deploy metallb-deploy ingress-internal-deploy ingress-external-deploy victoriametrics-deploy victorialogs-deploy telegraf-deploy telegraf-snmp-deploy kube-state-metrics-deploy grafana-deploy
 
-remove-sys: coredns-remove democratic-csi-remove cert-manager-remove metallb-remove ingress-internal-remove ingress-external-remove grafana-remove kube-state-metrics-remove telegraf-snmp-remove telegraf-remove victorialogs-remove victoriametrics-remove
+remove-sys: democratic-csi-remove cert-manager-remove metallb-remove ingress-internal-remove ingress-external-remove grafana-remove kube-state-metrics-remove telegraf-snmp-remove telegraf-remove victorialogs-remove victoriametrics-remove
 
 deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy synology-dsm-deploy qbittorrent-deploy mealie-deploy seerr-deploy decluttarr-deploy
 

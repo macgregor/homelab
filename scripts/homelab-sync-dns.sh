@@ -3,12 +3,10 @@
 # Sync split-horizon DNS records from local Kubernetes ingress definitions.
 #
 # Scans network.yml files in kube/{sys,app,media,observation}/ for Ingress
-# resources, maps ingressClassName to LoadBalancer IPs, and updates:
-#   - CoreDNS hosts block in kube/sys/coredns/coredns.yml
-#   - Router static DNS list in ansible/inventory/group_vars/router.yaml
+# resources, maps ingressClassName to LoadBalancer IPs, and updates the
+# router static DNS list in ansible/inventory/group_vars/router.yaml.
 #
-# Does not touch the cluster or router. Apply changes with:
-#   cd kube && just coredns-deploy
+# Does not touch the router. Apply changes with:
 #   cd ansible && ansible-playbook mikrotik-configure.yml
 #
 # Usage:
@@ -17,7 +15,6 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-COREDNS_FILE="$REPO_ROOT/kube/sys/coredns/coredns.yml"
 ROUTER_VARS="$REPO_ROOT/ansible/inventory/group_vars/router.yaml"
 
 EXTERNAL_IP="192.168.1.220"
@@ -63,42 +60,6 @@ echo "$ENTRIES" | while read -r ip host; do
 done
 echo ""
 
-# ── Build CoreDNS hosts block ────────────────────────────────────────
-
-# Group hostnames by IP, one line per IP with an alias prefix.
-build_coredns_block() {
-    local prev_ip=""
-    local hosts=""
-
-    while read -r ip host; do
-        if [[ "$ip" != "$prev_ip" && -n "$prev_ip" ]]; then
-            emit_coredns_line "$prev_ip" "$hosts"
-            hosts=""
-        fi
-        prev_ip="$ip"
-        hosts="$hosts $host"
-    done <<< "$ENTRIES"
-
-    emit_coredns_line "$prev_ip" "$hosts"
-}
-
-emit_coredns_line() {
-    local ip="$1"
-    local hosts="$2"
-    local alias=""
-
-    case "$ip" in
-        "$EXTERNAL_IP") alias="ext-lb" ;;
-        "$INTERNAL_IP") alias="int-lb" ;;
-    esac
-
-    # Trim leading space from accumulated hosts
-    hosts="${hosts# }"
-    echo "    ${ip}${alias:+ $alias} ${hosts}"
-}
-
-COREDNS_BLOCK=$(build_coredns_block)
-
 # ── Build router DNS hosts YAML ──────────────────────────────────────
 
 build_router_block() {
@@ -114,42 +75,10 @@ ROUTER_BLOCK=$(build_router_block)
 # ── Apply or preview ─────────────────────────────────────────────────
 
 if $DRY_RUN; then
-    echo "CoreDNS hosts block (would write to $COREDNS_FILE):"
-    echo "    # ingress-hosts-start (managed by homelab-sync-dns.sh)"
-    echo "$COREDNS_BLOCK"
-    echo "    # ingress-hosts-end"
-    echo ""
     echo "Router DNS hosts (would write to $ROUTER_VARS):"
     echo "$ROUTER_BLOCK"
     exit 0
 fi
-
-# Update CoreDNS: replace content between markers
-MARKER_START="# ingress-hosts-start"
-MARKER_END="# ingress-hosts-end"
-
-if ! grep -q "$MARKER_START" "$COREDNS_FILE"; then
-    echo "Error: marker '$MARKER_START' not found in $COREDNS_FILE" >&2
-    exit 1
-fi
-
-awk -v start="$MARKER_START" -v end="$MARKER_END" -v block="$COREDNS_BLOCK" '
-    $0 ~ start {
-        print "    " start " (managed by homelab-sync-dns.sh)"
-        print block
-        skip = 1
-        next
-    }
-    $0 ~ end {
-        print "    " end
-        skip = 0
-        next
-    }
-    !skip { print }
-' "$COREDNS_FILE" > "$COREDNS_FILE.tmp"
-mv "$COREDNS_FILE.tmp" "$COREDNS_FILE"
-
-echo "Updated $COREDNS_FILE"
 
 # Update router.yaml: replace or append router_dns_hosts block
 if grep -q '^router_dns_hosts:' "$ROUTER_VARS"; then
@@ -172,5 +101,4 @@ fi
 echo "Updated $ROUTER_VARS"
 echo ""
 echo "To apply:"
-echo "  cd kube && just coredns-deploy"
 echo "  cd ansible && ansible-playbook mikrotik-configure.yml"

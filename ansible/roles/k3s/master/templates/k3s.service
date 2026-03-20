@@ -11,11 +11,9 @@ ExecStartPre=-/sbin/modprobe overlay
 ExecStart=/usr/local/bin/k3s server \
     --token "{{ kube_server_token }}" \
     --data-dir /var/lib/rancher/k3s \
-    --disable coredns \
     --disable traefik \
     --disable servicelb \
     --disable-cloud-controller \
-    --disable-helm-controller \
     --flannel-backend=host-gw \
     --write-kubeconfig-mode 644 \
     --node-taint CriticalAddonsOnly=true:NoSchedule \
