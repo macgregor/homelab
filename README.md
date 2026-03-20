@@ -36,6 +36,7 @@ just deploy-all       # Everything
 7. [Observability](docs/06-observability.md) -- Logging and monitoring stack.
 8. [Media Playback Hardware](docs/07-media-playback-hardware.md) -- Media playback chain, device configuration, and audio/video troubleshooting.
 9. [Maintenance](docs/08-maintenance.md) -- k3s upgrades and cluster maintenance procedures.
+10. [Syncthing Hub](docs/09-syncthing-hub.md) -- Private relay server, always-on sync node, and client configuration.
 
 ## Repository Layout
 

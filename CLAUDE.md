@@ -19,6 +19,7 @@ Load these documents based on the task at hand. Do not load speculatively.
 | `docs/06-observability.md` | Working with logging, monitoring, or debugging infrastructure |
 | `docs/07-media-playback-hardware.md` | Troubleshooting audio/video playback, Shield TV or soundbar configuration, HDMI/ARC issues |
 | `docs/08-maintenance.md` | Upgrading k3s, rotating certificates, or cluster recovery |
+| `docs/09-syncthing-hub.md` | Working with the Syncthing hub deployment, relay server, client setup, or sync connectivity |
 | `docs/appendix/mikrotik-routeros.md` | Working with MikroTik router config, RouterOS scripting, or firewall rules |
 | `docs/appendix/media-services.md` | Working with Jellyfin, Sonarr, Radarr, Prowlarr, qBittorrent, Gluetun, Tdarr, Seerr, or Decluttarr |
 | `docs/appendix/grafana-dashboards.md` | Creating, editing, or troubleshooting Grafana dashboards, dashboard JSON, PromQL/MetricsQL queries, or panel configuration |
