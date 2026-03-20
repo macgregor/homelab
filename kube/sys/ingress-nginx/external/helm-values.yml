@@ -15,7 +15,6 @@ controller:
       tolerations:
       - <<: *tolerate-control-plane
   config:
-    use-proxy-protocol: "true"
     enable-modsecurity: "true"
     enable-owasp-modsecurity-crs: "true"
     modsecurity-snippet: |
