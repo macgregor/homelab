@@ -44,7 +44,7 @@ Both containers share a single 50 GB iSCSI volume (LUN 6) with `subPath` isolati
 
 Only port 22067 (relay) is forwarded from WAN via DST-NAT. Port 22000 (sync) is intentionally NOT forwarded -- off-network clients connect through the relay exclusively. This minimizes attack surface while the relay provides token + mTLS authentication.
 
-Split-horizon DNS resolves `vpn.matthew-stratton.me` to `192.168.1.233` on LAN (router static DNS) and to the WAN IP off-network (Cloudflare DDNS). This allows the same relay URL to work in both contexts without hairpin NAT issues.
+Split-horizon DNS resolves `relay.matthew-stratton.me` to `192.168.1.233` on LAN (router static DNS) and to the WAN IP off-network (Cloudflare DDNS). This allows the same relay URL to work in both contexts without hairpin NAT issues.
 
 ### Connectivity by Location
 
@@ -52,31 +52,17 @@ Split-horizon DNS resolves `vpn.matthew-stratton.me` to `192.168.1.233` on LAN (
 |----------------|----------------|-----|
 | LAN (WiFi/ethernet) | Direct TCP | `192.168.1.233:22000` |
 | VPN (WireGuard) | Direct TCP or relay | LAN access through tunnel |
-| Off-network (cellular/remote) | Relay | `vpn.matthew-stratton.me:22067` via DST-NAT |
+| Off-network (cellular/remote) | Relay | `relay.matthew-stratton.me:22067` via DST-NAT |
 
 ### Known Limitations
 
 - **Local discovery does not work.** The pod is on the flannel pod subnet (`10.42.x.0/24`), not the LAN (`192.168.1.0/24`). UDP broadcast announcements on port 21027 don't cross subnets. Clients must add the hub manually by device ID. Global discovery works for address resolution after pairing.
 - **Symmetric NAT.** kube-proxy DNAT presents as symmetric NAT to Syncthing, preventing QUIC hole-punching. This is irrelevant since off-network traffic uses the relay.
-- **Hub relay uses LAN address.** The hub connects to its own relay at `192.168.1.233:22067` (not `vpn.matthew-stratton.me`) because the router doesn't support hairpin NAT for DST-NAT'd traffic originating from LAN.
+- **Relay DNS.** `relay.matthew-stratton.me` resolves to `192.168.1.233` on LAN (split-horizon) and the WAN IP off-network (Cloudflare DDNS). The DDNS record is maintained by the router alongside the other DDNS records.
 
 ## Hub Configuration
 
-The hub's Syncthing settings are applied via `just syncthing-relay-configure`, which uses the REST API. This recipe is idempotent and should be re-run after a fresh deployment or if settings drift.
-
-**What it configures:**
-- Device name: `syncthing.matthew-stratton.me`
-- Listen addresses: explicit TCP, QUIC, and private relay (replaces `default` to exclude public relay pool)
-- Relay: enabled, pointed at the private relay via LAN address
-- Telemetry: crash reporting disabled, usage reporting declined, auto-upgrade disabled
-- Folder defaults: `ignorePerms: true` (mixed OS/container environment)
-- Device defaults: `autoAcceptFolders: true` (hub accepts any folder a client shares)
-- GUI: credentials from env vars
-
-**What it does NOT configure** (manual via GUI):
-- Per-folder versioning (set explicitly per folder based on content type)
-- Device pairing (requires exchanging device IDs)
-- Folder sharing (client-initiated, hub auto-accepts)
+The hub's Syncthing settings are applied via `just syncthing-relay-configure`, which uses the REST API. This recipe is idempotent and should be re-run after a fresh deployment or if settings drift. See the justfile for the specific settings it applies.
 
 ## Client Setup
 
@@ -96,7 +82,7 @@ On the hub, approve the new device when prompted. The hub's default device confi
 Replace the default `default` with explicit entries to use the private relay instead of the public pool:
 
 ```
-tcp://0.0.0.0:22000, quic://0.0.0.0:22000, relay://vpn.matthew-stratton.me:22067/?id=<RELAY_DEVICE_ID>&token=<RELAY_TOKEN>
+tcp://0.0.0.0:22000, quic://0.0.0.0:22000, relay://relay.matthew-stratton.me:22067/?id=<RELAY_DEVICE_ID>&token=<RELAY_TOKEN>
 ```
 
 The relay device ID is in the relaysrv container logs (`just syncthing-relay-logs`). The token is `SYNCTHING_RELAY_TOKEN` from `.envrc`.
@@ -107,7 +93,8 @@ The relay device ID is in the relaysrv container logs (`just syncthing-relay-log
 - **Local discovery**: enabled (works between LAN clients, just not with the hub)
 - **Relaying**: enabled
 - **Compression**: metadata (hub is on low-power ARM hardware)
-- **Introducer/Auto Accept**: set on the hub device, not on other devices
+- **Introducer**: set on the hub device entry (client tells Syncthing "the hub will introduce me to other devices")
+- **Auto Accept**: set on the hub device entry (client auto-accepts folders the hub shares)
 
 ## Environment Variables
 
@@ -117,18 +104,6 @@ The relay device ID is in the relaysrv container logs (`just syncthing-relay-log
 | `SYNCTHING_API_KEY` | Syncthing REST API key (generated on first run, stored in `.envrc`) |
 | `SYNCTHING_GUI_USER` | GUI username |
 | `SYNCTHING_GUI_PASSWORD` | GUI password (plaintext, API hashes it with bcrypt) |
-
-## Just Recipes
-
-| Recipe | Purpose |
-|--------|---------|
-| `syncthing-relay-deploy` | Deploy all k8s resources |
-| `syncthing-relay-configure` | Apply hub settings via REST API |
-| `syncthing-relay-status` | Show k8s resources (pods, services, storage) |
-| `syncthing-relay-relay-status` | Show relay server stats (connections, bytes proxied) |
-| `syncthing-relay-logs` | Tail pod logs |
-| `syncthing-relay-stop` / `start` / `restart` | Scale deployment |
-| `syncthing-relay-remove` | Tear down all resources |
 
 ## Deployment from Scratch
 
@@ -143,9 +118,9 @@ The API key is generated by Syncthing on first run. After initial deploy, retrie
 
 ## Troubleshooting
 
-**Client can't connect off-network:** Check that the client's listen addresses include the private relay URL with correct device ID and token. Verify relay is reachable: `nc -zv vpn.matthew-stratton.me 22067`.
+**Client can't connect off-network:** Check that the client's listen addresses include the private relay URL with correct device ID and token. Verify relay is reachable: `nc -zv relay.matthew-stratton.me 22067`.
 
-**Hub shows stale connections after client network change:** Kernel TCP keepalive is 2 hours (default). Stale connections persist until the keepalive timer expires. The client will reconnect on a new connection; the old one eventually cleans up.
+**Slow reconnect after client network change:** Syncthing and the relay detect dead connections within a couple of minutes via application-level keepalives. The client reconnects automatically. The kernel TCP keepalive is much longer (2 hours default) but is not the bottleneck -- Syncthing's own detection is faster.
 
 **Relay status shows zero connections:** All devices are on LAN using direct TCP. The relay is only active when a client is off-network and can't reach the hub directly.
 

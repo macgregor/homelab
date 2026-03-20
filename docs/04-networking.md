@@ -96,6 +96,8 @@ k3s's bundled CoreDNS handles in-cluster DNS (`cluster.local`). It forwards unkn
 
 The router maintains static DNS entries that map `*.matthew-stratton.me` domains to their MetalLB IPs. These entries are managed by `scripts/homelab-sync-dns.sh`, which scans Ingress resources and writes to `ansible/inventory/group_vars/router.yaml`. Apply with `cd ansible && ansible-playbook mikrotik-configure.yml`.
 
+The `router_dns_hosts` list supports manually-added entries above the `# auto-managed below` marker. The sync script preserves these and only replaces entries below the marker. This is used for services that need split-horizon DNS but aren't Ingress resources (e.g., `relay.matthew-stratton.me` for the Syncthing relay).
+
 Internal services have no public DNS records. LAN clients resolve them via the router (which is the DHCP-pushed DNS server). Pods resolve them via CoreDNS -> router forwarding.
 
 ### Local Client DNS (Split DNS)

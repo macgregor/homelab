@@ -6,6 +6,10 @@
 # resources, maps ingressClassName to LoadBalancer IPs, and updates the
 # router static DNS list in ansible/inventory/group_vars/router.yaml.
 #
+# Manual entries placed above the "# auto-managed below" marker in
+# router_dns_hosts are preserved. Only entries below the marker are
+# replaced by this script.
+#
 # Does not touch the router. Apply changes with:
 #   cd ansible && ansible-playbook mikrotik-configure.yml
 #
@@ -64,7 +68,19 @@ echo ""
 
 build_router_block() {
     echo "# Split-horizon DNS: per-host entries managed by homelab-sync-dns.sh"
+    echo "# Manual entries above \"# auto-managed below\" are preserved by the sync script."
     echo "router_dns_hosts:"
+    # Preserve manually-added entries (lines before the auto-managed marker)
+    if grep -q '^router_dns_hosts:' "$ROUTER_VARS"; then
+        awk '
+            /^router_dns_hosts:/ { capture = 1; next }
+            capture && /^  - / && !/# auto-managed/ { print; next }
+            capture && /# auto-managed below/ { capture = 0 }
+            capture && /^  - / { capture = 0 }
+            capture && !/^  - / && !/^$/ && !/^#/ { capture = 0 }
+        ' "$ROUTER_VARS"
+    fi
+    echo "  # auto-managed below"
     while read -r ip host; do
         echo "  - { name: \"${host}\", address: \"${ip}\" }"
     done <<< "$ENTRIES"

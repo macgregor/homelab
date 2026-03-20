@@ -34,7 +34,7 @@ syncthing-relay-configure:
 
     echo "Configuring connections (private relay only, keep discovery)..."
     RELAY_ID=$(kubectl -n syncthing-relay logs deployment/syncthing-relay -c relaysrv | grep -o 'id=[^ &]*' | head -1 | cut -d= -f2)
-    RELAY_URI="relay://192.168.1.233:22067/?id=${RELAY_ID}&token=${SYNCTHING_RELAY_TOKEN}"
+    RELAY_URI="relay://relay.matthew-stratton.me:22067/?id=${RELAY_ID}&token=${SYNCTHING_RELAY_TOKEN}"
     patch options "{\"relaysEnabled\":true,\"startBrowser\":false,\"urAccepted\":-1,\"crashReportingEnabled\":false,\"autoUpgradeIntervalH\":0,\"listenAddresses\":[\"tcp://0.0.0.0:22000\",\"quic://0.0.0.0:22000\",\"${RELAY_URI}\"]}"
 
     echo "Setting default device config (auto-accept folders from new devices)..."

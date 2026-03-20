@@ -54,6 +54,10 @@ cf_ddns_records:
     record_id: "{{ lookup('env', 'CF_VPN_DNS_RECORD_ID') | mandatory('CF_VPN_DNS_RECORD_ID is not set — source .envrc') }}"
     record_name: "{{ lookup('env', 'CF_VPN_DNS_RECORD_NAME') | mandatory('CF_VPN_DNS_RECORD_NAME is not set — source .envrc') }}"
     proxied: "false"
+  - name: relay
+    record_id: "{{ lookup('env', 'CF_RELAY_DNS_RECORD_ID') | mandatory('CF_RELAY_DNS_RECORD_ID is not set — source .envrc') }}"
+    record_name: "{{ lookup('env', 'CF_RELAY_DNS_RECORD_NAME') | mandatory('CF_RELAY_DNS_RECORD_NAME is not set — source .envrc') }}"
+    proxied: "false"
 
 # WireGuard interface
 wg_address: "10.100.0.1/24"
@@ -85,9 +89,10 @@ knock_port_2: "{{ lookup('env', 'KNOCK_PORT_2') | mandatory('KNOCK_PORT_2 is not
 knock_port_3: "{{ lookup('env', 'KNOCK_PORT_3') | mandatory('KNOCK_PORT_3 is not set — source .envrc') }}"
 
 # Split-horizon DNS: per-host entries managed by homelab-sync-dns.sh
-# Exception: vpn.* is manually added (not an ingress, resolves to syncthing-relay LB for LAN)
+# Exception: relay.* is manually added (not an ingress, resolves to syncthing-relay LB for LAN)
 router_dns_hosts:
-  - { name: "vpn.matthew-stratton.me", address: "192.168.1.233" }
+  - { name: "relay.matthew-stratton.me", address: "192.168.1.233" }
+  # auto-managed below
   - { name: "jellyfin.matthew-stratton.me", address: "192.168.1.220" }
   - { name: "seerr.matthew-stratton.me", address: "192.168.1.220" }
   - { name: "cook.matthew-stratton.me", address: "192.168.1.221" }
