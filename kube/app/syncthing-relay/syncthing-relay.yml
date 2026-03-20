@@ -29,7 +29,7 @@ spec:
           image: ghcr.io/syncthing/relaysrv:latest
           args:
             - "-pools="
-            - "-status-srv="
+            - "-status-srv=:22070"
             - "-keys=/relay-keys"
             - "-listen=:22067"
             - "-token=$(RELAY_TOKEN)"

@@ -18,6 +18,36 @@ syncthing-relay-remove:
     kubectl delete -f ./app/syncthing-relay/storage.yml || true
     kubectl delete -f ./app/syncthing-relay/namespace.yml --cascade=background || true
 
+syncthing-relay-configure:
+    #!/usr/bin/env bash
+    set -e
+    API="https://syncthing.matthew-stratton.me"
+    HDR="X-API-Key: ${SYNCTHING_API_KEY}"
+    patch() { curl -sf -H "$HDR" -X PATCH -H "Content-Type: application/json" -d "$2" "$API/rest/config/$1" || { echo "FAILED: PATCH $1"; return 1; }; }
+
+    echo "Setting device name..."
+    DEVICE_ID=$(curl -sf -H "$HDR" "$API/rest/config" | python3 -c "import json,sys; print(json.load(sys.stdin)['devices'][0]['deviceID'])")
+    patch "devices/$DEVICE_ID" '{"name":"syncthing.matthew-stratton.me"}'
+
+    echo "Setting default folder config..."
+    patch defaults/folder '{"path":"/var/syncthing/","ignorePerms":true}'
+
+    echo "Configuring connections (private relay only, keep discovery)..."
+    RELAY_ID=$(kubectl -n syncthing-relay logs deployment/syncthing-relay -c relaysrv | grep -o 'id=[^ &]*' | head -1 | cut -d= -f2)
+    RELAY_URI="relay://192.168.1.233:22067/?id=${RELAY_ID}&token=${SYNCTHING_RELAY_TOKEN}"
+    patch options "{\"relaysEnabled\":true,\"startBrowser\":false,\"urAccepted\":-1,\"crashReportingEnabled\":false,\"autoUpgradeIntervalH\":0,\"listenAddresses\":[\"tcp://0.0.0.0:22000\",\"quic://0.0.0.0:22000\",\"${RELAY_URI}\"]}"
+
+    echo "Setting default device config (auto-accept folders from new devices)..."
+    patch defaults/device '{"autoAcceptFolders":true}'
+
+    echo "Setting GUI credentials (causes listener restart, must be last)..."
+    patch gui "{\"user\":\"${SYNCTHING_GUI_USER}\",\"password\":\"${SYNCTHING_GUI_PASSWORD}\"}"
+
+    echo "Done. Hub is ready for client pairing."
+
+syncthing-relay-relay-status:
+    @curl -sf http://192.168.1.233:22070/status | python3 -m json.tool
+
 syncthing-relay-debug: (_kube-debug "syncthing-relay" "syncthing-relay")
 syncthing-relay-logs: (_kube-logs "syncthing-relay" "syncthing-relay")
 syncthing-relay-stop: (_kube-stop "syncthing-relay" "deployment/syncthing-relay")

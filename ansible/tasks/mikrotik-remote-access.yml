@@ -160,17 +160,17 @@
 
 # ── Syncthing relay port forward ─────────────────────────────
 
-- name: Query Syncthing relay firewall state
+- name: Query Syncthing firewall state
   community.routeros.command:
     commands:
       - ':put [:len [/ip firewall nat find comment="syncthing-relay-dnat"]]'
       - ':put [:len [/ip firewall filter find comment="syncthing-relay-forward"]]'
   register: _syncthing_fw_state
 
-- name: Set Syncthing relay firewall state facts
+- name: Set Syncthing firewall state facts
   ansible.builtin.set_fact:
-    _has_syncthing_dnat: "{{ _syncthing_fw_state.stdout[0] | int > 0 }}"
-    _has_syncthing_forward: "{{ _syncthing_fw_state.stdout[1] | int > 0 }}"
+    _has_syncthing_relay_dnat: "{{ _syncthing_fw_state.stdout[0] | int > 0 }}"
+    _has_syncthing_relay_forward: "{{ _syncthing_fw_state.stdout[1] | int > 0 }}"
 
 - name: Add Syncthing relay DST-NAT rule
   community.routeros.command:
@@ -180,7 +180,7 @@
         in-interface-list=WAN action=dst-nat
         to-addresses={{ syncthing_relay_ip }} to-ports={{ syncthing_relay_port }}
         comment="syncthing-relay-dnat"
-  when: not _has_syncthing_dnat
+  when: not _has_syncthing_relay_dnat
 
 - name: Add Syncthing relay forward accept rule
   community.routeros.command:
@@ -191,4 +191,4 @@
         action=accept
         place-before=[find comment="defconf: drop all from WAN not DSTNATed"]
         comment="syncthing-relay-forward"
-  when: not _has_syncthing_forward
+  when: not _has_syncthing_relay_forward

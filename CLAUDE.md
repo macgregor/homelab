@@ -25,6 +25,7 @@ Load these documents based on the task at hand. Do not load speculatively.
 | `docs/appendix/grafana-visualizations.md` | Choosing visualization types, dashboard design principles, layout patterns, color discipline |
 | `docs/appendix/telegraf.md` | Working with Telegraf configuration, plugin tuning, metric filtering, containerized deployment, or debugging collection issues |
 | `docs/appendix/victoriametrics-queries.md` | Writing PromQL/MetricsQL or LogsQL queries, investigating metrics or logs |
+| `docs/appendix/syncthing.md` | Working with Syncthing configuration, relay servers, device connectivity, discovery, NAT traversal, or file sync behavior |
 
 **`docs/plans/`** — Files here are speculative or historical planning documents (gitignored, ephemeral). Never load them unless the user explicitly asks. They contain outdated or hypothetical information that will contradict the actual state of the project. Never reference or link to them from long-lived documentation.
 

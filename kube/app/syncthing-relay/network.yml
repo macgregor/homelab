@@ -20,6 +20,12 @@ spec:
   - port: 22000
     name: sync
     protocol: TCP
+  - port: 21027
+    name: discovery
+    protocol: UDP
+  - port: 22070
+    name: relay-status
+    protocol: TCP
 ---
 apiVersion: v1
 kind: Service
@@ -46,6 +52,8 @@ metadata:
     app.kubernetes.io/name: syncthing-relay
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
 spec:
   ingressClassName: nginx-internal
   tls:
