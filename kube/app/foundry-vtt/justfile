@@ -1,4 +1,4 @@
-FOUNDRY_VTT_REPLICAS := env_var_or_default("FOUNDRY_VTT_REPLICAS", "1")
+FOUNDRY_VTT_REPLICAS := env_var_or_default("FOUNDRY_VTT_REPLICAS", "0")
 
 foundry-vtt-deploy: (_kube-deploy "foundry-vtt" "./app/foundry-vtt")
 
