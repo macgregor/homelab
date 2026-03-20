@@ -124,6 +124,8 @@ Configuration:
 
 Services request a specific IP from the pool using `spec.loadBalancerIP` in their Service definition. The pool must not overlap with the router's DHCP range.
 
+Current allocations include `192.168.1.220` (nginx-external), `192.168.1.221` (nginx-internal), and `192.168.1.233` (syncthing-relay). See individual app `network.yml` files for the full list.
+
 ## Ingress Controllers
 
 The cluster runs two separate ingress-nginx controllers to separate internet-facing and LAN-only traffic. Both deploy to the `ingress-nginx` namespace as independent Helm releases.
@@ -155,6 +157,8 @@ Handles LAN-only traffic. Access control is enforced at the router level -- the 
 No ModSecurity or WAF rules -- internal traffic is trusted.
 
 Each app's `network.yml` specifies which ingress class it uses. To see current assignments: `kubectl get ingress -A`.
+
+The Syncthing GUI (`syncthing.matthew-stratton.me`) uses `nginx-internal` for LAN-only access to the always-on sync node's web interface.
 
 ## TLS
 

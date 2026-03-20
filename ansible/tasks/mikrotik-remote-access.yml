@@ -2,7 +2,8 @@
 # WireGuard VPN and SSH remote access (port knocking + ProxyJump).
 #
 # Included by mikrotik-configure.yml. Requires vars from group_vars/router.yaml:
-#   wg_peers, knock_port_1, knock_port_2, knock_port_3
+#   wg_peers, wg_address, wg_port, ssh_port, knock_port_1, knock_port_2, knock_port_3,
+#   syncthing_relay_ip, syncthing_relay_port
 
 # ── WireGuard VPN ──────────────────────────────────────────────
 
@@ -11,7 +12,7 @@
     commands:
       - ':put [:len [/interface wireguard find name=wg0]]'
       - ':put [:len [/ip address find interface=wg0]]'
-      - ':put [:len [/ip firewall filter find comment="wg: accept UDP 51820"]]'
+      - ':put [:len [/ip firewall filter find comment="wg: accept UDP {{ wg_port }}"]]'
       - ':put [:len [/ip firewall filter find comment="wg: forward from wg0"]]'
       - ':put [:len [/interface list member find list=LAN interface=wg0]]'
   register: _wg_state
@@ -27,7 +28,7 @@
 - name: Create WireGuard interface
   community.routeros.command:
     commands:
-      - /interface wireguard add name=wg0 listen-port=51820 mtu=1420
+      - /interface wireguard add name=wg0 listen-port={{ wg_port }} mtu=1420
   when: not _has_wg_interface
 
 - name: Add wg0 to LAN interface list
@@ -54,16 +55,16 @@
 - name: Add WireGuard interface address
   community.routeros.command:
     commands:
-      - /ip address add address=10.100.0.1/24 interface=wg0
+      - /ip address add address={{ wg_address }} interface=wg0
   when: not _has_wg_address
 
 - name: Add WireGuard input firewall rule
   community.routeros.command:
     commands:
       - >-
-        /ip firewall filter add chain=input protocol=udp dst-port=51820
+        /ip firewall filter add chain=input protocol=udp dst-port={{ wg_port }}
         in-interface-list=WAN action=accept
-        comment="wg: accept UDP 51820"
+        comment="wg: accept UDP {{ wg_port }}"
         place-before=[find comment="defconf: drop all not coming from LAN"]
   when: not _has_wg_input_rule
 
@@ -105,7 +106,7 @@
   community.routeros.command:
     commands:
       - >-
-        /ip firewall filter add chain=input protocol=tcp dst-port=22
+        /ip firewall filter add chain=input protocol=tcp dst-port={{ ssh_port }}
         in-interface-list=LAN action=accept
         comment="ssh: LAN accept"
         place-before=[find comment="defconf: drop all not coming from LAN"]
@@ -150,9 +151,44 @@
   community.routeros.command:
     commands:
       - >-
-        /ip firewall filter add chain=input protocol=tcp dst-port=22
+        /ip firewall filter add chain=input protocol=tcp dst-port={{ ssh_port }}
         src-address-list=ssh-allowed action=accept
         in-interface-list=WAN
         comment="ssh: WAN accept after knock"
         place-before=[find comment="defconf: drop all not coming from LAN"]
   when: not _has_ssh_wan
+
+# ── Syncthing relay port forward ─────────────────────────────
+
+- name: Query Syncthing relay firewall state
+  community.routeros.command:
+    commands:
+      - ':put [:len [/ip firewall nat find comment="syncthing-relay-dnat"]]'
+      - ':put [:len [/ip firewall filter find comment="syncthing-relay-forward"]]'
+  register: _syncthing_fw_state
+
+- name: Set Syncthing relay firewall state facts
+  ansible.builtin.set_fact:
+    _has_syncthing_dnat: "{{ _syncthing_fw_state.stdout[0] | int > 0 }}"
+    _has_syncthing_forward: "{{ _syncthing_fw_state.stdout[1] | int > 0 }}"
+
+- name: Add Syncthing relay DST-NAT rule
+  community.routeros.command:
+    commands:
+      - >-
+        /ip firewall nat add chain=dstnat protocol=tcp dst-port={{ syncthing_relay_port }}
+        in-interface-list=WAN action=dst-nat
+        to-addresses={{ syncthing_relay_ip }} to-ports={{ syncthing_relay_port }}
+        comment="syncthing-relay-dnat"
+  when: not _has_syncthing_dnat
+
+- name: Add Syncthing relay forward accept rule
+  community.routeros.command:
+    commands:
+      - >-
+        /ip firewall filter add chain=forward protocol=tcp
+        connection-nat-state=dstnat dst-address={{ syncthing_relay_ip }} dst-port={{ syncthing_relay_port }}
+        action=accept
+        place-before=[find comment="defconf: drop all from WAN not DSTNATed"]
+        comment="syncthing-relay-forward"
+  when: not _has_syncthing_forward

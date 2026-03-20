@@ -8,6 +8,23 @@ router_user: macgregor
 router_timezone: America/New_York
 router_dns_servers: 1.1.1.1,1.0.0.1
 
+# Network topology
+router_ip: "192.168.1.1"
+router_factory_ip: "192.168.88.1"
+router_lan_subnet: "192.168.1.0/24"
+router_dhcp_range: "192.168.1.50-192.168.1.199"
+
+# Kubernetes service IPs (MetalLB allocations)
+ingress_external_ip: "192.168.1.220"
+victorialogs_syslog_ip: "192.168.1.228"
+syncthing_relay_ip: "192.168.1.233"
+
+# Service ports
+ssh_port: 22
+ingress_external_port: 443
+victorialogs_syslog_port: 5140
+syncthing_relay_port: 22067
+
 # Static DHCP leases (MAC -> IP mapping)
 # Read MAC addresses from .envrc env vars
 router_static_leases:
@@ -37,6 +54,10 @@ cf_ddns_records:
     record_id: "{{ lookup('env', 'CF_VPN_DNS_RECORD_ID') | mandatory('CF_VPN_DNS_RECORD_ID is not set — source .envrc') }}"
     record_name: "{{ lookup('env', 'CF_VPN_DNS_RECORD_NAME') | mandatory('CF_VPN_DNS_RECORD_NAME is not set — source .envrc') }}"
     proxied: "false"
+
+# WireGuard interface
+wg_address: "10.100.0.1/24"
+wg_port: 51820
 
 # WireGuard VPN peers
 # Each device gets its own keypair and preshared key. To add a new peer:
@@ -75,6 +96,7 @@ router_dns_hosts:
   - { name: "qbittorrent.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "radarr.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "sonarr.matthew-stratton.me", address: "192.168.1.221" }
+  - { name: "syncthing.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "synology.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "victorialogs.matthew-stratton.me", address: "192.168.1.221" }
   - { name: "victoriametrics.matthew-stratton.me", address: "192.168.1.221" }

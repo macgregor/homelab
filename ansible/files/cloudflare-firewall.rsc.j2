@@ -74,9 +74,9 @@
 
     # ── Ensure DNAT rule ──────────────────────────────────────────────
     :if ([:len [/ip firewall nat find comment="cloudflare-proxy-dnat"]] = 0) do={
-        /ip firewall nat add chain=dstnat protocol=tcp dst-port=443 \
+        /ip firewall nat add chain=dstnat protocol=tcp dst-port={{ ingress_external_port }} \
             src-address-list=cloudflare in-interface-list=WAN \
-            action=dst-nat to-addresses=192.168.1.220 to-ports=443 \
+            action=dst-nat to-addresses={{ ingress_external_ip }} to-ports={{ ingress_external_port }} \
             comment="cloudflare-proxy-dnat"
         /log info "cloudflare-firewall: created DNAT rule"
     }
@@ -85,7 +85,7 @@
     :if ([:len [/ip firewall filter find comment="cloudflare-proxy-forward"]] = 0) do={
         /ip firewall filter add chain=forward protocol=tcp \
             connection-nat-state=dstnat src-address-list=cloudflare \
-            dst-address=192.168.1.220 dst-port=443 action=accept \
+            dst-address={{ ingress_external_ip }} dst-port={{ ingress_external_port }} action=accept \
             place-before=[find where comment="defconf: drop all from WAN not DSTNATed"] \
             comment="cloudflare-proxy-forward"
         /log info "cloudflare-firewall: created forward-accept rule"

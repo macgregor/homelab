@@ -52,7 +52,7 @@
           - ':put [:len [/ip dns static find comment="split-dns"]]'
           - ':put [:len [/tool graphing interface find]]'
           - ':put [:len [/tool graphing resource find]]'
-          - ':put [:len [/ip dns static find name="router.lan" address="192.168.88.1"]]'
+          - ':put [:len [/ip dns static find name="router.lan" address="{{ router_factory_ip }}"]]'
           - ':put [/snmp get enabled]'
       register: _state
 
@@ -103,7 +103,7 @@
     - name: Configure DHCP settings
       community.routeros.command:
         commands:
-          - /ip pool set [find name=dhcp-pool] ranges=192.168.1.50-192.168.1.199
+          - /ip pool set [find name=dhcp-pool] ranges={{ router_dhcp_range }}
           - /ip dhcp-server set [find name=dhcp-lan] lease-time=1d
 
     # ── DNS ────────────────────────────────────────────────────────────
@@ -135,7 +135,7 @@
     - name: Fix stale router.lan DNS entry from factory default subnet
       community.routeros.command:
         commands:
-          - /ip dns static set [find name="router.lan"] address=192.168.1.1
+          - /ip dns static set [find name="router.lan"] address={{ router_ip }}
       when: _has_stale_router_dns
 
     # Split-horizon DNS: per-host static entries avoid hairpin NAT through
@@ -195,8 +195,8 @@
         commands:
           - /ip service disable telnet,ftp,api,api-ssl
           - /ip service set ssh address=0.0.0.0/0
-          - /ip service set winbox address=192.168.1.0/24
-          - /ip service set www address=192.168.1.0/24
+          - /ip service set winbox address={{ router_lan_subnet }}
+          - /ip service set www address={{ router_lan_subnet }}
 
     # ── Discovery hardening ────────────────────────────────────────────
 
@@ -226,7 +226,7 @@
     - name: Enable resource graphing
       community.routeros.command:
         commands:
-          - /tool graphing resource add allow-address=192.168.1.0/24
+          - /tool graphing resource add allow-address={{ router_lan_subnet }}
       when: not _has_graphing_resource
 
     # ── SNMP ─────────────────────────────────────────────────────────
@@ -234,7 +234,7 @@
     - name: Enable SNMP with community string
       community.routeros.command:
         commands:
-          - /snmp community set [find default=yes] name={{ snmp_community }} addresses=192.168.1.0/24
+          - /snmp community set [find default=yes] name={{ snmp_community }} addresses={{ router_lan_subnet }}
           - /snmp set enabled=yes
       when: not _snmp_enabled
 
@@ -291,7 +291,7 @@
           log_comment: "log: drop forward wan"
         - chain: forward
           prefix: cloudflare-fwd
-          matchers: "connection-nat-state=dstnat protocol=tcp src-address-list=cloudflare dst-port=443"
+          matchers: "connection-nat-state=dstnat protocol=tcp src-address-list=cloudflare dst-port={{ ingress_external_port }}"
           limit: "5/1m,5"
           target_comment: "cloudflare-proxy-forward"
           log_comment: "log: cloudflare forward"
@@ -307,7 +307,6 @@
 
     # ── Syslog forwarding ──────────────────────────────────────────
     # Forward security-relevant logs to VictoriaLogs via UDP syslog.
-    # The VictoriaLogs syslog LB is at 192.168.1.228:5140.
 
     - name: Query syslog state
       community.routeros.command:
@@ -322,7 +321,7 @@
     - name: Create syslog remote action for VictoriaLogs
       community.routeros.command:
         commands:
-          - /system logging action add name=victorialogs target=remote remote=192.168.1.228 remote-port=5140 src-address=192.168.1.1
+          - /system logging action add name=victorialogs target=remote remote={{ victorialogs_syslog_ip }} remote-port={{ victorialogs_syslog_port }} src-address={{ router_ip }}
       when: not _has_syslog_action
 
     - name: Configure syslog logging rules
@@ -372,7 +371,7 @@
         file: tasks/mikrotik-upload-and-schedule.yml
       vars:
         upload_files:
-          - "{{ playbook_dir }}/files/cloudflare-firewall.rsc"
+          - "{{ playbook_dir }}/files/cloudflare-firewall.rsc.j2"
         schedulers:
           - name: cloudflare-firewall-startup
             on_event: "/import file-name=cloudflare-firewall.rsc"
@@ -415,7 +414,7 @@
         file: tasks/mikrotik-upload-and-schedule.yml
       vars:
         upload_files:
-          - "{{ playbook_dir }}/files/threat-intel-firewall.rsc"
+          - "{{ playbook_dir }}/files/threat-intel-firewall.rsc.j2"
         schedulers:
           - name: threat-intel-firewall-startup
             on_event: "/import file-name=threat-intel-firewall.rsc"

@@ -1,0 +1,79 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: syncthing-relay
+  namespace: syncthing-relay
+  labels:
+    app.kubernetes.io/name: syncthing-relay
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: syncthing-relay
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: syncthing-relay
+    spec:
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: relaysrv
+          image: ghcr.io/syncthing/relaysrv:latest
+          args:
+            - "-pools="
+            - "-status-srv="
+            - "-keys=/relay-keys"
+            - "-listen=:22067"
+            - "-token=$(RELAY_TOKEN)"
+          env:
+            - name: RELAY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: syncthing-relay-env
+                  key: RELAY_TOKEN
+          ports:
+            - containerPort: 22067
+              name: relay
+              protocol: TCP
+          resources:
+            requests:
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          volumeMounts:
+            - mountPath: /relay-keys
+              name: data
+              subPath: relay-keys
+        - name: syncthing
+          image: syncthing/syncthing:latest
+          env:
+            - name: STGUIADDRESS
+              value: "0.0.0.0:8384"
+          ports:
+            - containerPort: 8384
+              name: gui
+              protocol: TCP
+            - containerPort: 22000
+              name: sync
+              protocol: TCP
+          resources:
+            requests:
+              memory: 64Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - mountPath: /var/syncthing
+              name: data
+              subPath: syncthing
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: syncthing-relay-data

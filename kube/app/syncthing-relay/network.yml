@@ -1,0 +1,65 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: syncthing-relay-lan
+  namespace: syncthing-relay
+  annotations:
+    metallb.io/loadBalancerIPs: "192.168.1.233"
+  labels:
+    app.kubernetes.io/name: syncthing-relay
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/name: syncthing-relay
+  ports:
+  - port: 22067
+    name: relay
+    protocol: TCP
+  - port: 22000
+    name: sync
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: syncthing-relay
+  namespace: syncthing-relay
+  labels:
+    app.kubernetes.io/name: syncthing-relay
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: syncthing-relay
+  ports:
+  - port: 8384
+    name: gui
+    protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: syncthing-relay
+  namespace: syncthing-relay
+  labels:
+    app.kubernetes.io/name: syncthing-relay
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+spec:
+  ingressClassName: nginx-internal
+  tls:
+  - hosts:
+    - syncthing.matthew-stratton.me
+    secretName: syncthing-relay-tls
+  rules:
+  - host: syncthing.matthew-stratton.me
+    http:
+      paths:
+      - backend:
+          service:
+            name: syncthing-relay
+            port:
+              number: 8384
+        path: /
+        pathType: Prefix

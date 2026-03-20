@@ -175,6 +175,17 @@ spec:
     readOnly: false
 ```
 
+Current iSCSI LUN assignments on the default target:
+
+| LUN | PV Name | App | Size |
+|-----|---------|-----|------|
+| 1 | jellyfin-config | Jellyfin | 10Gi |
+| 2 | prowlarr-config | Prowlarr | 10Gi |
+| 3 | radarr-config | Radarr | 10Gi |
+| 4 | sonarr-config | Sonarr | 10Gi |
+| 5 | seerr-config | Seerr | 10Gi |
+| 6 | syncthing-relay-data | Syncthing relay + node | 50Gi |
+
 Requires `iscsi-initiator-utils` on all nodes (installed via the Ansible `sys` role).
 
 **LUN ID numbering:** DSM SAN Manager displays LUN IDs starting at 0, but the iSCSI protocol and Linux kernel report them with an offset (e.g., DSM "LUN 0" appears as `lun-1` in `/dev/disk/by-path/`). Verify the correct ID by logging into the target from a node and checking `ls /dev/disk/by-path/ | grep iscsi`.

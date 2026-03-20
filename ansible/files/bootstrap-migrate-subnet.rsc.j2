@@ -1,28 +1,28 @@
-# Bootstrap: add 192.168.1.0/24 alongside factory defaults
+# Bootstrap: add {{ router_lan_subnet }} alongside factory defaults
 #
 # Idempotent: errors on already-existing resources are caught and logged.
 # Logs all actions. Safe to run multiple times.
 #
 # Does NOT remove factory 192.168.88.0/24 config. Disables defconf DHCP server
-# and creates dhcp-lan on 192.168.1.0/24. mikrotik-configure.yml handles all
+# and creates dhcp-lan on {{ router_lan_subnet }}. mikrotik-configure.yml handles all
 # remaining configuration.
 
 /log info "bootstrap: starting subnet setup"
 
 :do {
-    /ip address add address=192.168.1.1/24 interface=bridge
-    /log info "bootstrap: added 192.168.1.1/24"
-} on-error={ /log info "bootstrap: 192.168.1.1/24 already present" }
+    /ip address add address={{ router_ip }}/24 interface=bridge
+    /log info "bootstrap: added {{ router_ip }}/24"
+} on-error={ /log info "bootstrap: {{ router_ip }}/24 already present" }
 
 :do {
-    /ip pool add name=dhcp-pool ranges=192.168.1.10-192.168.1.254
+    /ip pool add name=dhcp-pool ranges={{ router_dhcp_range }}
     /log info "bootstrap: added dhcp-pool"
 } on-error={ /log info "bootstrap: dhcp-pool already present" }
 
 :do {
-    /ip dhcp-server network add address=192.168.1.0/24 gateway=192.168.1.1 dns-server=192.168.1.1
-    /log info "bootstrap: added dhcp-server network 192.168.1.0/24"
-} on-error={ /log info "bootstrap: dhcp-server network 192.168.1.0/24 already present" }
+    /ip dhcp-server network add address={{ router_lan_subnet }} gateway={{ router_ip }} dns-server={{ router_ip }}
+    /log info "bootstrap: added dhcp-server network {{ router_lan_subnet }}"
+} on-error={ /log info "bootstrap: dhcp-server network {{ router_lan_subnet }} already present" }
 
 :do {
     /ip dhcp-server set defconf disabled=yes

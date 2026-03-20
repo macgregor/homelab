@@ -105,7 +105,7 @@ ssh 192.168.1.1
 
 **Idempotent.** Applies system configuration, security hardening, and automation. Safe to re-run.
 
-Covers: system identity and time, DHCP pools and static leases, DNS upstreams, service hardening (disabling insecure protocols, restricting web UI to LAN), WireGuard VPN, SSH port knocking, Cloudflare DDNS, auto-update scheduling.
+Covers: system identity and time, DHCP pools and static leases, DNS upstreams, service hardening (disabling insecure protocols, restricting web UI to LAN), WireGuard VPN, SSH port knocking, Syncthing relay port forward, Cloudflare DDNS, auto-update scheduling.
 
 **Running:**
 ```bash

@@ -90,7 +90,7 @@
         :if ([:len $anchorId] > 0) do={
             /ip firewall filter add chain=forward action=log \
                 log-prefix=threat-intel connection-state=new \
-                dst-address-list=threat-intel \
+                dst-address-list=threat-intel dst-port=!{{ syncthing_relay_port }} protocol=tcp \
                 limit=10/1m,10 \
                 place-before=$anchorId \
                 comment="threat-intel-log-egress"

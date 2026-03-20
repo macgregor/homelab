@@ -32,7 +32,7 @@
   vars:
     # Override inventory connection settings for factory-default router
     # Factory credentials are temporary (bootstrap-only), not persisted in inventory
-    ansible_host: 192.168.88.1
+    ansible_host: "{{ router_factory_ip }}"
     # Strip any existing +cet<n>w terminal suffix before use
     factory_user: "{{ lookup('env', 'MIKROTIK_DEFAULT_USER') | regex_replace('\\+cet\\d*w$', '') }}"
     ansible_user: "{{ factory_user }}+cet512w"
@@ -60,11 +60,16 @@
         ansible_user_new: "{{ router_vars.router_user }}"
         key_dest_filename: "{{ router_vars.router_user }}.pub"
 
-    - name: Render user creation script
+    - name: Render bootstrap scripts
       ansible.builtin.template:
-        src: files/bootstrap-create-user.rsc.j2
-        dest: /tmp/bootstrap-create-user.rsc
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
       delegate_to: localhost
+      loop:
+        - { src: "files/bootstrap-create-user.rsc.j2",        dest: "/tmp/bootstrap-create-user.rsc" }
+        - { src: "files/bootstrap-migrate-subnet.rsc.j2",     dest: "/tmp/bootstrap-migrate-subnet.rsc" }
+      loop_control:
+        label: "{{ item.src | basename }}"
 
     - name: Upload files to router
       delegate_to: localhost
@@ -80,9 +85,9 @@
       ignore_errors: true
       register: upload_results
       loop:
-        - { src: "/tmp/bootstrap-create-user.rsc",                          dest: "bootstrap-create-user.rsc" }
-        - { src: "{{ ssh_pub_key }}",                                        dest: "{{ key_dest_filename }}" }
-        - { src: "{{ playbook_dir }}/files/bootstrap-migrate-subnet.rsc",   dest: "bootstrap-migrate-subnet.rsc" }
+        - { src: "/tmp/bootstrap-create-user.rsc",          dest: "bootstrap-create-user.rsc" }
+        - { src: "{{ ssh_pub_key }}",                        dest: "{{ key_dest_filename }}" }
+        - { src: "/tmp/bootstrap-migrate-subnet.rsc",       dest: "bootstrap-migrate-subnet.rsc" }
       loop_control:
         label: "{{ item.dest }}"
 
@@ -126,8 +131,11 @@
           - "subnet migration: {{ subnet_import.stdout_lines }}"
       when: dry_run | bool
 
-    - name: Remove locally rendered user creation script
+    - name: Remove locally rendered bootstrap scripts
       ansible.builtin.file:
-        path: /tmp/bootstrap-create-user.rsc
+        path: "{{ item }}"
         state: absent
       delegate_to: localhost
+      loop:
+        - /tmp/bootstrap-create-user.rsc
+        - /tmp/bootstrap-migrate-subnet.rsc

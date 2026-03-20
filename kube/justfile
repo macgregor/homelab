@@ -71,6 +71,7 @@ import 'media/decluttarr/justfile'
 import 'app/foundry-vtt/justfile'
 import 'app/mealie/justfile'
 import 'app/network-multitool/justfile'
+import 'app/syncthing-relay/justfile'
 import 'app/synology-dsm/justfile'
 
 import 'demo/whoami/justfile'
@@ -95,13 +96,13 @@ deploy-sys: democratic-csi-deploy cert-manager-deploy metallb-deploy ingress-int
 
 remove-sys: democratic-csi-remove cert-manager-remove metallb-remove ingress-internal-remove ingress-external-remove grafana-remove kube-state-metrics-remove telegraf-snmp-remove telegraf-remove victorialogs-remove victoriametrics-remove
 
-deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy synology-dsm-deploy qbittorrent-deploy mealie-deploy seerr-deploy decluttarr-deploy
+deploy-apps: foundry-vtt-deploy jellyfin-deploy network-multitool-deploy syncthing-relay-deploy synology-dsm-deploy qbittorrent-deploy mealie-deploy seerr-deploy decluttarr-deploy
 
-stop-apps: foundry-vtt-stop jellyfin-stop network-multitool-stop qbittorrent-stop mealie-stop seerr-stop decluttarr-stop
+stop-apps: foundry-vtt-stop jellyfin-stop network-multitool-stop syncthing-relay-stop qbittorrent-stop mealie-stop seerr-stop decluttarr-stop
 
-start-apps: foundry-vtt-start jellyfin-start network-multitool-start qbittorrent-start mealie-start seerr-start decluttarr-start
+start-apps: foundry-vtt-start jellyfin-start network-multitool-start syncthing-relay-start qbittorrent-start mealie-start seerr-start decluttarr-start
 
-remove-apps: foundry-vtt-remove jellyfin-remove network-multitool-remove synology-dsm-remove qbittorrent-remove mealie-remove seerr-remove decluttarr-remove
+remove-apps: foundry-vtt-remove jellyfin-remove network-multitool-remove syncthing-relay-remove synology-dsm-remove qbittorrent-remove mealie-remove seerr-remove decluttarr-remove
 
 deploy-demos: whoami-deploy kuard-deploy
 

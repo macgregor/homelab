@@ -1,0 +1,26 @@
+SYNCTHING_RELAY_REPLICAS := env_var_or_default("SYNCTHING_RELAY_REPLICAS", "1")
+
+syncthing-relay-deploy: (_kube-deploy "syncthing-relay" "./app/syncthing-relay")
+
+syncthing-relay-deploy-secret:
+    #!/usr/bin/env bash
+    set -e
+    kubectl create secret generic syncthing-relay-env \
+        -n syncthing-relay --save-config --dry-run=client \
+        --from-literal=RELAY_TOKEN="${SYNCTHING_RELAY_TOKEN}" \
+        -o yaml | kubectl apply -f -
+
+syncthing-relay-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./app/syncthing-relay/network.yml || true
+    kubectl delete -f ./app/syncthing-relay/syncthing-relay.yml || true
+    kubectl -n syncthing-relay delete secret syncthing-relay-env || true
+    kubectl delete -f ./app/syncthing-relay/storage.yml || true
+    kubectl delete -f ./app/syncthing-relay/namespace.yml --cascade=background || true
+
+syncthing-relay-debug: (_kube-debug "syncthing-relay" "syncthing-relay")
+syncthing-relay-logs: (_kube-logs "syncthing-relay" "syncthing-relay")
+syncthing-relay-stop: (_kube-stop "syncthing-relay" "deployment/syncthing-relay")
+syncthing-relay-start: (_kube-start "syncthing-relay" "deployment/syncthing-relay" SYNCTHING_RELAY_REPLICAS)
+syncthing-relay-restart: (_kube-restart "syncthing-relay" "deployment/syncthing-relay")
+syncthing-relay-status: (_kube-status "syncthing-relay" "syncthing-relay")
