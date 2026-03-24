@@ -138,8 +138,13 @@
           - /ip dns static set [find name="router.lan"] address={{ router_ip }}
       when: _has_stale_router_dns
 
-    # Split-horizon DNS: per-host static entries avoid hairpin NAT through
-    # Cloudflare. The router_dns_hosts list is managed by homelab-sync-dns.sh.
+    # Split-horizon DNS: CNAME-based entries avoid hairpin NAT through
+    # Cloudflare and block HTTPS RR (RFC 9460) leakage. Browsers use HTTPS
+    # RR ipv4hint/ipv6hint to bypass A/AAAA records; CNAMEing to a .homelab
+    # target ensures all query types resolve locally with no upstream leak.
+    # See docs/04-networking.md for details.
+    #
+    # The router_dns_hosts list is managed by homelab-sync-dns.sh.
 
     - name: Remove existing split-horizon DNS entries
       community.routeros.command:
@@ -147,7 +152,7 @@
           - /ip dns static remove [find comment="split-dns"]
       when: _has_split_dns
 
-    - name: Add split-horizon DNS entries
+    - name: Add split-horizon DNS CNAME targets
       community.routeros.command:
         commands:
           - >-
@@ -156,9 +161,37 @@
             address={{ item.address }}
             ttl=1d
             comment="split-dns"
-      loop: "{{ router_dns_hosts }}"
+          - >-
+            /ip dns static add type=AAAA
+            name={{ item.name }}
+            address=::1
+            ttl=1d
+            comment="split-dns"
+      loop:
+        - { name: "ingress-external.homelab", address: "{{ ingress_external_ip }}" }
+        - { name: "ingress-internal.homelab", address: "{{ ingress_internal_ip }}" }
+        - { name: "syncthing-relay.homelab", address: "{{ syncthing_relay_ip }}" }
       loop_control:
         label: "{{ item.name }} ({{ item.address }})"
+
+    - name: Add split-horizon DNS entries
+      community.routeros.command:
+        commands:
+          - >-
+            /ip dns static add type=CNAME
+            name={{ item.name }}
+            cname={{ _cname_target }}
+            ttl=1d
+            comment="split-dns"
+      vars:
+        _cname_target: >-
+          {{ 'ingress-external.homelab' if item.address == ingress_external_ip
+          else 'ingress-internal.homelab' if item.address == ingress_internal_ip
+          else 'syncthing-relay.homelab' if item.address == syncthing_relay_ip
+          else item.address }}
+      loop: "{{ router_dns_hosts }}"
+      loop_control:
+        label: "{{ item.name }} → {{ _cname_target }}"
 
     # ── Static DHCP leases ─────────────────────────────────────────────
 

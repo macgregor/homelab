@@ -100,6 +100,32 @@ The `router_dns_hosts` list supports manually-added entries above the `# auto-ma
 
 Internal services have no public DNS records. LAN clients resolve them via the router (which is the DHCP-pushed DNS server). Pods resolve them via CoreDNS -> router forwarding.
 
+#### CNAME-based resolution (Cloudflare HTTPS RR workaround)
+
+Split-horizon DNS entries use CNAME records pointing to `.homelab` targets rather than direct A records. This works around Cloudflare's HTTPS Resource Records (RFC 9460).
+
+**The problem**: Cloudflare automatically serves HTTPS RRs for proxied domains containing `ipv4hint`/`ipv6hint` fields that point to Cloudflare's proxy IPs. Modern browsers (Firefox, Chrome) query for HTTPS RRs and prefer these hints over A/AAAA records. RouterOS cannot create static HTTPS RR entries (it only supports A, AAAA, CNAME, FWD, MX, NS, NXDOMAIN, SRV, TXT), so HTTPS RR queries pass through to upstream DNS and return Cloudflare's hints -- bypassing split-horizon DNS entirely. The browser connects to Cloudflare instead of the local ingress.
+
+**The fix**: Each hostname is a CNAME to a `.homelab` target that only exists on the router:
+
+```
+jellyfin.matthew-stratton.me  CNAME → ingress-external.homelab
+ingress-external.homelab      A     → 192.168.1.220
+ingress-external.homelab      AAAA  → ::1
+```
+
+Because CNAME applies to all query types, the HTTPS RR query follows the chain to `ingress-external.homelab` -- a name no upstream DNS server has heard of. The query returns empty, and the browser falls back to the A record.
+
+Three CNAME targets cover all services:
+
+| Target | IP | Used by |
+|--------|----|---------|
+| `ingress-external.homelab` | 192.168.1.220 | Internet-facing services (jellyfin, seerr) |
+| `ingress-internal.homelab` | 192.168.1.221 | LAN-only services (grafana, sonarr, etc.) |
+| `syncthing-relay.homelab` | 192.168.1.233 | Syncthing relay |
+
+The CNAME is transparent to users -- browser URLs, TLS certificate validation, and the `router_dns_hosts` data model are all unchanged.
+
 ### Local Client DNS (Split DNS)
 
 A NetworkManager dispatcher script ([`scripts/homelab-split-dns.sh`](../scripts/homelab-split-dns.sh)) handles VPN scenarios for Linux workstations with `systemd-resolved`. When a VPN reconnects with a catch-all `~.` routing domain, it can override the default DNS, causing homelab domains to fail. The script probes the router to detect the home network, then configures a `~matthew-stratton.me` routing domain via `resolvectl` to direct matching queries to the router. It works across connection types (wifi, ethernet, thunderbolt dock), is inert off the home network, and survives VPN reconnects. Install to `/etc/NetworkManager/dispatcher.d/` and `chmod 755`.

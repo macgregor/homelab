@@ -16,6 +16,7 @@ router_dhcp_range: "192.168.1.50-192.168.1.199"
 
 # Kubernetes service IPs (MetalLB allocations)
 ingress_external_ip: "192.168.1.220"
+ingress_internal_ip: "192.168.1.221"
 victorialogs_syslog_ip: "192.168.1.228"
 syncthing_relay_ip: "192.168.1.233"
 
