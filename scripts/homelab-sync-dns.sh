@@ -105,8 +105,8 @@ if grep -q '^router_dns_hosts:' "$ROUTER_VARS"; then
             skip = 1
             next
         }
-        skip && /^  - / { next }
-        skip { skip = 0 }
+        skip && /^[^ ]/ { skip = 0 }
+        skip { next }
         { print }
     ' "$ROUTER_VARS" > "$ROUTER_VARS.tmp"
     mv "$ROUTER_VARS.tmp" "$ROUTER_VARS"
