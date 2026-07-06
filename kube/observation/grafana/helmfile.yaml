@@ -1,11 +1,11 @@
 repositories:
-- name: grafana
-  url: https://grafana.github.io/helm-charts
+- name: grafana-community
+  url: https://grafana-community.github.io/helm-charts
 helmDefaults:
   createNamespace: true
 releases:
 - name: grafana
-  chart: grafana/grafana
+  chart: grafana-community/grafana
   version: 10.5.15
   namespace: obs
   values:

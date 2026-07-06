@@ -6,7 +6,7 @@ helmDefaults:
 releases:
 - name: metallb
   chart: metallb/metallb
-  version: 0.14.9
+  version: 0.16.1
   namespace: metallb
   values:
   - ./helm-values.yml

@@ -6,7 +6,7 @@ helmDefaults:
 releases:
 - name: kube-state-metrics
   chart: prometheus-community/kube-state-metrics
-  version: 7.2.0
+  version: 7.5.1
   namespace: obs
   values:
   - ./helm-values.yml

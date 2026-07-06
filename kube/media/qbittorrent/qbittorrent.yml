@@ -46,7 +46,7 @@ spec:
       containers:
         # https://hub.docker.com/r/linuxserver/qbittorrent/tags
         - name: qbittorrent
-          image: linuxserver/qbittorrent:5.1.4
+          image: linuxserver/qbittorrent:5.2.2
           imagePullPolicy: IfNotPresent
           resources:
             requests:

@@ -42,7 +42,7 @@ spec:
           value: '002'
         
         # https://registry.hub.docker.com/r/linuxserver/radarr/tags
-        image: linuxserver/radarr:6.0.4
+        image: linuxserver/radarr:6.2.1
         imagePullPolicy: IfNotPresent
         name: radarr
         resources:
