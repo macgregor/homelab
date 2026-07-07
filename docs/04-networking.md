@@ -172,6 +172,33 @@ Handles internet-facing traffic arriving via Cloudflare.
 
 Proxy protocol is needed because traffic arrives through Cloudflare's reverse proxy -- without it, all source IPs would appear as Cloudflare's.
 
+#### Backend TLS cipher selection (ARM / ChaCha20)
+
+The RPi 4B's Cortex-A72 CPU lacks hardware AES acceleration (ARMv8 crypto extensions are not exposed by the kernel). Without it, ChaCha20-Poly1305 is roughly 5x faster than AES-256-GCM in software:
+
+| Cipher | Throughput (16KB blocks) |
+| ------ | ----------------------- |
+| ChaCha20-Poly1305 | ~358 MB/s |
+| AES-128-GCM | ~77 MB/s |
+| AES-256-GCM | ~65 MB/s |
+
+For ingresses using `backend-protocol: "HTTPS"`, the ingress-to-backend connection negotiates TLS separately from the client-facing connection. By default this negotiates AES-256-GCM, which is the slowest option on this hardware.
+
+To force ChaCha20 on the backend connection, use the `proxy-ssl-*` annotations. These annotations are gated in ingress-nginx's source code behind `proxy-ssl-secret` -- without one, the controller silently ignores `proxy-ssl-ciphers` and `proxy-ssl-protocols`. To unlock them, provide a secret containing a `ca.crt` field:
+
+```yaml
+annotations:
+  nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+  nginx.ingress.kubernetes.io/proxy-ssl-secret: "<namespace>/<secret-name>"
+  nginx.ingress.kubernetes.io/proxy-ssl-verify: "off"
+  nginx.ingress.kubernetes.io/proxy-ssl-protocols: "TLSv1.2"
+  nginx.ingress.kubernetes.io/proxy-ssl-ciphers: "ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-CHACHA20-POLY1305"
+```
+
+The secret must contain `ca.crt`, `tls.crt`, and `tls.key`. Any valid cert works -- the existing ingress TLS cert can be copied with a `ca.crt` added (e.g., the backend server's own certificate). With `proxy-ssl-verify: "off"`, the CA cert is not validated, it just satisfies the code gate.
+
+The `ssl-ciphers` ConfigMap setting is unrelated -- it controls **client-facing** ciphers (`ssl_ciphers` directive), not backend proxy ciphers (`proxy_ssl_ciphers`).
+
 ### Internal (`nginx-internal`)
 
 Handles LAN-only traffic. Access control is enforced at the router level -- the internal ingress VIP (`192.168.1.221`) is only reachable from the LAN interface list, which includes `wg0` (WireGuard VPN). VPN clients have the same access as local LAN clients.

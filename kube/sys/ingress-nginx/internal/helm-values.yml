@@ -15,6 +15,8 @@ controller:
       tolerations:
       - <<: *tolerate-control-plane
   config:
+    ssl-protocols: "TLSv1.2"
+    ssl-ciphers: "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256"
     use-gzip: "true"
   extraArgs:
     enable-ssl-passthrough: true

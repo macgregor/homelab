@@ -89,6 +89,8 @@ knock_port_1: "{{ lookup('env', 'KNOCK_PORT_1') | mandatory('KNOCK_PORT_1 is not
 knock_port_2: "{{ lookup('env', 'KNOCK_PORT_2') | mandatory('KNOCK_PORT_2 is not set — source .envrc') }}"
 knock_port_3: "{{ lookup('env', 'KNOCK_PORT_3') | mandatory('KNOCK_PORT_3 is not set — source .envrc') }}"
 
+# Manual entries above "# auto-managed below" are preserved by the sync script.
+# Manual entries above "# auto-managed below" are preserved by the sync script.
 # Split-horizon DNS: per-host entries managed by homelab-sync-dns.sh
 # Manual entries above "# auto-managed below" are preserved by the sync script.
 router_dns_hosts:
