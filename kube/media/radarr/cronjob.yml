@@ -27,12 +27,13 @@ spec:
           restartPolicy: Never
           containers:
           - name: missing-search
-            image: curlimages/curl:8.12.1
+            # https://hub.docker.com/r/badouralix/curl-jq/tags
+            image: badouralix/curl-jq:alpine
             resources:
               requests:
                 memory: "16Mi"
               limits:
-                memory: "32Mi"
+                memory: "64Mi"
             env:
             - name: RADARR_API_KEY
               valueFrom:
@@ -43,8 +44,19 @@ spec:
             - /bin/sh
             - -c
             - |
-              curl -sf -X POST \
+              MOVIE_IDS=$(curl -sf \
                 -H "X-Api-Key: ${RADARR_API_KEY}" \
-                -H "Content-Type: application/json" \
-                -d '{"name": "MissingMoviesSearch", "filterKey": "status", "filterValue": "released"}' \
-                http://radarr:7878/api/v3/command
+                http://radarr:7878/api/v3/movie | \
+                jq -c '[.[] | select(.monitored and (.hasFile | not) and .status == "released") | .id]')
+
+              COUNT=$(echo "$MOVIE_IDS" | jq 'length')
+              if [ "$COUNT" -gt 0 ]; then
+                echo "Searching for $COUNT released missing movies"
+                curl -sf -X POST \
+                  -H "X-Api-Key: ${RADARR_API_KEY}" \
+                  -H "Content-Type: application/json" \
+                  -d "{\"name\": \"MoviesSearch\", \"movieIds\": $MOVIE_IDS}" \
+                  http://radarr:7878/api/v3/command
+              else
+                echo "No released missing movies to search"
+              fi

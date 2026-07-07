@@ -281,17 +281,20 @@ Tiered scoring system that isolates language, audio, and other preferences into 
 
 | Tier | Category | Range | Max Sum |
 |------|----------|-------|---------|
-| Thousands | Language | ±1000+ | — |
+| Thousands | Language / Quality gate | ±1000+ | — |
 | Hundreds | Audio format | ±100–500 | 500 |
 | Tens | Other | ±10–50 | 80 |
 
-Constraint: max(hundreds) + max(tens) = 580 < 1000. Lower tiers cannot overcome language penalties.
+Constraint: max(hundreds) + max(tens) = 580 < 1000. Lower tiers cannot overcome language or quality gate penalties.
 
 #### Scores
 
 | Custom Format | Score | Tier | Rationale |
 |---|---|---|---|
 | Not English + Not Original | -10000 | Language | Hard block |
+| LQ Source (Cam/TS/TC/SCR) | -10000 | Quality gate | Blocks cam, telesync, telecine, screener, DCPRip sources |
+| LQ Audio (Line/Mic) | -10000 | Quality gate | Blocks cam-quality audio (line-in, microphone recordings) |
+| LQ Group (Cam/Pre-Release) | -10000 | Quality gate | Blocks release groups known for cam/theater rips |
 | English | +10 | Other | Minimum floor for English releases; absorbs small audio penalties |
 | DD (AC3) | +500 | Audio | Soundbar-native |
 | DTS | +500 | Audio | Soundbar-native |
@@ -321,6 +324,21 @@ Fix: a required release-title condition on the "Not English + Not Original" CF e
 - The negative lookbehind `(?<!WEB[-_. ])` prevents matching `WEB-DL`, `WEB.DL`, `WEB_DL`, and `WEB DL` (space-separated, common in normalized titles)
 
 **Assumption:** DL/DUAL/MULTi releases include English. Standard for German/European scene releases. A rare non-English multi-language release could slip through.
+
+#### Low Quality Source Detection
+
+Three custom formats gate against cam, telesync, and theater rip releases that bypass quality tier detection by being mislabeled (e.g., a DCPRip tagged as "1080p HEVC" parses as WEBDL-1080p).
+
+**LQ Source (Cam/TS/TC/SCR):** Matches source quality indicators in release titles:
+- **Regex:** `\b(CAM|HDCAM|HQCAM|TS|HDTS|TELESYNC|TC|HDTC|TELECINE|SCR|SCREENER|DVDSCR|BDSCR|DCPRi?p|PDVD|CAMRip)\b`
+
+**LQ Audio (Line/Mic):** Matches cam-quality audio indicators:
+- **Regex:** `\b(LiNE|MiC\.?Dubbed|MiC|LINE\.?DUB(BED)?)\b`
+
+**LQ Group (Cam/Pre-Release):** Blocks release groups known for cam and theater rips. Uses `ReleaseGroupSpecification` (matches the parsed release group field, not the full title) to avoid false positives from group names appearing in movie titles.
+- **Groups:** LuCY, DJT, CONFiRM, BONE, CM8, EVO, GETIT, NhaNc3, STARTER, TOPKEK, FaiLED, DEMAND
+
+This list is intentionally narrow -- it targets groups that primarily release cam/TS/theater content. The full TRaSH Guides LQ group list (YTS, RARBG, GalaxyRG, PSA, etc.) blocks lower-bitrate encoders that are legitimate releases, not cams. Adding the full list would penalize most of the existing library.
 
 #### Radarr Profile Language
 
