@@ -8,7 +8,7 @@ metadata:
 spec:
   storageClassName: ""
   capacity:
-    storage: 10Gi
+    storage: 20Gi
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
@@ -34,7 +34,7 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 10Gi
+      storage: 20Gi
 ---
 # node local storage for cache/transcode speed. not guaranteed to 
 # survive long term but realistically should exist until explicitly 
