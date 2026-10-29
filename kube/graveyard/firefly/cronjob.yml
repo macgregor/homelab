@@ -1,0 +1,117 @@
+# Two independent schedules -- upstream runs both from a single always-on
+# alpine crond sidecar, which is redundant on Kubernetes.
+#
+#   firefly-import  02:40  pull new transactions from SimpleFIN
+#   firefly-cron    03:00  fire recurring transactions, bill reminders,
+#                          auto-budget rollover. Without this those features
+#                          silently never run.
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: firefly-import
+  namespace: firefly
+  labels:
+    app.kubernetes.io/name: firefly-importer
+spec:
+  schedule: "40 2 * * *"
+  timeZone: "America/New_York"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: firefly-importer
+    spec:
+      ttlSecondsAfterFinished: 604800
+      # No retries. SimpleFIN allows ~24 API calls/day and refreshes data only
+      # once per 24h, so a retry cannot return anything new -- it just burns
+      # quota and earns a "too many requests" warning from the bridge. A failed
+      # import is picked up by the next day's run.
+      backoffLimit: 0
+      activeDeadlineSeconds: 1800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: firefly-importer
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: autoimport
+            # https://hub.docker.com/r/badouralix/curl-jq/tags
+            image: badouralix/curl-jq:alpine
+            resources:
+              requests:
+                memory: "16Mi"
+              limits:
+                memory: "64Mi"
+            env:
+            - name: AUTO_IMPORT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: firefly-importer-env
+                  key: AUTO_IMPORT_SECRET
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              # The importer streams progress and can take a few minutes on a
+              # large date window, hence the generous --max-time.
+              curl -sf --max-time 1500 -X POST \
+                -H 'Accept: application/json' \
+                "http://firefly-importer:8080/autoimport?directory=/import&secret=${AUTO_IMPORT_SECRET}"
+              echo
+              echo "autoimport request completed"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: firefly-cron
+  namespace: firefly
+  labels:
+    app.kubernetes.io/name: firefly
+spec:
+  schedule: "0 3 * * *"
+  timeZone: "America/New_York"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/name: firefly
+    spec:
+      ttlSecondsAfterFinished: 604800
+      backoffLimit: 2
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: firefly
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: cron
+            image: badouralix/curl-jq:alpine
+            resources:
+              requests:
+                memory: "16Mi"
+              limits:
+                memory: "64Mi"
+            env:
+            - name: STATIC_CRON_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: firefly-env
+                  key: STATIC_CRON_TOKEN
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              curl -sf --max-time 300 \
+                "http://firefly:8080/api/v1/cron/${STATIC_CRON_TOKEN}"
+              echo
+              echo "cron request completed"

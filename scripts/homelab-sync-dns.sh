@@ -100,6 +100,7 @@ fi
 if grep -q '^router_dns_hosts:' "$ROUTER_VARS"; then
     awk -v block="$ROUTER_BLOCK" '
         /^# Split-horizon DNS:.*homelab-sync-dns/ { next }
+        /^# Manual entries above .* preserved by the sync script\./ { next }
         /^router_dns_hosts:/ {
             print block
             skip = 1

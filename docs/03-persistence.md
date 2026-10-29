@@ -17,7 +17,7 @@ This document covers the Synology NAS, MariaDB datastore, and Kubernetes storage
 
 ## Synology NAS
 
-The Synology DS720+ (`192.168.1.200`) serves two roles: network storage for the Kubernetes cluster and host for the MariaDB database that backs k3s.
+The Synology DS720+ (`192.168.1.200`) serves three roles: network storage for the Kubernetes cluster, host for the MariaDB database that backs k3s, and host for a PostgreSQL container.
 
 ### Volume Layout
 

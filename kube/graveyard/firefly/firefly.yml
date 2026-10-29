@@ -1,0 +1,220 @@
+# https://hub.docker.com/r/fireflyiii/core
+# https://hub.docker.com/r/fireflyiii/data-importer
+# https://docs.firefly-iii.org/how-to/firefly-iii/installation/docker/
+# https://docs.firefly-iii.org/how-to/data-importer/import/simplefin/
+#
+# Two workloads in one file so `_kube-deploy` picks them both up:
+#   firefly           -- the core app (web UI + REST API)
+#   firefly-importer  -- the data importer, a separate app by upstream design
+#
+# Both images are serversideup/php v3 based: they listen on 8080 and run as
+# www-data (33:33). PUID/PGID are NOT honoured -- see storage.yml.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: firefly-config
+  namespace: firefly
+data:
+  APP_ENV: production
+  APP_DEBUG: "false"
+  APP_NAME: FireflyIII
+  APP_URL: https://firefly.matthew-stratton.me
+  TZ: America/New_York
+  DEFAULT_LANGUAGE: en_US
+
+  # Behind nginx-internal; trust the forwarded proto so URLs stay https
+  TRUSTED_PROXIES: "**"
+
+  LOG_CHANNEL: stack
+  APP_LOG_LEVEL: notice
+  AUDIT_LOG_LEVEL: emergency
+
+  CACHE_STORE: file
+  SESSION_DRIVER: file
+  MAIL_MAILER: log
+
+  # Postgres on the Synology, same server that backs mealie
+  DB_CONNECTION: pgsql
+
+  # Image default is 256M; upstream recommends 512M or more. max_children is
+  # capped well below the image default of 20 so a burst cannot exhaust the
+  # pod memory limit on a Pi.
+  PHP_MEMORY_LIMIT: 512M
+  PHP_FPM_PM_MAX_CHILDREN: "6"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firefly
+  namespace: firefly
+  labels:
+    app.kubernetes.io/name: firefly
+    app.kubernetes.io/version: version-6.7.3
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 1
+  # Recreate, not RollingUpdate: the container runs database migrations on
+  # start, and two versions must never migrate the same schema concurrently.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: firefly
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: firefly
+    spec:
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: firefly
+          image: fireflyiii/core:version-6.7.3
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              memory: 768Mi
+          envFrom:
+            - configMapRef:
+                name: firefly-config
+                optional: false
+            - secretRef:
+                name: firefly-env
+                optional: false
+          ports:
+            - containerPort: 8080
+              name: http-tcp
+              protocol: TCP
+          # /health is unauthenticated (routes/web.php, withoutMiddleware)
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http-tcp
+            periodSeconds: 10
+            # PHP-FPM is slowest to answer on a cold start, which is exactly
+            # when this probe runs -- the default 1s timeout produces spurious
+            # 499s on a Pi. Match the other probes.
+            timeoutSeconds: 10
+            failureThreshold: 30 # allow up to 5m for first-run migrations
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http-tcp
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http-tcp
+            periodSeconds: 15
+            timeoutSeconds: 10
+          volumeMounts:
+            - mountPath: /var/www/html/storage/upload
+              name: firefly-upload
+      volumes:
+        - name: firefly-upload
+          persistentVolumeClaim:
+            claimName: firefly-upload
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: firefly-importer-config
+  namespace: firefly
+data:
+  TZ: America/New_York
+  TRUSTED_PROXIES: "**"
+  LOG_CHANNEL: stack
+
+  # In-cluster URL the importer uses to reach Firefly III, and the browser
+  # facing URL it should print in links.
+  FIREFLY_III_URL: http://firefly:8080
+  VANITY_URL: https://firefly.matthew-stratton.me
+
+  # Auto-import is disabled by default upstream and each capability has to be
+  # switched on individually. Only the directory flow is enabled -- file upload
+  # over HTTP stays off since nothing needs it.
+  CAN_POST_AUTOIMPORT: "true"
+  CAN_POST_FILES: "false"
+  IMPORT_DIR_ALLOWLIST: /import
+
+  PHP_MEMORY_LIMIT: 512M
+  PHP_FPM_PM_MAX_CHILDREN: "4"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firefly-importer
+  namespace: firefly
+  labels:
+    app.kubernetes.io/name: firefly-importer
+    app.kubernetes.io/version: version-2.3.4
+spec:
+  progressDeadlineSeconds: 300
+  replicas: 1
+  revisionHistoryLimit: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: firefly-importer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: firefly-importer
+    spec:
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: firefly-importer
+          image: fireflyiii/data-importer:version-2.3.4
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          envFrom:
+            - configMapRef:
+                name: firefly-importer-config
+                optional: false
+            - secretRef:
+                name: firefly-importer-env
+                optional: false
+          ports:
+            - containerPort: 8080
+              name: http-tcp
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: http-tcp
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: http-tcp
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          volumeMounts:
+            # Read-only: the autoimport scan only reads. The JSON holds the
+            # SimpleFIN access URL (a live bank credential), so it lives in a
+            # Secret rather than on a PV.
+            - mountPath: /import
+              name: import-config
+              readOnly: true
+      volumes:
+        - name: import-config
+          secret:
+            secretName: firefly-import-config
+            optional: true
+            defaultMode: 0444

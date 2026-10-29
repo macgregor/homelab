@@ -1,0 +1,45 @@
+---
+# Attachment uploads only (receipts, statements attached to transactions).
+# Firefly III keeps everything else in Postgres, so there is no SQLite file
+# here and no POSIX locking requirement -- NFS is safe for this volume.
+#
+# The container is built on serversideup/php v3, which dropped PUID/PGID
+# support and always runs as www-data (33:33). fsGroup does not work on
+# in-tree NFS volumes, so the directory must be chowned on the NAS:
+#   ssh synology 'sudo mkdir -p /volume2/kube-nfs/v/firefly-upload \
+#     && sudo chown 33:33 /volume2/kube-nfs/v/firefly-upload'
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    app.kubernetes.io/name: firefly
+  name: firefly-upload
+spec:
+  storageClassName: "" # needs to be blank so dynamic provisioners dont match
+  capacity:
+    storage: 5Gi # not enforced on NFS shares
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /volume2/kube-nfs/v/firefly-upload #not dynamic so make sure it already exists on the NAS
+    server: 192.168.1.200
+    readOnly: false
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app.kubernetes.io/name: firefly
+  name: firefly-upload
+  namespace: firefly
+spec:
+  storageClassName: "" # needs to be blank so dynamic provisioners dont match
+  volumeName: firefly-upload
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---

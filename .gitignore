@@ -2,6 +2,9 @@
 __pycache__/
 docs/plans/
 
+# Firefly III SimpleFIN import config -- embeds the SimpleFIN access URL
+kube/graveyard/firefly/conf/simplefin.json
+
 # Ignore .claude dirs in subdirectories, keep root
 .claude/
 !/.claude/

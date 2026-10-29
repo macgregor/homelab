@@ -128,7 +128,27 @@ The CNAME is transparent to users -- browser URLs, TLS certificate validation, a
 
 ### Local Client DNS (Split DNS)
 
-A NetworkManager dispatcher script ([`scripts/homelab-split-dns.sh`](../scripts/homelab-split-dns.sh)) handles VPN scenarios for Linux workstations with `systemd-resolved`. When a VPN reconnects with a catch-all `~.` routing domain, it can override the default DNS, causing homelab domains to fail. The script probes the router to detect the home network, then configures a `~matthew-stratton.me` routing domain via `resolvectl` to direct matching queries to the router. It works across connection types (wifi, ethernet, thunderbolt dock), is inert off the home network, and survives VPN reconnects. Install to `/etc/NetworkManager/dispatcher.d/` and `chmod 755`.
+A NetworkManager dispatcher script ([`scripts/homelab-split-dns.sh`](../scripts/homelab-split-dns.sh)) handles VPN scenarios for Linux workstations with `systemd-resolved`. When a VPN reconnects with a catch-all `~.` routing domain, it can override the default DNS, causing homelab domains to fail. The script probes the router to detect the home network, then configures `~matthew-stratton.me` and `~homelab` routing domains via `resolvectl` to direct matching queries to the router. It works across connection types (wifi, ethernet, thunderbolt dock), is inert off the home network, and survives VPN reconnects.
+
+**Both routing domains are required.** The router answers `matthew-stratton.me` names with a CNAME to `<ingress>.homelab` (see the CNAME table above), and `systemd-resolved` resolves that target as a *separate* query. Routing only `~matthew-stratton.me` leaves `.homelab` to the VPN, which returns NXDOMAIN and negative-caches it. The symptom is distinctive and easy to misread: names resolve fine right after `resolvectl flush-caches`, then fail at random once something re-poisons the target, and `getent` may still succeed while `resolvectl query` fails.
+
+Install it as a dispatcher hook:
+
+```bash
+sudo install -m 755 -o root -g root scripts/homelab-split-dns.sh \
+    /etc/NetworkManager/dispatcher.d/50-homelab-split-dns
+```
+
+**Why the script conditionally re-adds `~.`:** `systemd-resolved` turns a link's `DefaultRoute` implicitly *off* as soon as that link carries a route-only domain other than `~.`. With a VPN up that is the desired split -- homelab names go to the router, everything else goes to the tunnel. With no VPN it would strand general DNS: no link would be a default route, and Fedora compiles in no fallback servers (`FallbackDNS=` is empty), so every non-homelab lookup fails outright rather than degrading. The script therefore checks whether another link has already claimed `~.` and only gives up the default route when one has.
+
+Verify the split after a VPN reconnect -- `resolvectl query` reports which link answered:
+
+```bash
+resolvectl query jellyfin.matthew-stratton.me  # -> link: <lan iface>
+resolvectl query google.com                    # -> link: tun0 (when on VPN)
+```
+
+`resolvectl` caches negative answers, so a name that failed while DNS was misconfigured keeps failing after the fix. Run `resolvectl flush-caches` before concluding an entry is wrong.
 
 ## Router Configuration (MikroTik)
 

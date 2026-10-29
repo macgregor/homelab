@@ -1,0 +1,98 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: firefly
+  namespace: firefly
+  labels:
+    app.kubernetes.io/name: firefly
+spec:
+  selector:
+    app.kubernetes.io/name: firefly
+  ports:
+  - port: 8080
+    name: http-tcp
+    protocol: TCP
+  type: ClusterIP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: firefly-importer
+  namespace: firefly
+  labels:
+    app.kubernetes.io/name: firefly-importer
+spec:
+  selector:
+    app.kubernetes.io/name: firefly-importer
+  ports:
+  - port: 8080
+    name: http-tcp
+    protocol: TCP
+  type: ClusterIP
+---
+# Internal only -- nginx-internal is reachable from the LAN and over WireGuard,
+# never from the WAN. Financial data does not go on the external ingress.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: firefly
+  namespace: firefly
+  labels:
+    app.kubernetes.io/name: firefly
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+spec:
+  ingressClassName: nginx-internal
+  tls:
+  - hosts:
+    - firefly.matthew-stratton.me
+    secretName: firefly-tls
+  rules:
+  - host: firefly.matthew-stratton.me
+    http:
+      paths:
+      - backend:
+          service:
+            name: firefly
+            port:
+              number: 8080
+        path: /
+        pathType: Prefix
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: firefly-importer
+  namespace: firefly
+  labels:
+    app.kubernetes.io/name: firefly-importer
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt"
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+    # A SimpleFIN conversion runs synchronously inside one HTTP request and
+    # makes a fresh upstream API call per account per ~44-day window, so it
+    # easily outlives nginx's 60s default and returns a 504 while the pod is
+    # still working. The browser then shows "conversion could not be started"
+    # even though nothing has actually stopped -- which hides the real error.
+    # Keep the import date range bounded; this only stops the truncation.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  ingressClassName: nginx-internal
+  tls:
+  - hosts:
+    - firefly-import.matthew-stratton.me
+    secretName: firefly-importer-tls
+  rules:
+  - host: firefly-import.matthew-stratton.me
+    http:
+      paths:
+      - backend:
+          service:
+            name: firefly-importer
+            port:
+              number: 8080
+        path: /
+        pathType: Prefix

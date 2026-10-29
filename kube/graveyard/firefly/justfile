@@ -1,0 +1,99 @@
+FIREFLY_REPLICAS := env_var_or_default("FIREFLY_REPLICAS", "1")
+FIREFLY_IMPORTER_REPLICAS := env_var_or_default("FIREFLY_IMPORTER_REPLICAS", "1")
+
+firefly-deploy: (_kube-deploy "firefly" "./app/firefly")
+    kubectl -n firefly rollout restart deployment/firefly-importer
+
+firefly-deploy-secret:
+    #!/usr/bin/env bash
+    set -e
+    # APP_KEY and STATIC_CRON_TOKEN must both be exactly 32 characters.
+    kubectl create secret generic firefly-env \
+        -n firefly --save-config --dry-run=client \
+        --from-literal=APP_KEY="${FIREFLY_APP_KEY}" \
+        --from-literal=SITE_OWNER="${FIREFLY_SITE_OWNER}" \
+        --from-literal=STATIC_CRON_TOKEN="${FIREFLY_STATIC_CRON_TOKEN}" \
+        --from-literal=DB_HOST="${FIREFLY_PG_HOST}" \
+        --from-literal=DB_PORT="${FIREFLY_PG_PORT}" \
+        --from-literal=DB_DATABASE="${FIREFLY_PG_DB}" \
+        --from-literal=DB_USERNAME="${FIREFLY_PG_USER}" \
+        --from-literal=DB_PASSWORD="${FIREFLY_PG_PASSWORD}" \
+        -o yaml | kubectl apply -f -
+
+    # FIREFLY_III_ACCESS_TOKEN is a Personal Access Token minted in the
+    # Firefly III UI (Options > Profile > OAuth), so it only exists after the
+    # first login. AUTO_IMPORT_SECRET must be at least 16 characters.
+    kubectl create secret generic firefly-importer-env \
+        -n firefly --save-config --dry-run=client \
+        --from-literal=FIREFLY_III_ACCESS_TOKEN="${FIREFLY_III_ACCESS_TOKEN:-}" \
+        --from-literal=AUTO_IMPORT_SECRET="${FIREFLY_AUTO_IMPORT_SECRET}" \
+        --from-literal=SIMPLEFIN_TOKEN="${FIREFLY_SIMPLEFIN_TOKEN:-}" \
+        -o yaml | kubectl apply -f -
+
+    # The SimpleFIN import config is produced by the importer UI and saved to
+    # ./app/firefly/conf/simplefin.json (gitignored -- it embeds the SimpleFIN
+    # access URL, which is a live bank-data credential). Absent on first deploy.
+    if [ -f ./app/firefly/conf/simplefin.json ]; then
+        kubectl create secret generic firefly-import-config \
+            -n firefly --save-config --dry-run=client \
+            --from-file=simplefin.json=./app/firefly/conf/simplefin.json \
+            -o yaml | kubectl apply -f -
+    else
+        echo "NOTE: ./app/firefly/conf/simplefin.json not found -- skipping import config secret."
+        echo "      Run the SimpleFIN setup at https://firefly-import.matthew-stratton.me first."
+    fi
+
+firefly-remove:
+    #!/usr/bin/env bash
+    kubectl delete -f ./app/firefly/cronjob.yml || true
+    kubectl delete -f ./app/firefly/network.yml || true
+    kubectl delete -f ./app/firefly/firefly.yml || true
+    kubectl delete -f ./app/firefly/storage.yml || true
+    kubectl -n firefly delete secret firefly-env firefly-importer-env firefly-import-config || true
+
+firefly-debug: (_kube-debug "firefly" "firefly")
+firefly-logs: (_kube-logs "firefly" "firefly")
+firefly-stop: (_kube-stop "firefly" "deployment/firefly")
+firefly-start: (_kube-start "firefly" "deployment/firefly" FIREFLY_REPLICAS)
+firefly-restart: (_kube-restart "firefly" "deployment/firefly")
+firefly-status: (_kube-status "firefly" "firefly")
+
+firefly-importer-debug: (_kube-debug "firefly-importer" "firefly")
+firefly-importer-logs: (_kube-logs "firefly-importer" "firefly")
+firefly-importer-stop: (_kube-stop "firefly" "deployment/firefly-importer")
+firefly-importer-start: (_kube-start "firefly" "deployment/firefly-importer" FIREFLY_IMPORTER_REPLICAS)
+firefly-importer-restart: (_kube-restart "firefly" "deployment/firefly-importer")
+firefly-importer-status: (_kube-status "firefly-importer" "firefly")
+
+# Trigger the SimpleFIN import now instead of waiting for the 02:40 schedule.
+firefly-import-now:
+    kubectl -n firefly create job --from=cronjob/firefly-import "firefly-import-manual-$(date +%s)"
+
+# Trigger the Firefly III recurring-transaction cron now.
+firefly-cron-now:
+    kubectl -n firefly create job --from=cronjob/firefly-cron "firefly-cron-manual-$(date +%s)"
+
+# Open a psql shell against the Firefly III Postgres container on the NAS.
+firefly-debug-pg:
+    kubectl -n firefly run -i --tty --rm debug --image=postgres:17-alpine --restart=Never -- /bin/sh -c "psql postgresql://${FIREFLY_PG_USER}:${FIREFLY_PG_PASSWORD}@${FIREFLY_PG_HOST}:${FIREFLY_PG_PORT}/${FIREFLY_PG_DB}"
+
+# Dump the Firefly III database to a local gzipped file (run before upgrades).
+firefly-db-backup out='':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    OUT="{{out}}"
+    [ -n "$OUT" ] || OUT="firefly-$(date +%Y%m%d-%H%M%S).sql.gz"
+    kubectl -n firefly run firefly-dump --quiet --rm -i --restart=Never \
+        --image=postgres:17-alpine \
+        --env=PGPASSWORD="${FIREFLY_PG_PASSWORD}" \
+        --command -- pg_dump --no-owner --no-acl \
+            -h "${FIREFLY_PG_HOST}" -p "${FIREFLY_PG_PORT}" \
+            -U "${FIREFLY_PG_USER}" -d "${FIREFLY_PG_DB}" \
+        | gzip > "$OUT"
+    # The dump is streamed through kubectl's log pipe, so verify it actually
+    # ran to completion rather than trusting a zero exit code.
+    if ! gunzip -c "$OUT" | tail -5 | grep -q 'PostgreSQL database dump complete'; then
+        echo "ERROR: $OUT is truncated or incomplete -- do NOT rely on it." >&2
+        exit 1
+    fi
+    echo "wrote $OUT ($(du -h "$OUT" | cut -f1)) -- dump footer verified"
